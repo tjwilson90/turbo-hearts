@@ -1,3 +1,4 @@
+use crate::error::CardsError;
 use rand::seq::SliceRandom;
 use rusqlite::{
     types::{FromSql, FromSqlError, ToSqlOutput, Value, ValueRef},
@@ -77,6 +78,43 @@ pub enum ChargingRules {
     BlindBridge,
     Chain,
     BlindChain,
+}
+
+impl Display for ChargingRules {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
+        fmt::Debug::fmt(&self, f)
+    }
+}
+
+impl FromStr for ChargingRules {
+    type Err = CardsError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "Classic" => Ok(ChargingRules::Classic),
+            "Blind" => Ok(ChargingRules::Blind),
+            "Bridge" => Ok(ChargingRules::Bridge),
+            "BlindBridge" => Ok(ChargingRules::BlindBridge),
+            "Chain" => Ok(ChargingRules::Chain),
+            "BlindChain" => Ok(ChargingRules::BlindChain),
+            _ => Err(CardsError::InvalidChargingRules(s.to_string())),
+        }
+    }
+}
+
+impl ToSql for ChargingRules {
+    fn to_sql(&self) -> Result<ToSqlOutput<'_>, Error> {
+        Ok(ToSqlOutput::Owned(Value::Text(self.to_string())))
+    }
+}
+
+impl FromSql for ChargingRules {
+    fn column_result(value: ValueRef<'_>) -> Result<Self, FromSqlError> {
+        match value.as_str() {
+            Ok(value) => Ok(value.parse().unwrap()),
+            Err(e) => Err(e),
+        }
+    }
 }
 
 const SEATS: [char; 4] = ['N', 'E', 'S', 'W'];

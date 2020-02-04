@@ -1,5 +1,5 @@
 [package]
-name = "cards"
+name = "turbo-hearts"
 version = "0.1.0"
 authors = ["Tim Wilson <twilson@palantir.com>"]
 edition = "2018"

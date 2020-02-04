@@ -1,5 +1,5 @@
 use crate::{
-    cards::{GameId, Player},
+    cards::{ChargingRules, GameId, Player},
     error::CardsError,
 };
 use serde::{Deserialize, Serialize};
@@ -18,24 +18,26 @@ pub struct Lobby {
 
 struct Inner {
     subscribers: HashMap<Player, UnboundedSender<Event>>,
-    games: HashMap<GameId, HashSet<Player>>,
+    games: HashMap<GameId, HashMap<Player, ChargingRules>>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum Event {
     Ping,
-    EnterLobby(Player),
-    CreateGame {
+    Subscribe(Player),
+    NewGame {
         id: GameId,
         player: Player,
+        rules: ChargingRules,
     },
     LobbyState {
         viewers: Vec<Player>,
-        games: HashMap<GameId, HashSet<Player>>,
+        games: HashMap<GameId, HashMap<Player, ChargingRules>>,
     },
     JoinGame {
         id: GameId,
         player: Player,
+        rules: ChargingRules,
     },
     LeaveGame {
         id: GameId,
@@ -65,10 +67,10 @@ impl Lobby {
         inner.broadcast(Event::Ping);
     }
 
-    pub async fn enter(&self, player: Player, tx: UnboundedSender<Event>) {
+    pub async fn subscribe(&self, player: Player, tx: UnboundedSender<Event>) {
         let mut inner = self.inner.lock().await;
         if inner.subscribers.remove(&player).is_none() {
-            inner.broadcast(Event::EnterLobby(player.clone()));
+            inner.broadcast(Event::Subscribe(player.clone()));
         }
         tx.send(Event::LobbyState {
             viewers: inner.subscribers.keys().cloned().collect(),
@@ -78,24 +80,26 @@ impl Lobby {
         inner.subscribers.insert(player, tx);
     }
 
-    pub async fn create_game(&self, id: GameId, player: Player) {
+    pub async fn new_game(&self, id: GameId, player: Player, rules: ChargingRules) {
         let mut inner = self.inner.lock().await;
-        inner
-            .games
-            .insert(id, HashSet::from_iter(vec![player.clone()]));
-        inner.broadcast(Event::CreateGame { id, player });
+        let mut game = HashMap::new();
+        game.insert(player.clone(), rules);
+        inner.games.insert(id, game);
+        inner.broadcast(Event::NewGame { id, player, rules });
     }
 
-    pub async fn join_game(&self, id: GameId, player: Player) -> Result<Vec<Player>, CardsError> {
+    pub async fn join_game(
+        &self,
+        id: GameId,
+        player: Player,
+        rules: ChargingRules,
+    ) -> Result<HashMap<Player, ChargingRules>, CardsError> {
         let mut inner = self.inner.lock().await;
         if let Some(players) = inner.games.get_mut(&id) {
-            if players.insert(player.clone()) {
-                let players = players.iter().cloned().collect();
-                inner.broadcast(Event::JoinGame { id, player });
-                Ok(players)
-            } else {
-                Ok(players.iter().cloned().collect())
-            }
+            players.insert(player.clone(), rules);
+            let players = players.clone();
+            inner.broadcast(Event::JoinGame { id, player, rules });
+            Ok(players)
         } else {
             Err(CardsError::UnknownGame(id))
         }
@@ -105,19 +109,12 @@ impl Lobby {
         let mut inner = self.inner.lock().await;
         let games = &mut inner.games;
         if let Entry::Occupied(mut entry) = games.entry(id) {
-            if entry.get_mut().remove(&player) {
+            if entry.get_mut().remove(&player).is_some() {
                 if entry.get().is_empty() {
                     entry.remove();
                 }
                 inner.broadcast(Event::LeaveGame { id, player });
             }
-        }
-    }
-
-    pub async fn leave_lobby(&self, player: Player) {
-        let mut inner = self.inner.lock().await;
-        if inner.subscribers.remove(&player).is_some() {
-            inner.broadcast(Event::LeaveLobby(player));
         }
     }
 }

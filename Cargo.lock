@@ -113,23 +113,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "cards"
-version = "0.1.0"
-dependencies = [
- "env_logger",
- "r2d2",
- "r2d2_sqlite",
- "rand 0.7.3",
- "rusqlite",
- "serde",
- "serde_json",
- "thiserror",
- "tokio",
- "uuid",
- "warp",
-]
-
-[[package]]
 name = "cfg-if"
 version = "0.1.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1280,6 +1263,23 @@ dependencies = [
  "sha-1",
  "url",
  "utf-8",
+]
+
+[[package]]
+name = "turbo-hearts"
+version = "0.1.0"
+dependencies = [
+ "env_logger",
+ "r2d2",
+ "r2d2_sqlite",
+ "rand 0.6.5",
+ "rusqlite",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "tokio",
+ "uuid",
+ "warp",
 ]
 
 [[package]]

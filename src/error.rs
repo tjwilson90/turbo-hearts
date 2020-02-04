@@ -1,4 +1,8 @@
-use crate::cards::GameId;
+use crate::{
+    cards::{GameId, Player},
+    games,
+    games::HandState,
+};
 use serde::Serialize;
 use std::{backtrace::Backtrace, convert::Infallible, fmt, fmt::Display};
 use thiserror::Error;
@@ -7,19 +11,31 @@ use warp::{http::StatusCode, reject::Reject, Rejection};
 
 #[derive(Debug, Error)]
 pub enum CardsError {
+    #[error("game {0} is already complete")]
+    GameComplete(GameId),
+    #[error("invalid charging rules: {0}")]
+    InvalidChargingRules(String),
+    #[error("cannot perform action, currently {0:?}")]
+    IllegalAction(HandState),
+    #[error("{0} is not a member of the game")]
+    IllegalPlayer(Player),
     #[error("unexpected sqlite error")]
     Sqlite {
         #[from]
         source: rusqlite::Error,
         backtrace: Backtrace,
     },
-    #[error("unknown game {0}")]
+    #[error("unknown game: {0}")]
     UnknownGame(GameId),
 }
 
 impl CardsError {
     fn status_code(&self) -> StatusCode {
         match self {
+            CardsError::GameComplete(_) => StatusCode::BAD_REQUEST,
+            CardsError::IllegalAction(_) => StatusCode::BAD_REQUEST,
+            CardsError::IllegalPlayer(_) => StatusCode::BAD_REQUEST,
+            CardsError::InvalidChargingRules(_) => StatusCode::BAD_REQUEST,
             CardsError::Sqlite { .. } => StatusCode::INTERNAL_SERVER_ERROR,
             CardsError::UnknownGame { .. } => StatusCode::NOT_FOUND,
         }
