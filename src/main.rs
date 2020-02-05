@@ -1,38 +1,31 @@
 #![feature(backtrace, drain_filter)]
 
 use crate::{
-    cards::{Card, Cards, ChargingRules, GameId, Player, Seat},
+    cards::{Card, Cards},
     db::Database,
-    error::CardsError,
     games::Games,
+    hacks::{unbounded_channel, UnboundedReceiver},
     lobby::Lobby,
-    publish::EventKind,
+    types::{ChargingRules, GameId, Player},
 };
-use r2d2::Pool;
-use r2d2_sqlite::SqliteConnectionManager;
-use rand::{seq::SliceRandom, RngCore};
-use rusqlite::{Connection, Error, ToSql, Transaction, TransactionBehavior, NO_PARAMS};
+use rand::seq::SliceRandom;
+use rusqlite::ToSql;
 use serde::{Deserialize, Serialize};
-use std::{
-    collections::{hash_map::RandomState, HashMap, HashSet},
-    convert::Infallible,
-    sync::Arc,
-    time::SystemTime,
-};
+use std::{convert::Infallible, time::SystemTime};
 use tokio::{
     stream::{Stream, StreamExt},
-    sync::{mpsc, mpsc::UnboundedSender, Mutex},
     task, time,
     time::Duration,
 };
-use warp::{filters::sse::ServerSentEvent, reject, reply, sse, Filter, Rejection, Reply};
+use warp::{filters::sse::ServerSentEvent, reject, sse, Filter, Rejection, Reply};
 
 mod cards;
 mod db;
 mod error;
 mod games;
+mod hacks;
 mod lobby;
-mod publish;
+mod types;
 
 #[derive(Clone)]
 struct Server {
@@ -43,22 +36,23 @@ struct Server {
 
 impl Server {
     fn new() -> Self {
+        let db = Database::new();
         Self {
-            db: Database::new(),
+            db: db.clone(),
             lobby: Lobby::new(),
-            games: Games::new(),
+            games: Games::new(db),
         }
     }
 }
 
 async fn subscribe_lobby(player: Player, server: Server) -> Result<impl Reply, Infallible> {
-    let (tx, rx) = mpsc::unbounded_channel();
+    let (tx, rx) = unbounded_channel();
     server.lobby.subscribe(player, tx).await;
     Ok(sse::reply(lobby_stream(rx)))
 }
 
 fn lobby_stream(
-    rx: mpsc::UnboundedReceiver<lobby::Event>,
+    rx: UnboundedReceiver<lobby::Event>,
 ) -> impl Stream<Item = Result<impl ServerSentEvent, warp::Error>> {
     rx.map(|event| {
         Ok(if event.is_ping() {
@@ -92,7 +86,7 @@ struct JoinGame {
 async fn join_game(server: Server, request: JoinGame) -> Result<impl Reply, Rejection> {
     let JoinGame { id, player, rules } = request;
     match server.lobby.join_game(id, player, rules).await {
-        Ok(mut players) => {
+        Ok(players) => {
             if players.len() == 4 {
                 let mut order = players.keys().cloned().collect::<Vec<_>>();
                 order.shuffle(&mut rand::thread_rng());
@@ -109,7 +103,8 @@ async fn join_game(server: Server, request: JoinGame) -> Result<impl Reply, Reje
                             &order[3],
                             &players.get(&order[0]).unwrap(),
                         ],
-                    )
+                    )?;
+                    Ok(())
                 })?;
             }
             Ok(warp::reply::json(&players))
@@ -134,14 +129,14 @@ async fn subscribe_game(
     id: GameId,
     player: Player,
     server: Server,
-) -> Result<impl Reply, Infallible> {
-    let (tx, rx) = mpsc::unbounded_channel();
-    server.games.subscribe(id, player, tx).await;
+) -> Result<impl Reply, Rejection> {
+    let (tx, rx) = unbounded_channel();
+    server.games.subscribe(id, player, tx).await?;
     Ok(sse::reply(game_stream(rx)))
 }
 
 fn game_stream(
-    rx: mpsc::UnboundedReceiver<games::Event>,
+    rx: UnboundedReceiver<games::Event>,
 ) -> impl Stream<Item = Result<impl ServerSentEvent, warp::Error>> {
     rx.map(|event| {
         Ok(if event.is_ping() {
@@ -159,9 +154,9 @@ struct PassCards {
     cards: Cards,
 }
 
-async fn pass_cards(server: Server, request: PassCards) -> Result<impl Reply, Infallible> {
+async fn pass_cards(server: Server, request: PassCards) -> Result<impl Reply, Rejection> {
     let PassCards { id, player, cards } = request;
-    server.games.pass_cards(id, player, cards).await;
+    server.games.pass_cards(id, player, cards).await?;
     Ok(warp::reply())
 }
 
@@ -172,9 +167,9 @@ struct ChargeCards {
     cards: Cards,
 }
 
-async fn charge_cards(server: Server, request: ChargeCards) -> Result<impl Reply, Infallible> {
+async fn charge_cards(server: Server, request: ChargeCards) -> Result<impl Reply, Rejection> {
     let ChargeCards { id, player, cards } = request;
-    server.games.charge_cards(id, player, cards).await;
+    server.games.charge_cards(id, player, cards).await?;
     Ok(warp::reply())
 }
 
@@ -185,9 +180,9 @@ struct PlayCard {
     card: Card,
 }
 
-async fn play_card(server: Server, request: PlayCard) -> Result<impl Reply, Infallible> {
+async fn play_card(server: Server, request: PlayCard) -> Result<impl Reply, Rejection> {
     let PlayCard { id, player, card } = request;
-    server.games.play_card(id, player, card).await;
+    server.games.play_card(id, player, card).await?;
     Ok(warp::reply())
 }
 

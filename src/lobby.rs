@@ -1,15 +1,13 @@
 use crate::{
-    cards::{ChargingRules, GameId, Player},
     error::CardsError,
+    hacks::{Mutex, UnboundedSender},
+    types::{ChargingRules, GameId, Player},
 };
 use serde::{Deserialize, Serialize};
 use std::{
-    collections::{hash_map::Entry, HashMap, HashSet, VecDeque},
-    iter::FromIterator,
+    collections::{hash_map::Entry, HashMap, VecDeque},
     sync::Arc,
 };
-use tokio::sync::{mpsc::UnboundedSender, Mutex};
-use uuid::Uuid;
 
 #[derive(Clone)]
 pub struct Lobby {

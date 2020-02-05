@@ -6,6 +6,7 @@ edition = "2018"
 
 [dependencies]
 env_logger = "*"
+num_enum = "*"
 rand = "*"
 r2d2 = "*"
 r2d2_sqlite = "*"

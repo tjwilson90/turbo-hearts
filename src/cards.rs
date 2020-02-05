@@ -1,9 +1,4 @@
-use crate::error::CardsError;
 use rand::seq::SliceRandom;
-use rusqlite::{
-    types::{FromSql, FromSqlError, ToSqlOutput, Value, ValueRef},
-    Error, ToSql,
-};
 use serde::{Deserialize, Serialize};
 use std::{
     convert::{Infallible, TryFrom},
@@ -14,7 +9,6 @@ use std::{
     ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Not, Sub, SubAssign},
     str::FromStr,
 };
-use uuid::Uuid;
 
 fn deal() -> [Cards; 4] {
     let mut deck = Cards::ALL.into_iter().collect::<Vec<_>>();
@@ -25,159 +19,6 @@ fn deal() -> [Cards; 4] {
         deck[26..39].iter().cloned().collect(),
         deck[39..52].iter().cloned().collect(),
     ]
-}
-
-#[derive(
-    Copy, Clone, Default, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize,
-)]
-pub struct GameId(Uuid);
-
-impl GameId {
-    pub fn new() -> GameId {
-        GameId(Uuid::new_v4())
-    }
-}
-
-impl ToSql for GameId {
-    fn to_sql(&self) -> Result<ToSqlOutput<'_>, Error> {
-        Ok(ToSqlOutput::Owned(Value::Text(self.0.to_string())))
-    }
-}
-
-impl FromSql for GameId {
-    fn column_result(value: ValueRef<'_>) -> Result<Self, FromSqlError> {
-        match value.as_str() {
-            Ok(value) => Ok(value.parse().unwrap()),
-            Err(e) => Err(e),
-        }
-    }
-}
-
-impl Display for GameId {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
-        fmt::Display::fmt(&self.0, f)
-    }
-}
-
-impl FromStr for GameId {
-    type Err = <Uuid as FromStr>::Err;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(GameId(s.parse()?))
-    }
-}
-
-pub type EventId = u64;
-pub type Player = String;
-
-#[derive(Copy, Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
-pub enum ChargingRules {
-    Classic,
-    Blind,
-    Bridge,
-    BlindBridge,
-    Chain,
-    BlindChain,
-}
-
-impl Display for ChargingRules {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
-        fmt::Debug::fmt(&self, f)
-    }
-}
-
-impl FromStr for ChargingRules {
-    type Err = CardsError;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
-            "Classic" => Ok(ChargingRules::Classic),
-            "Blind" => Ok(ChargingRules::Blind),
-            "Bridge" => Ok(ChargingRules::Bridge),
-            "BlindBridge" => Ok(ChargingRules::BlindBridge),
-            "Chain" => Ok(ChargingRules::Chain),
-            "BlindChain" => Ok(ChargingRules::BlindChain),
-            _ => Err(CardsError::InvalidChargingRules(s.to_string())),
-        }
-    }
-}
-
-impl ToSql for ChargingRules {
-    fn to_sql(&self) -> Result<ToSqlOutput<'_>, Error> {
-        Ok(ToSqlOutput::Owned(Value::Text(self.to_string())))
-    }
-}
-
-impl FromSql for ChargingRules {
-    fn column_result(value: ValueRef<'_>) -> Result<Self, FromSqlError> {
-        match value.as_str() {
-            Ok(value) => Ok(value.parse().unwrap()),
-            Err(e) => Err(e),
-        }
-    }
-}
-
-const SEATS: [char; 4] = ['N', 'E', 'S', 'W'];
-
-#[repr(u8)]
-#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd)]
-pub enum Seat {
-    North,
-    East,
-    South,
-    West,
-}
-
-impl Seat {
-    pub fn char(self) -> char {
-        SEATS[self as usize]
-    }
-}
-
-impl From<usize> for Seat {
-    fn from(n: usize) -> Self {
-        assert!(n < 4, "n={}", n);
-        unsafe { mem::transmute(n as u8) }
-    }
-}
-
-impl TryFrom<char> for Seat {
-    type Error = char;
-
-    fn try_from(c: char) -> Result<Self, Self::Error> {
-        SEATS
-            .iter()
-            .position(|&s| s == c)
-            .map(|n| Self::from(n))
-            .ok_or(c)
-    }
-}
-
-impl Display for Seat {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.write_char(self.char())
-    }
-}
-
-impl Debug for Seat {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        Display::fmt(self, f)
-    }
-}
-
-impl ToSql for Seat {
-    fn to_sql(&self) -> Result<ToSqlOutput<'_>, Error> {
-        Ok(ToSqlOutput::Owned(Value::Integer(*self as i64)))
-    }
-}
-
-impl FromSql for Seat {
-    fn column_result(value: ValueRef<'_>) -> Result<Self, FromSqlError> {
-        match value.as_i64() {
-            Ok(value) => Ok(Seat::from(value as usize)),
-            Err(e) => Err(e),
-        }
-    }
 }
 
 const RANKS: [char; 13] = [
@@ -478,6 +319,10 @@ impl Cards {
     pub const ALL: Cards = Cards {
         bits: Self::SPADES.bits | Self::HEARTS.bits | Self::DIAMONDS.bits | Self::CLUBS.bits,
     };
+
+    pub fn is_empty(self) -> bool {
+        self.len() == 0
+    }
 
     pub fn len(self) -> u32 {
         self.bits.count_ones()

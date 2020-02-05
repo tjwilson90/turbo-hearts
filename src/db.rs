@@ -1,10 +1,9 @@
 use crate::error::CardsError;
 use r2d2::Pool;
 use r2d2_sqlite::SqliteConnectionManager;
-use rusqlite::{Connection, ErrorCode, Transaction, TransactionBehavior};
+use rusqlite::{Connection, Transaction, TransactionBehavior};
 use std::time::Duration;
 use tokio::task;
-use warp::{reject, Rejection};
 
 #[derive(Clone)]
 pub struct Database {
@@ -35,51 +34,48 @@ impl Database {
             );
             CREATE TABLE IF NOT EXISTS event (
                 game_id TEXT NOT NULL,
-                hand_id INTEGER NOT NULL,
                 event_id INTEGER NOT NULL,
+                hand INTEGER NOT NULL,
                 seat INTEGER NOT NULL,
                 timestamp INTEGER NOT NULL,
-                event TEXT NOT NULL,
+                kind TEXT NOT NULL,
                 PRIMARY KEY (game_id, event_id)
             );
             END;",
         )
     }
 
-    pub fn run_read_only<F, T>(&self, f: F) -> Result<T, Rejection>
+    pub fn run_read_only<F, T>(&self, f: F) -> Result<T, CardsError>
     where
-        F: FnMut(Transaction) -> Result<T, rusqlite::Error>,
+        F: FnMut(Transaction) -> Result<T, CardsError>,
     {
         self.run_sql(TransactionBehavior::Deferred, f)
     }
 
-    pub fn run_with_retry<F, T>(&self, f: F) -> Result<T, Rejection>
+    pub fn run_with_retry<F, T>(&self, f: F) -> Result<T, CardsError>
     where
-        F: FnMut(Transaction) -> Result<T, rusqlite::Error>,
+        F: FnMut(Transaction) -> Result<T, CardsError>,
     {
         self.run_sql(TransactionBehavior::Immediate, f)
     }
 
-    fn run_sql<F, T>(&self, behavior: TransactionBehavior, mut f: F) -> Result<T, Rejection>
+    fn run_sql<F, T>(&self, behavior: TransactionBehavior, mut f: F) -> Result<T, CardsError>
     where
-        F: FnMut(Transaction) -> Result<T, rusqlite::Error>,
+        F: FnMut(Transaction) -> Result<T, CardsError>,
     {
         task::block_in_place(|| {
             let mut conn = self.pool.get().unwrap();
             conn.busy_timeout(Duration::from_secs(5)).unwrap();
             loop {
-                match conn.transaction_with_behavior(behavior).and_then(&mut f) {
-                    Err(rusqlite::Error::SqliteFailure(e, _))
-                        if e.code == ErrorCode::DatabaseBusy
-                            || e.code == ErrorCode::DatabaseLocked =>
-                    {
-                        continue
-                    }
-                    Ok(v) => return Ok(v),
+                let result = conn
+                    .transaction_with_behavior(behavior)
+                    .map_err(|err| CardsError::from(err))
+                    .and_then(&mut f);
+                match result {
+                    Err(e) if e.is_retriable() => continue,
                     v => return v,
                 }
             }
         })
-        .map_err(|err: rusqlite::Error| reject::custom(CardsError::from(err)))
     }
 }
