@@ -65,15 +65,6 @@ pub enum ChargingRules {
 }
 
 impl ChargingRules {
-    pub const VALUES: [ChargingRules; 6] = [
-        ChargingRules::Classic,
-        ChargingRules::Blind,
-        ChargingRules::Bridge,
-        ChargingRules::BlindBridge,
-        ChargingRules::Chain,
-        ChargingRules::BlindChain,
-    ];
-
     pub fn free(&self) -> bool {
         match self {
             ChargingRules::Classic | ChargingRules::Blind => true,
@@ -99,21 +90,6 @@ impl ChargingRules {
 impl Display for ChargingRules {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
         Debug::fmt(&self, f)
-    }
-}
-
-impl ToSql for ChargingRules {
-    fn to_sql(&self) -> Result<ToSqlOutput<'_>, rusqlite::Error> {
-        Ok(ToSqlOutput::Owned(Value::Integer(*self as i64)))
-    }
-}
-
-impl FromSql for ChargingRules {
-    fn column_result(value: ValueRef<'_>) -> Result<Self, FromSqlError> {
-        match value.as_i64() {
-            Ok(value) => Ok(ChargingRules::VALUES[value as usize]),
-            Err(e) => Err(e),
-        }
     }
 }
 
@@ -156,21 +132,6 @@ impl Seat {
 impl Display for Seat {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         Debug::fmt(&self, f)
-    }
-}
-
-impl ToSql for Seat {
-    fn to_sql(&self) -> Result<ToSqlOutput<'_>, rusqlite::Error> {
-        Ok(ToSqlOutput::Owned(Value::Integer(*self as i64)))
-    }
-}
-
-impl FromSql for Seat {
-    fn column_result(value: ValueRef<'_>) -> Result<Self, FromSqlError> {
-        match value.as_i64() {
-            Ok(value) => Ok(Seat::VALUES[value as usize]),
-            Err(e) => Err(e),
-        }
     }
 }
 
