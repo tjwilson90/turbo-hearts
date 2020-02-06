@@ -1,23 +1,22 @@
-#![feature(backtrace, drain_filter)]
+#![feature(async_closure, backtrace)]
 
 use crate::{
     cards::{Card, Cards},
     db::Database,
+    error::CardsError,
     games::Games,
     hacks::{unbounded_channel, UnboundedReceiver},
     lobby::Lobby,
     types::{ChargingRules, GameId, Player},
 };
-use rand::seq::SliceRandom;
-use rusqlite::ToSql;
 use serde::{Deserialize, Serialize};
-use std::{convert::Infallible, time::SystemTime};
+use std::convert::Infallible;
 use tokio::{
     stream::{Stream, StreamExt},
     task, time,
     time::Duration,
 };
-use warp::{filters::sse::ServerSentEvent, reject, sse, Filter, Rejection, Reply};
+use warp::{filters::sse::ServerSentEvent, sse, Filter, Rejection, Reply};
 
 mod cards;
 mod db;
@@ -45,7 +44,7 @@ impl Server {
     }
 }
 
-async fn subscribe_lobby(player: Player, server: Server) -> Result<impl Reply, Infallible> {
+async fn subscribe_lobby(server: Server, player: Player) -> Result<impl Reply, Infallible> {
     let (tx, rx) = unbounded_channel();
     server.lobby.subscribe(player, tx).await;
     Ok(sse::reply(lobby_stream(rx)))
@@ -65,13 +64,16 @@ fn lobby_stream(
 
 #[derive(Debug, Serialize, Deserialize)]
 struct NewGame {
-    player: Player,
     rules: ChargingRules,
 }
 
-async fn new_game(server: Server, request: NewGame) -> Result<impl Reply, Infallible> {
+async fn new_game(
+    server: Server,
+    player: Player,
+    request: NewGame,
+) -> Result<impl Reply, Infallible> {
     let id = GameId::new();
-    let NewGame { player, rules } = request;
+    let NewGame { rules } = request;
     server.lobby.new_game(id, player, rules).await;
     Ok(warp::reply::json(&id))
 }
@@ -79,56 +81,41 @@ async fn new_game(server: Server, request: NewGame) -> Result<impl Reply, Infall
 #[derive(Debug, Serialize, Deserialize)]
 struct JoinGame {
     id: GameId,
-    player: Player,
     rules: ChargingRules,
 }
 
-async fn join_game(server: Server, request: JoinGame) -> Result<impl Reply, Rejection> {
-    let JoinGame { id, player, rules } = request;
-    match server.lobby.join_game(id, player, rules).await {
-        Ok(players) => {
-            if players.len() == 4 {
-                let mut order = players.keys().cloned().collect::<Vec<_>>();
-                order.shuffle(&mut rand::thread_rng());
-                server.db.run_with_retry(|tx| {
-                    tx.execute::<&[&dyn ToSql]>(
-                        "INSERT INTO game (id, timestamp, north, east, south, west, rules)
-                        VALUES (?, ?, ?, ?, ?, ?)",
-                        &[
-                            &id,
-                            &timestamp(),
-                            &order[0],
-                            &order[1],
-                            &order[2],
-                            &order[3],
-                            &players.get(&order[0]).unwrap(),
-                        ],
-                    )?;
-                    Ok(())
-                })?;
-            }
-            Ok(warp::reply::json(&players))
-        }
-        Err(e) => Err(reject::custom(e)),
+async fn join_game(
+    server: Server,
+    player: Player,
+    request: JoinGame,
+) -> Result<impl Reply, Rejection> {
+    let JoinGame { id, rules } = request;
+    let players = server.lobby.join_game(id, player, rules).await?;
+    if players.len() == 4 {
+        server.games.start_game(id, &players)?;
     }
+    Ok(warp::reply::json(&players))
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 struct LeaveGame {
     id: GameId,
-    player: Player,
 }
 
-async fn leave_game(server: Server, request: LeaveGame) -> Result<impl Reply, Infallible> {
-    let LeaveGame { id, player } = request;
+async fn leave_game(
+    server: Server,
+    player: Player,
+    request: LeaveGame,
+) -> Result<impl Reply, Infallible> {
+    let LeaveGame { id } = request;
     server.lobby.leave_game(id, player).await;
     Ok(warp::reply())
 }
 
 async fn subscribe_game(
     id: GameId,
-    player: Player,
     server: Server,
+    player: Player,
 ) -> Result<impl Reply, Rejection> {
     let (tx, rx) = unbounded_channel();
     server.games.subscribe(id, player, tx).await?;
@@ -150,12 +137,15 @@ fn game_stream(
 #[derive(Debug, Serialize, Deserialize)]
 struct PassCards {
     id: GameId,
-    player: Player,
     cards: Cards,
 }
 
-async fn pass_cards(server: Server, request: PassCards) -> Result<impl Reply, Rejection> {
-    let PassCards { id, player, cards } = request;
+async fn pass_cards(
+    server: Server,
+    player: Player,
+    request: PassCards,
+) -> Result<impl Reply, Rejection> {
+    let PassCards { id, cards } = request;
     server.games.pass_cards(id, player, cards).await?;
     Ok(warp::reply())
 }
@@ -163,12 +153,15 @@ async fn pass_cards(server: Server, request: PassCards) -> Result<impl Reply, Re
 #[derive(Debug, Serialize, Deserialize)]
 struct ChargeCards {
     id: GameId,
-    player: Player,
     cards: Cards,
 }
 
-async fn charge_cards(server: Server, request: ChargeCards) -> Result<impl Reply, Rejection> {
-    let ChargeCards { id, player, cards } = request;
+async fn charge_cards(
+    server: Server,
+    player: Player,
+    request: ChargeCards,
+) -> Result<impl Reply, Rejection> {
+    let ChargeCards { id, cards } = request;
     server.games.charge_cards(id, player, cards).await?;
     Ok(warp::reply())
 }
@@ -176,12 +169,15 @@ async fn charge_cards(server: Server, request: ChargeCards) -> Result<impl Reply
 #[derive(Debug, Serialize, Deserialize)]
 struct PlayCard {
     id: GameId,
-    player: Player,
     card: Card,
 }
 
-async fn play_card(server: Server, request: PlayCard) -> Result<impl Reply, Rejection> {
-    let PlayCard { id, player, card } = request;
+async fn play_card(
+    server: Server,
+    player: Player,
+    request: PlayCard,
+) -> Result<impl Reply, Rejection> {
+    let PlayCard { id, card } = request;
     server.games.play_card(id, player, card).await?;
     Ok(warp::reply())
 }
@@ -193,43 +189,54 @@ async fn main() {
     let server = Server::new();
     task::spawn(ping_event_streams(server.clone()));
     let server = warp::any().map(move || server.clone());
+    let player = warp::cookie::optional("player").and_then(async move |player: Option<Player>| {
+        player.ok_or(warp::reject::custom(CardsError::MissingPlayerCookie))
+    });
 
-    let subscribe_lobby = warp::path!("lobby" / Player)
+    let subscribe_lobby = warp::path!("lobby" / "subscribe")
         .and(warp::get())
         .and(server.clone())
+        .and(player.clone())
         .and_then(subscribe_lobby);
     let new_game = warp::path!("lobby" / "new")
         .and(warp::post())
         .and(server.clone())
+        .and(player.clone())
         .and(warp::body::json())
         .and_then(new_game);
     let join_game = warp::path!("lobby" / "join")
         .and(warp::post())
         .and(server.clone())
+        .and(player.clone())
         .and(warp::body::json())
         .and_then(join_game);
     let leave_game = warp::path!("lobby" / "leave")
         .and(warp::post())
         .and(server.clone())
+        .and(player.clone())
         .and(warp::body::json())
         .and_then(leave_game);
-    let subscribe_game = warp::path!("game" / GameId / Player)
+    let subscribe_game = warp::path!("game" / "subscribe" / GameId)
         .and(warp::get())
         .and(server.clone())
+        .and(player.clone())
         .and_then(subscribe_game);
     let pass_cards = warp::path!("game" / "pass")
         .and(warp::post())
         .and(server.clone())
+        .and(player.clone())
         .and(warp::body::json())
         .and_then(pass_cards);
     let charge_cards = warp::path!("game" / "charge")
         .and(warp::post())
         .and(server.clone())
+        .and(player.clone())
         .and(warp::body::json())
         .and_then(charge_cards);
     let play_card = warp::path!("game" / "play")
         .and(warp::post())
         .and(server.clone())
+        .and(player.clone())
         .and(warp::body::json())
         .and_then(play_card);
     let app = subscribe_lobby
@@ -248,12 +255,6 @@ async fn ping_event_streams(server: Server) {
     let mut stream = time::interval(Duration::from_secs(15));
     while let Some(_) = stream.next().await {
         server.lobby.ping().await;
+        server.games.ping().await;
     }
-}
-
-fn timestamp() -> i64 {
-    SystemTime::now()
-        .duration_since(SystemTime::UNIX_EPOCH)
-        .unwrap()
-        .as_millis() as i64
 }

@@ -1,4 +1,3 @@
-use rand::seq::SliceRandom;
 use serde::{Deserialize, Serialize};
 use std::{
     convert::{Infallible, TryFrom},
@@ -9,17 +8,6 @@ use std::{
     ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Not, Sub, SubAssign},
     str::FromStr,
 };
-
-fn deal() -> [Cards; 4] {
-    let mut deck = Cards::ALL.into_iter().collect::<Vec<_>>();
-    deck.shuffle(&mut rand::thread_rng());
-    [
-        deck[0..13].iter().cloned().collect(),
-        deck[13..26].iter().cloned().collect(),
-        deck[26..39].iter().cloned().collect(),
-        deck[39..52].iter().cloned().collect(),
-    ]
-}
 
 const RANKS: [char; 13] = [
     '2', '3', '4', '5', '6', '7', '8', '9', 'T', 'J', 'Q', 'K', 'A',

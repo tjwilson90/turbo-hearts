@@ -19,17 +19,20 @@ struct Inner {
     games: HashMap<GameId, HashMap<Player, ChargingRules>>,
 }
 
+#[serde(tag = "type")]
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum Event {
     Ping,
-    Subscribe(Player),
+    Subscribe {
+        player: Player,
+    },
     NewGame {
         id: GameId,
         player: Player,
         rules: ChargingRules,
     },
     LobbyState {
-        viewers: Vec<Player>,
+        subscribers: Vec<Player>,
         games: HashMap<GameId, HashMap<Player, ChargingRules>>,
     },
     JoinGame {
@@ -41,7 +44,9 @@ pub enum Event {
         id: GameId,
         player: Player,
     },
-    LeaveLobby(Player),
+    LeaveLobby {
+        player: Player,
+    },
 }
 
 impl Event {
@@ -68,14 +73,16 @@ impl Lobby {
     pub async fn subscribe(&self, player: Player, tx: UnboundedSender<Event>) {
         let mut inner = self.inner.lock().await;
         if inner.subscribers.remove(&player).is_none() {
-            inner.broadcast(Event::Subscribe(player.clone()));
+            inner.broadcast(Event::Subscribe {
+                player: player.clone(),
+            });
         }
+        inner.subscribers.insert(player, tx.clone());
         tx.send(Event::LobbyState {
-            viewers: inner.subscribers.keys().cloned().collect(),
+            subscribers: inner.subscribers.keys().cloned().collect(),
             games: inner.games.clone(),
         })
         .unwrap();
-        inner.subscribers.insert(player, tx);
     }
 
     pub async fn new_game(&self, id: GameId, player: Player, rules: ChargingRules) {
@@ -133,7 +140,7 @@ impl Inner {
                 if tx.send(event.clone()).is_ok() {
                     true
                 } else {
-                    events.push_back(Event::LeaveLobby(p.clone()));
+                    events.push_back(Event::LeaveLobby { player: p.clone() });
                     false
                 }
             });

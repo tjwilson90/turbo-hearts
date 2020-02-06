@@ -10,6 +10,7 @@ use tokio::{
 
 pub struct Mutex<T>(sync::Mutex<T>);
 pub struct MutexGuard<'a, T>(sync::MutexGuard<'a, T>);
+#[derive(Clone)]
 pub struct UnboundedSender<T>(mpsc::UnboundedSender<T>);
 pub struct UnboundedReceiver<T>(mpsc::UnboundedReceiver<T>);
 

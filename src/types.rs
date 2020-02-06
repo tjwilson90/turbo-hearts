@@ -1,10 +1,13 @@
-use num_enum::{IntoPrimitive, TryFromPrimitive};
 use rusqlite::{
     types::{FromSql, FromSqlError, ToSqlOutput, Value, ValueRef},
     ToSql,
 };
 use serde::{Deserialize, Serialize};
-use std::{convert::TryFrom, fmt, fmt::Debug, str::FromStr};
+use std::{
+    fmt,
+    fmt::{Debug, Display},
+    str::FromStr,
+};
 use uuid::Uuid;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash, Serialize, Deserialize)]
@@ -16,9 +19,9 @@ impl GameId {
     }
 }
 
-impl fmt::Display for GameId {
+impl Display for GameId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
-        fmt::Display::fmt(&self.0, f)
+        Display::fmt(&self.0, f)
     }
 }
 
@@ -50,9 +53,7 @@ pub type EventId = u32;
 pub type Player = String;
 
 #[repr(u8)]
-#[derive(
-    Copy, Clone, Debug, Eq, PartialEq, Serialize, Deserialize, IntoPrimitive, TryFromPrimitive,
-)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub enum ChargingRules {
     Classic,
     Blind,
@@ -62,31 +63,61 @@ pub enum ChargingRules {
     BlindChain,
 }
 
-impl fmt::Display for ChargingRules {
+impl ChargingRules {
+    pub const VALUES: [ChargingRules; 6] = [
+        ChargingRules::Classic,
+        ChargingRules::Blind,
+        ChargingRules::Bridge,
+        ChargingRules::BlindBridge,
+        ChargingRules::Chain,
+        ChargingRules::BlindChain,
+    ];
+
+    pub fn free(&self) -> bool {
+        match self {
+            ChargingRules::Classic | ChargingRules::Blind => true,
+            _ => false,
+        }
+    }
+
+    pub fn chain(&self) -> bool {
+        match self {
+            ChargingRules::Chain | ChargingRules::BlindChain => true,
+            _ => false,
+        }
+    }
+
+    pub fn blind(&self) -> bool {
+        match self {
+            ChargingRules::Classic | ChargingRules::Bridge | ChargingRules::Chain => false,
+            _ => true,
+        }
+    }
+}
+
+impl Display for ChargingRules {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
-        fmt::Debug::fmt(&self, f)
+        Debug::fmt(&self, f)
     }
 }
 
 impl ToSql for ChargingRules {
     fn to_sql(&self) -> Result<ToSqlOutput<'_>, rusqlite::Error> {
-        Ok(ToSqlOutput::Owned(Value::Integer(u8::from(*self) as i64)))
+        Ok(ToSqlOutput::Owned(Value::Integer(*self as i64)))
     }
 }
 
 impl FromSql for ChargingRules {
     fn column_result(value: ValueRef<'_>) -> Result<Self, FromSqlError> {
         match value.as_i64() {
-            Ok(value) => Ok(Self::try_from(value as u8).unwrap()),
+            Ok(value) => Ok(ChargingRules::VALUES[value as usize]),
             Err(e) => Err(e),
         }
     }
 }
 
 #[repr(u8)]
-#[derive(
-    Copy, Clone, Debug, Eq, PartialEq, Serialize, Deserialize, IntoPrimitive, TryFromPrimitive,
-)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub enum Seat {
     North,
     East,
@@ -98,19 +129,37 @@ impl Seat {
     pub const VALUES: [Seat; 4] = [Seat::North, Seat::East, Seat::South, Seat::West];
 
     pub fn idx(&self) -> usize {
-        u8::from(*self) as usize
+        *self as usize
+    }
+
+    pub fn next(&self) -> Self {
+        match self {
+            Seat::North => Seat::East,
+            Seat::East => Seat::South,
+            Seat::South => Seat::West,
+            Seat::West => Seat::North,
+        }
+    }
+
+    pub fn pass_receiver(&self, hand: Hand) -> Self {
+        match hand {
+            Hand::Left => self.next(),
+            Hand::Right => self.next().next().next(),
+            Hand::Across => self.next().next(),
+            Hand::Keeper => *self,
+        }
     }
 }
 
-impl fmt::Display for Seat {
+impl Display for Seat {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        fmt::Debug::fmt(&self, f)
+        Debug::fmt(&self, f)
     }
 }
 
 impl ToSql for Seat {
     fn to_sql(&self) -> Result<ToSqlOutput<'_>, rusqlite::Error> {
-        Ok(ToSqlOutput::Owned(Value::Integer(u8::from(*self) as i64)))
+        Ok(ToSqlOutput::Owned(Value::Integer(*self as i64)))
     }
 }
 
@@ -124,38 +173,38 @@ impl FromSql for Seat {
 }
 
 #[repr(u8)]
-#[derive(
-    Copy, Clone, Debug, Eq, PartialEq, Serialize, Deserialize, IntoPrimitive, TryFromPrimitive,
-)]
-pub enum PassDirection {
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub enum Hand {
     Left,
     Right,
     Across,
     Keeper,
 }
 
-impl PassDirection {
+impl Hand {
+    pub const VALUES: [Hand; 4] = [Hand::Left, Hand::Right, Hand::Across, Hand::Keeper];
+
     pub fn idx(&self) -> usize {
-        u8::from(*self) as usize
+        *self as usize
     }
 }
 
-impl fmt::Display for PassDirection {
+impl Display for Hand {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        fmt::Debug::fmt(&self, f)
+        Debug::fmt(&self, f)
     }
 }
 
-impl ToSql for PassDirection {
+impl ToSql for Hand {
     fn to_sql(&self) -> Result<ToSqlOutput<'_>, rusqlite::Error> {
-        Ok(ToSqlOutput::Owned(Value::Integer(u8::from(*self) as i64)))
+        Ok(ToSqlOutput::Owned(Value::Integer(*self as i64)))
     }
 }
 
-impl FromSql for PassDirection {
+impl FromSql for Hand {
     fn column_result(value: ValueRef<'_>) -> Result<Self, FromSqlError> {
         match value.as_i64() {
-            Ok(value) => Ok(Self::try_from(value as u8).unwrap()),
+            Ok(value) => Ok(Hand::VALUES[value as usize]),
             Err(e) => Err(e),
         }
     }

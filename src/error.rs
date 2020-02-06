@@ -1,7 +1,9 @@
 use crate::{
-    games::HandState,
+    cards::Cards,
+    games::HandStatus,
     types::{GameId, Player},
 };
+use log::error;
 use rusqlite::ErrorCode;
 use serde::Serialize;
 use std::{backtrace::Backtrace, convert::Infallible};
@@ -10,14 +12,34 @@ use warp::{http::StatusCode, reject::Reject, Rejection};
 
 #[derive(Debug, Error)]
 pub enum CardsError {
+    #[error("{0} has already been charged")]
+    AlreadyCharged(Cards),
+    #[error("{0} has already been passed")]
+    AlreadyPassed(Cards),
     #[error("game {0} is already complete")]
     GameComplete(GameId),
-    #[error("invalid charging rules: {0}")]
-    InvalidChargingRules(String),
+    #[error("hearts cannot be lead if hearts are not broken")]
+    HeartsNotBroken,
     #[error("cannot perform action, currently {0:?}")]
-    IllegalAction(HandState),
+    IllegalAction(HandStatus),
+    #[error("{0} is not a legal pass, passes must have 3 cards")]
+    IllegalPassSize(Cards),
     #[error("{0} is not a member of the game")]
     IllegalPlayer(Player),
+    #[error("charged cards cannot be played on the first trick of their suit")]
+    NoChargeOnFirstTrickOfSuit,
+    #[error("points cannot be played on the first trick")]
+    NoPointsOnFirstTrick,
+    #[error("your hand does not contain {0}")]
+    NotYourCards(Cards),
+    #[error("player {0} makes the next charge or play")]
+    NotYourTurn(Player),
+    #[error("api endpoints require a \"player\" cookie identifying the caller")]
+    MissingPlayerCookie,
+    #[error("the first lead must be the two of clubs")]
+    MustStartWithTwoOfClubs,
+    #[error("suit must be followed")]
+    MustFollowSuit,
     #[error("unexpected serde error")]
     Serde {
         #[from]
@@ -30,6 +52,8 @@ pub enum CardsError {
         source: rusqlite::Error,
         backtrace: Backtrace,
     },
+    #[error("the cards {0} cannot be charged")]
+    Unchargeable(Cards),
     #[error("unknown game: {0}")]
     UnknownGame(GameId),
 }
@@ -46,13 +70,11 @@ impl CardsError {
 
     fn status_code(&self) -> StatusCode {
         match self {
-            CardsError::GameComplete(_) => StatusCode::BAD_REQUEST,
-            CardsError::IllegalAction(_) => StatusCode::BAD_REQUEST,
-            CardsError::IllegalPlayer(_) => StatusCode::BAD_REQUEST,
-            CardsError::InvalidChargingRules(_) => StatusCode::BAD_REQUEST,
-            CardsError::Serde { .. } => StatusCode::INTERNAL_SERVER_ERROR,
-            CardsError::Sqlite { .. } => StatusCode::INTERNAL_SERVER_ERROR,
+            CardsError::Serde { .. } | CardsError::Sqlite { .. } => {
+                StatusCode::INTERNAL_SERVER_ERROR
+            }
             CardsError::UnknownGame { .. } => StatusCode::NOT_FOUND,
+            _ => StatusCode::BAD_REQUEST,
         }
     }
 }
@@ -83,7 +105,7 @@ pub async fn handle_rejection(err: Rejection) -> Result<impl warp::Reply, Infall
         message = error.to_string();
     } else {
         code = StatusCode::INTERNAL_SERVER_ERROR;
-        message = "unknown error".to_string();
+        message = format!("{:?}", err);
     }
 
     let json = warp::reply::json(&ErrorMessage {

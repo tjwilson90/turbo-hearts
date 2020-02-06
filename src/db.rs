@@ -1,5 +1,5 @@
 use crate::error::CardsError;
-use r2d2::Pool;
+use r2d2::{CustomizeConnection, Pool};
 use r2d2_sqlite::SqliteConnectionManager;
 use rusqlite::{Connection, Transaction, TransactionBehavior};
 use std::time::Duration;
@@ -12,8 +12,11 @@ pub struct Database {
 
 impl Database {
     pub fn new() -> Self {
-        let manager = SqliteConnectionManager::file("cards.db");
-        let pool = Pool::new(manager).unwrap();
+        let manager = SqliteConnectionManager::file("turbo-hearts.db");
+        let pool = Pool::builder()
+            .connection_customizer(Box::new(Customizer))
+            .build(manager)
+            .unwrap();
         Database::seed(&pool.get().unwrap()).unwrap();
         Self { pool }
     }
@@ -35,7 +38,6 @@ impl Database {
             CREATE TABLE IF NOT EXISTS event (
                 game_id TEXT NOT NULL,
                 event_id INTEGER NOT NULL,
-                hand INTEGER NOT NULL,
                 seat INTEGER NOT NULL,
                 timestamp INTEGER NOT NULL,
                 kind TEXT NOT NULL,
@@ -65,17 +67,29 @@ impl Database {
     {
         task::block_in_place(|| {
             let mut conn = self.pool.get().unwrap();
-            conn.busy_timeout(Duration::from_secs(5)).unwrap();
-            loop {
+            for i in 0.. {
                 let result = conn
                     .transaction_with_behavior(behavior)
                     .map_err(|err| CardsError::from(err))
                     .and_then(&mut f);
                 match result {
-                    Err(e) if e.is_retriable() => continue,
+                    Err(e) if i < 5 && e.is_retriable() => continue,
                     v => return v,
                 }
             }
+            unreachable!()
         })
     }
+}
+
+#[derive(Debug)]
+struct Customizer;
+
+impl CustomizeConnection<Connection, rusqlite::Error> for Customizer {
+    fn on_acquire(&self, conn: &mut Connection) -> Result<(), rusqlite::Error> {
+        conn.busy_timeout(Duration::from_secs(5))?;
+        Ok(())
+    }
+
+    fn on_release(&self, _: Connection) {}
 }
