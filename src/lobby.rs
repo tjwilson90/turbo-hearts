@@ -19,7 +19,7 @@ struct Inner {
     games: HashMap<GameId, HashMap<Player, ChargingRules>>,
 }
 
-#[serde(tag = "type")]
+#[serde(tag = "type", rename_all = "snake_case")]
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum Event {
     Ping,

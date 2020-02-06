@@ -1,6 +1,6 @@
 use crate::{
     cards::Cards,
-    games::HandStatus,
+    games::GameState,
     types::{GameId, Player},
 };
 use log::error;
@@ -21,7 +21,7 @@ pub enum CardsError {
     #[error("hearts cannot be lead if hearts are not broken")]
     HeartsNotBroken,
     #[error("cannot perform action, currently {0:?}")]
-    IllegalAction(HandStatus),
+    IllegalAction(GameState),
     #[error("{0} is not a legal pass, passes must have 3 cards")]
     IllegalPassSize(Cards),
     #[error("{0} is not a member of the game")]

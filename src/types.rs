@@ -53,6 +53,7 @@ pub type EventId = u32;
 pub type Player = String;
 
 #[repr(u8)]
+#[serde(rename_all = "snake_case")]
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub enum ChargingRules {
     Classic,
@@ -117,6 +118,7 @@ impl FromSql for ChargingRules {
 }
 
 #[repr(u8)]
+#[serde(rename_all = "snake_case")]
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub enum Seat {
     North,
@@ -141,12 +143,12 @@ impl Seat {
         }
     }
 
-    pub fn pass_receiver(&self, hand: Hand) -> Self {
+    pub fn pass_receiver(&self, hand: PassDirection) -> Self {
         match hand {
-            Hand::Left => self.next(),
-            Hand::Right => self.next().next().next(),
-            Hand::Across => self.next().next(),
-            Hand::Keeper => *self,
+            PassDirection::Left => self.next(),
+            PassDirection::Right => self.next().next().next(),
+            PassDirection::Across => self.next().next(),
+            PassDirection::Keeper => *self,
         }
     }
 }
@@ -174,38 +176,20 @@ impl FromSql for Seat {
 
 #[repr(u8)]
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
-pub enum Hand {
+pub enum PassDirection {
     Left,
     Right,
     Across,
     Keeper,
 }
 
-impl Hand {
-    pub const VALUES: [Hand; 4] = [Hand::Left, Hand::Right, Hand::Across, Hand::Keeper];
-
-    pub fn idx(&self) -> usize {
-        *self as usize
-    }
-}
-
-impl Display for Hand {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        Debug::fmt(&self, f)
-    }
-}
-
-impl ToSql for Hand {
-    fn to_sql(&self) -> Result<ToSqlOutput<'_>, rusqlite::Error> {
-        Ok(ToSqlOutput::Owned(Value::Integer(*self as i64)))
-    }
-}
-
-impl FromSql for Hand {
-    fn column_result(value: ValueRef<'_>) -> Result<Self, FromSqlError> {
-        match value.as_i64() {
-            Ok(value) => Ok(Hand::VALUES[value as usize]),
-            Err(e) => Err(e),
+impl PassDirection {
+    pub fn next(self) -> Option<PassDirection> {
+        match self {
+            PassDirection::Left => Some(PassDirection::Right),
+            PassDirection::Right => Some(PassDirection::Across),
+            PassDirection::Across => Some(PassDirection::Keeper),
+            PassDirection::Keeper => None,
         }
     }
 }

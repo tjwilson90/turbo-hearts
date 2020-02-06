@@ -25,22 +25,11 @@ impl Database {
         conn.execute_batch(
             "PRAGMA journal_mode = WAL;
             BEGIN;
-            CREATE TABLE IF NOT EXISTS game (
-                id TEXT NOT NULL,
-                timestamp INTEGER NOT NULL,
-                north TEXT NOT NULL,
-                east TEXT NOT NULL,
-                south TEXT NOT NULL,
-                west TEXT NOT NULL,
-                rules TEXT NOT NULL,
-                PRIMARY KEY (id)
-            );
             CREATE TABLE IF NOT EXISTS event (
                 game_id TEXT NOT NULL,
                 event_id INTEGER NOT NULL,
-                seat INTEGER NOT NULL,
                 timestamp INTEGER NOT NULL,
-                kind TEXT NOT NULL,
+                event TEXT NOT NULL,
                 PRIMARY KEY (game_id, event_id)
             );
             END;",

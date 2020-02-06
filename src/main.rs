@@ -9,7 +9,7 @@ use crate::{
     lobby::Lobby,
     types::{ChargingRules, GameId, Player},
 };
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use std::convert::Infallible;
 use tokio::{
     stream::{Stream, StreamExt},
@@ -62,7 +62,7 @@ fn lobby_stream(
     })
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Deserialize)]
 struct NewGame {
     rules: ChargingRules,
 }
@@ -78,7 +78,7 @@ async fn new_game(
     Ok(warp::reply::json(&id))
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Deserialize)]
 struct JoinGame {
     id: GameId,
     rules: ChargingRules,
@@ -97,7 +97,7 @@ async fn join_game(
     Ok(warp::reply::json(&players))
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Deserialize)]
 struct LeaveGame {
     id: GameId,
 }
@@ -134,7 +134,7 @@ fn game_stream(
     })
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Deserialize)]
 struct PassCards {
     id: GameId,
     cards: Cards,
@@ -150,7 +150,7 @@ async fn pass_cards(
     Ok(warp::reply())
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Deserialize)]
 struct ChargeCards {
     id: GameId,
     cards: Cards,
@@ -166,7 +166,7 @@ async fn charge_cards(
     Ok(warp::reply())
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Deserialize)]
 struct PlayCard {
     id: GameId,
     card: Card,

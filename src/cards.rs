@@ -1,11 +1,16 @@
-use serde::{Deserialize, Serialize};
+use serde::{
+    de::{SeqAccess, Visitor},
+    export::{fmt::Error, Formatter},
+    ser::SerializeSeq,
+    Deserialize, Deserializer, Serialize, Serializer,
+};
 use std::{
     convert::{Infallible, TryFrom},
     fmt,
     fmt::{Debug, Display, Write},
     iter::FromIterator,
     mem,
-    ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Not, Sub, SubAssign},
+    ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, Sub, SubAssign},
     str::FromStr,
 };
 
@@ -16,7 +21,7 @@ const RANKS: [char; 13] = [
 #[repr(u8)]
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd)]
 pub enum Rank {
-    Two = 0,
+    Two,
     Three,
     Four,
     Five,
@@ -73,7 +78,7 @@ const SUITS: [char; 4] = ['C', 'D', 'H', 'S'];
 #[repr(u8)]
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd)]
 pub enum Suit {
-    Clubs = 0,
+    Clubs,
     Diamonds,
     Hearts,
     Spades,
@@ -197,10 +202,6 @@ impl Card {
     pub fn suit(self) -> Suit {
         Suit::from(self as u8 / 16)
     }
-
-    pub fn parse(s: &str) -> Self {
-        s.parse().unwrap()
-    }
 }
 
 impl From<u8> for Card {
@@ -254,11 +255,51 @@ impl BitOr<Card> for Card {
     }
 }
 
-#[derive(Copy, Clone, Eq, PartialEq, Hash, Serialize, Deserialize)]
-#[serde(from = "String")]
-#[serde(into = "String")]
+#[derive(Copy, Clone, Eq, PartialEq, Hash)]
 pub struct Cards {
     pub bits: u64,
+}
+
+impl Serialize for Cards {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let mut seq = serializer.serialize_seq(Some(self.len()))?;
+        for card in self {
+            seq.serialize_element(&card)?;
+        }
+        seq.end()
+    }
+}
+
+impl<'de> Deserialize<'de> for Cards {
+    fn deserialize<D>(deserializer: D) -> Result<Self, <D as Deserializer<'de>>::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.deserialize_seq(CardsVisitor(Cards::NONE))
+    }
+}
+
+struct CardsVisitor(Cards);
+
+impl<'de> Visitor<'de> for CardsVisitor {
+    type Value = Cards;
+
+    fn expecting(&self, formatter: &mut Formatter<'_>) -> Result<(), Error> {
+        write!(formatter, "a sequence of cards")
+    }
+
+    fn visit_seq<A>(mut self, mut seq: A) -> Result<Self::Value, A::Error>
+    where
+        A: SeqAccess<'de>,
+    {
+        while let Some(card) = seq.next_element::<Card>()? {
+            self.0 |= card;
+        }
+        Ok(self.0)
+    }
 }
 
 impl Cards {
@@ -312,16 +353,12 @@ impl Cards {
         self.len() == 0
     }
 
-    pub fn len(self) -> u32 {
-        self.bits.count_ones()
+    pub fn len(self) -> usize {
+        self.bits.count_ones() as usize
     }
 
     pub fn max(self) -> Card {
         Card::from(63 - self.bits.leading_zeros() as u8)
-    }
-
-    pub fn min(self) -> Card {
-        Card::from(self.bits.trailing_zeros() as u8)
     }
 
     pub fn contains(self, other: Card) -> bool {
@@ -335,21 +372,9 @@ impl Cards {
     pub fn contains_all(self, other: Cards) -> bool {
         self == self | other
     }
-
-    pub fn suit(self) -> Self {
-        if self == Self::NONE {
-            Self::NONE
-        } else {
-            self.max().suit().cards()
-        }
-    }
-
-    pub fn parse(s: &str) -> Self {
-        s.parse().unwrap()
-    }
 }
 
-impl fmt::Display for Cards {
+impl Display for Cards {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let mut iter = self.into_iter();
         let card = match iter.next() {
@@ -392,18 +417,6 @@ impl FromStr for Cards {
             }
         }
         Ok(cards)
-    }
-}
-
-impl From<String> for Cards {
-    fn from(s: String) -> Self {
-        Cards::from_str(&s).unwrap()
-    }
-}
-
-impl From<Cards> for String {
-    fn from(c: Cards) -> Self {
-        c.to_string()
     }
 }
 
@@ -472,46 +485,6 @@ impl BitAndAssign<Cards> for Cards {
 impl BitAndAssign<Card> for Cards {
     fn bitand_assign(&mut self, rhs: Card) {
         *self &= Self::from(rhs)
-    }
-}
-
-impl BitXor<Cards> for Cards {
-    type Output = Self;
-
-    fn bitxor(self, rhs: Cards) -> Self::Output {
-        Cards {
-            bits: self.bits ^ rhs.bits,
-        }
-    }
-}
-
-impl BitXor<Card> for Cards {
-    type Output = Self;
-
-    fn bitxor(self, rhs: Card) -> Self::Output {
-        self ^ Self::from(rhs)
-    }
-}
-
-impl BitXorAssign<Cards> for Cards {
-    fn bitxor_assign(&mut self, rhs: Cards) {
-        self.bits ^= rhs.bits;
-    }
-}
-
-impl BitXorAssign<Card> for Cards {
-    fn bitxor_assign(&mut self, rhs: Card) {
-        *self ^= Self::from(rhs)
-    }
-}
-
-impl Not for Cards {
-    type Output = Self;
-
-    fn not(self) -> Self::Output {
-        Cards {
-            bits: Self::ALL.bits - self.bits,
-        }
     }
 }
 
@@ -593,18 +566,6 @@ impl Iterator for CardsIter {
     }
 }
 
-impl DoubleEndedIterator for CardsIter {
-    fn next_back(&mut self) -> Option<Self::Item> {
-        if self.0 == Cards::NONE {
-            None
-        } else {
-            let card = self.0.min();
-            self.0 -= card;
-            Some(card)
-        }
-    }
-}
-
 impl ExactSizeIterator for CardsIter {}
 
 impl FromIterator<Card> for Cards {
@@ -625,14 +586,6 @@ mod tests {
         assert_eq!(format!("{}", Card::ThreeDiamonds), "3D");
         assert_eq!(format!("{}", Card::JackClubs), "JC");
         assert_eq!(format!("{}", Card::AceHearts), "AH");
-    }
-
-    #[test]
-    fn test_card_parse() {
-        assert_eq!(Card::parse("TH"), Card::TenHearts);
-        assert_eq!(Card::parse("3D"), Card::ThreeDiamonds);
-        assert_eq!(Card::parse("4C"), Card::FourClubs);
-        assert_eq!(Card::parse("AS"), Card::AceSpades);
     }
 
     #[test]
@@ -660,26 +613,13 @@ mod tests {
 
     #[test]
     fn test_cards_max() {
-        assert_eq!(Cards::parse("98765432C").max(), Card::NineClubs);
-        assert_eq!(Cards::parse("98765D 432H").max(), Card::FourHearts);
-        assert_eq!(Cards::parse("A5S").max(), Card::AceSpades);
-        assert_eq!(Cards::parse("5H").max(), Card::FiveHearts);
-    }
-
-    #[test]
-    fn test_cards_min() {
-        assert_eq!(Cards::parse("98765432C").min(), Card::TwoClubs);
-        assert_eq!(Cards::parse("98765D 432H").min(), Card::FiveDiamonds);
-        assert_eq!(Cards::parse("A5S").min(), Card::FiveSpades);
-        assert_eq!(Cards::parse("5H").min(), Card::FiveHearts);
-    }
-
-    #[test]
-    fn test_cards_parse() {
+        assert_eq!((Card::TwoClubs | Card::NineClubs).max(), Card::NineClubs);
         assert_eq!(
-            Cards::parse("QS AH JD AKQJT98765432C"),
-            Card::QueenSpades | Card::AceHearts | Card::JackDiamonds | Cards::CLUBS
+            (Card::FourHearts | Card::SevenDiamonds).max(),
+            Card::FourHearts
         );
+        assert_eq!((Card::AceSpades | Card::FiveSpades).max(), Card::AceSpades);
+        assert_eq!(Cards::from(Card::FiveHearts).max(), Card::FiveHearts);
     }
 
     #[test]

@@ -20,31 +20,31 @@ lobby event stream.
   
 #### Subscribe
 
-Whenever a client subscribes to the lobby, a `Subscribe` message is sent to every other subscriber
+Whenever a client subscribes to the lobby, a `subscribe` message is sent to every other subscriber
 in the lobby.
 
 Response:
 ```json
 {
-  "type": "Subscribe",
+  "type": "subscribe",
   "player": "twilson"
 }
 ```
 
 #### LobbyState
 
-Whenever a client subscribes to the lobby, a `LobbyState` message is sent to that subscriber
+Whenever a client subscribes to the lobby, a `lobby_state` message is sent to that subscriber
 containing the list of all active subscribers, as well as all partial games that need additional
 players.
 
 Response:
 ```json
 {
-  "type": "LobbyState",
+  "type": "lobby_state",
   "subscribers": ["tslatcher","twilson"],
   "games": {
     "8c9e2ff7-dcf3-49be-86f0-315f469840bc": {
-      "carrino": "Blind"
+      "carrino": "blind"
     }
   }
 }
@@ -52,44 +52,44 @@ Response:
 
 #### NewGame
 
-Whenever a new game is created, a `NewGame` message is sent to all active subscribers containg the
+Whenever a new game is created, a `new_game` message is sent to all active subscribers containg the
 id of the game, the name of the player who created the game, and the charging rules they proposed.
 
 Response:
 ```json
 {
-  "type": "NewGame",
+  "type": "new_game",
   "id": "8c9e2ff7-dcf3-49be-86f0-315f469840bc",
   "player": "carrino",
-  "rules": "Blind"
+  "rules": "blind"
 }
 ```
 
 #### JoinGame
 
-Whenever a player joins an existing game, a `JoinGame` message is sent to all active subscribers
+Whenever a player joins an existing game, a `join_game` message is sent to all active subscribers
 containing the id of the game, the name of the player who joined the game, and the charging rules
 they proposed.
 
 Response:
 ```json
 {
-  "type": "JoinGame",
+  "type": "join_game",
   "id": "8c9e2ff7-dcf3-49be-86f0-315f469840bc",
   "player": "dcervelli",
-  "rules": "Chain"
+  "rules": "chain"
 }
 ```
 
 #### LeaveGame
 
-Whenever a player leaves an existing game, a `LeaveGame` message is sent to all active subscribers
+Whenever a player leaves an existing game, a `leave_game` message is sent to all active subscribers
 containing the id of the game and the name of the player who left.
 
 Response:
 ```json
 {
-  "type": "LeaveGame",
+  "type": "leave_game",
   "id": "8c9e2ff7-dcf3-49be-86f0-315f469840bc",
   "player": "carrino"
 }
@@ -97,13 +97,13 @@ Response:
 
 #### LeaveLobby
 
-Whenever a player disconnects from the lobby every stream, a `LeaveLobby` message is sent to all
+Whenever a player disconnects from the lobby every stream, a `leave_lobby` message is sent to all
 other active subscribers.
 
 Response:
 ```json
 {
-  "type": "LeaveLobby",
+  "type": "leave_lobby",
   "player": "carrino"
 }
 ```
@@ -116,7 +116,7 @@ will be selected randomly from the proposed rules of all players once the game h
 Request:
 ```json
 {
-  "rules": "Blind"
+  "rules": "blind"
 }
 ```
 
@@ -135,15 +135,15 @@ Request:
 ```json
 {
   "id": "8c9e2ff7-dcf3-49be-86f0-315f469840bc",
-  "rules": "Chain"
+  "rules": "chain"
 }
 ```
 
 Response:
 ```json
 {
-  "carrino": "Blind",
-  "dcervelli": "Chain"
+  "carrino": "blind",
+  "dcervelli": "chain"
 }
 ```
 
@@ -167,28 +167,139 @@ Returns an html page for a game displaying the live refreshing game state.
 ### `GET /game/subscribe/<id>`
 
 Returns a `text/event-stream` of events in the game. The event stream will immediately return all
-events that have occurred so far when it is connected. The event stream will be closed once the game
-is complete.
-
-All events have the form
-```json
-{
-  "seat": "West",
-  "timestamp": 1581006483853,
-  "kind": { ... }
-}
-```
-where the seat identifies  form
+events that have occurred so far when it is connected. The event stream will be closed shortly
+after the game is complete. Players not in the game can subscribe to the game as well to get an
+unredacted stream of all events.
 
 The following events can be returned in the game event stream.
 
-#### ReceiveHand
+#### Sit
 
-When a new hand starts, 
+When a game starts, the first event sent is a `sit` event indicating where each player is sitting
+and what the charging rules are. The charging rules will be the rules proposed by the player in the
+`north` seat.
+
+```json
+{
+  "type": "sit",
+  "north": "carrino",
+  "east": "tslatcher",
+  "south": "twilson",
+  "west": "dcervelli",
+  "rules": "blind"
+}
+```
+
+#### Deal
+
+When a new hand starts, a `deal` event is sent to every subscriber indicating which cards were
+dealt to which players. Players in the game will receive a redacted event containing only their
+cards.
 
 Response:
 ```json
 {
-  "hand": ["AS", "JS", "3S", "2S", "4H", "QC", "TC", "5C", "KD", "QD", "JD", "9D", "7D"]
+  "type": "deal",
+  "north": ["AS", "JS", "3S", "2S", "4H", "QC", "TC", "5C", "KD", "QD", "JD", "9D", "7D"],
+  "east": ["QS", "TS", "6S", "5S", "4S", "AH", "JH", "TH", "9H", "8H", "2C", "AD", "3D"],
+  "south": ["7S", "KH", "QH", "6H", "5H", "AC", "9C", "7C", "6C", "3C", "TD", "4D", "2D"],
+  "west": ["KS", "9S", "8S", "7H", "3H", "2H", "KC", "JC", "8C", "4C", "8D", "6D", "5D"]
+}
+```
+
+#### Pass
+
+When a player makes a pass, a `pass` event is sent to all subscribers. Players in the game but not
+involved in the pass will receive a redacted event without the actual cards passed.
+
+Response:
+```json
+{
+  "type": "pass",
+  "from": "south",
+  "to": "west",
+  "cards": ["QH", "AC", "TD"]
+}
+```
+
+#### Charge
+
+When a charge is made (including an empty charge), all players will receive a `charge` event
+indicating who made the charge and what cards they charged. If the charging rules use blind
+charges, players in the game other than the charger will receive a `blind_charge` event instead.
+
+Response:
+```json
+{
+  "type": "charge",
+  "seat": "east",
+  "cards": ["QS", "AH"]
+}
+```
+
+#### BlindCharge
+
+When a blind variant of the charging rules has been chosen and a charge is made (including an empty
+charge), other players in the game will receive a `blind_charge` event indicating who made the
+charge and how many cards they charged.
+
+Response:
+```json
+{
+  "type": "blind_charge",
+  "seat": "north",
+  "count": 1
+}
+```
+
+#### Play
+
+When a play is made, all players will receive a `play` event indicating who made the play and what
+card they played.
+
+Response:
+```json
+{
+  "type": "play",
+  "seat": "west",
+  "card": "8D"
+}
+```
+
+### `POST /game/pass`
+
+Pass cards to another player.
+
+Request:
+```json
+{
+  "id": "8c9e2ff7-dcf3-49be-86f0-315f469840bc",
+  "cards": ["QH", "AC", "TD"]
+}
+```
+
+### `POST /game/charge`
+
+Charge some cards. With chain style charging rules, all players must make a final empty charge to
+complete the charging phase of a hand. Otherwise, all players other than the last to make a
+non-empty charge must make a final empty charge to complete the charging phase.
+
+Request:
+```json
+{
+  "id": "8c9e2ff7-dcf3-49be-86f0-315f469840bc",
+  "cards": ["QS", "AH"]
+}
+```
+
+### `POST /game/play`
+
+Play a card.
+
+Request:
+```json
+{
+  "id": "8c9e2ff7-dcf3-49be-86f0-315f469840bc",
+  "card": "8D"
 }
 ```
