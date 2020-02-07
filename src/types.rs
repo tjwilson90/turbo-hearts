@@ -154,3 +154,7 @@ impl PassDirection {
         }
     }
 }
+
+pub trait Event {
+    fn is_ping(&self) -> bool;
+}

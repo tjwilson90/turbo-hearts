@@ -2,14 +2,13 @@
 
 use crate::{
     cards::{Card, Cards},
-    db::Database,
     error::CardsError,
-    games::Games,
-    hacks::{unbounded_channel, UnboundedReceiver},
-    lobby::Lobby,
-    types::{ChargingRules, GameId, Player},
+    hacks::UnboundedReceiver,
+    server::Server,
+    types::{ChargingRules, Event, GameId, Player},
 };
-use serde::Deserialize;
+use r2d2_sqlite::SqliteConnectionManager;
+use serde::{Deserialize, Serialize};
 use std::convert::Infallible;
 use tokio::{
     stream::{Stream, StreamExt},
@@ -21,45 +20,22 @@ use warp::{filters::sse::ServerSentEvent, sse, Filter, Rejection, Reply};
 mod cards;
 mod db;
 mod error;
-mod games;
+mod game;
 mod hacks;
 mod lobby;
+mod server;
 mod types;
 
-#[derive(Clone)]
-struct Server {
-    db: Database,
-    lobby: Lobby,
-    games: Games,
-}
-
-impl Server {
-    fn new() -> Self {
-        let db = Database::new();
-        Self {
-            db: db.clone(),
-            lobby: Lobby::new(),
-            games: Games::new(db),
-        }
+async fn ping_event_streams(server: Server) {
+    let mut stream = time::interval(Duration::from_secs(15));
+    while let Some(_) = stream.next().await {
+        server.ping_event_streams().await;
     }
 }
 
 async fn subscribe_lobby(server: Server, player: Player) -> Result<impl Reply, Infallible> {
-    let (tx, rx) = unbounded_channel();
-    server.lobby.subscribe(player, tx).await;
-    Ok(sse::reply(lobby_stream(rx)))
-}
-
-fn lobby_stream(
-    rx: UnboundedReceiver<lobby::Event>,
-) -> impl Stream<Item = Result<impl ServerSentEvent, warp::Error>> {
-    rx.map(|event| {
-        Ok(if event.is_ping() {
-            sse::comment(String::new()).into_a()
-        } else {
-            sse::json(event).into_b()
-        })
-    })
+    let rx = server.subscribe_lobby(player).await;
+    Ok(sse::reply(as_stream(rx)))
 }
 
 #[derive(Debug, Deserialize)]
@@ -72,9 +48,8 @@ async fn new_game(
     player: Player,
     request: NewGame,
 ) -> Result<impl Reply, Infallible> {
-    let id = GameId::new();
     let NewGame { rules } = request;
-    server.lobby.new_game(id, player, rules).await;
+    let id = server.new_game(player, rules).await;
     Ok(warp::reply::json(&id))
 }
 
@@ -90,10 +65,7 @@ async fn join_game(
     request: JoinGame,
 ) -> Result<impl Reply, Rejection> {
     let JoinGame { id, rules } = request;
-    let players = server.lobby.join_game(id, player, rules).await?;
-    if players.len() == 4 {
-        server.games.start_game(id, &players)?;
-    }
+    let players = server.join_game(id, player, rules).await?;
     Ok(warp::reply::json(&players))
 }
 
@@ -108,7 +80,7 @@ async fn leave_game(
     request: LeaveGame,
 ) -> Result<impl Reply, Infallible> {
     let LeaveGame { id } = request;
-    server.lobby.leave_game(id, player).await;
+    server.leave_game(id, player).await;
     Ok(warp::reply())
 }
 
@@ -117,21 +89,8 @@ async fn subscribe_game(
     server: Server,
     player: Player,
 ) -> Result<impl Reply, Rejection> {
-    let (tx, rx) = unbounded_channel();
-    server.games.subscribe(id, player, tx).await?;
-    Ok(sse::reply(game_stream(rx)))
-}
-
-fn game_stream(
-    rx: UnboundedReceiver<games::Event>,
-) -> impl Stream<Item = Result<impl ServerSentEvent, warp::Error>> {
-    rx.map(|event| {
-        Ok(if event.is_ping() {
-            sse::comment(String::new()).into_a()
-        } else {
-            sse::json(event).into_b()
-        })
-    })
+    let rx = server.subscribe_game(id, player).await?;
+    Ok(sse::reply(as_stream(rx)))
 }
 
 #[derive(Debug, Deserialize)]
@@ -146,7 +105,7 @@ async fn pass_cards(
     request: PassCards,
 ) -> Result<impl Reply, Rejection> {
     let PassCards { id, cards } = request;
-    server.games.pass_cards(id, player, cards).await?;
+    server.pass_cards(id, player, cards).await?;
     Ok(warp::reply())
 }
 
@@ -162,7 +121,7 @@ async fn charge_cards(
     request: ChargeCards,
 ) -> Result<impl Reply, Rejection> {
     let ChargeCards { id, cards } = request;
-    server.games.charge_cards(id, player, cards).await?;
+    server.charge_cards(id, player, cards).await?;
     Ok(warp::reply())
 }
 
@@ -178,15 +137,29 @@ async fn play_card(
     request: PlayCard,
 ) -> Result<impl Reply, Rejection> {
     let PlayCard { id, card } = request;
-    server.games.play_card(id, player, card).await?;
+    server.play_card(id, player, card).await?;
     Ok(warp::reply())
+}
+
+fn as_stream<E>(
+    rx: UnboundedReceiver<E>,
+) -> impl Stream<Item = Result<impl ServerSentEvent, warp::Error>>
+where
+    E: Event + Serialize + Send + Sync + 'static,
+{
+    rx.map(|event| {
+        Ok(if event.is_ping() {
+            sse::comment(String::new()).into_a()
+        } else {
+            sse::json(event).into_b()
+        })
+    })
 }
 
 #[tokio::main]
 async fn main() {
     env_logger::init();
-
-    let server = Server::new();
+    let server = Server::new(SqliteConnectionManager::file("turbo-hearts.db"));
     task::spawn(ping_event_streams(server.clone()));
     let server = warp::any().map(move || server.clone());
     let player = warp::cookie::optional("player").and_then(async move |player: Option<Player>| {
@@ -249,12 +222,4 @@ async fn main() {
         .or(play_card)
         .recover(error::handle_rejection);
     warp::serve(app).run(([127, 0, 0, 1], 7380)).await;
-}
-
-async fn ping_event_streams(server: Server) {
-    let mut stream = time::interval(Duration::from_secs(15));
-    while let Some(_) = stream.next().await {
-        server.lobby.ping().await;
-        server.games.ping().await;
-    }
 }

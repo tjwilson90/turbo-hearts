@@ -1,6 +1,6 @@
 use crate::{
     cards::Cards,
-    games::GameState,
+    game::GameState,
     types::{GameId, Player},
 };
 use log::error;

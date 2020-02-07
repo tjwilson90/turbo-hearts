@@ -309,9 +309,6 @@ impl Cards {
     pub const CHARGEABLE: Cards = Cards {
         bits: 0x0400_1000_0200_0100,
     };
-    pub const NINES: Cards = Cards {
-        bits: 0x0080_0080_0080_0080,
-    };
     pub const CLUBS: Cards = Cards {
         bits: 0x0000_0000_0000_1fff,
     };
@@ -324,26 +321,14 @@ impl Cards {
     pub const SPADES: Cards = Cards {
         bits: 0x1fff_0000_0000_0000,
     };
-    pub const TWO_CLUBS: Cards = Cards {
-        bits: 0x0000_0000_0000_0001,
-    };
-    pub const TEN_CLUBS: Cards = Cards {
-        bits: Self::CLUBS.bits & Self::CHARGEABLE.bits,
-    };
     pub const JACK_DIAMONDS: Cards = Cards {
         bits: Self::DIAMONDS.bits & Self::CHARGEABLE.bits,
-    };
-    pub const ACE_HEARTS: Cards = Cards {
-        bits: Self::HEARTS.bits & Self::CHARGEABLE.bits,
     };
     pub const QUEEN_SPADES: Cards = Cards {
         bits: Self::SPADES.bits & Self::CHARGEABLE.bits,
     };
-    pub const RUNNING: Cards = Cards {
-        bits: Self::HEARTS.bits | Self::QUEEN_SPADES.bits,
-    };
     pub const POINTS: Cards = Cards {
-        bits: Self::RUNNING.bits | Self::JACK_DIAMONDS.bits,
+        bits: Self::HEARTS.bits | Self::QUEEN_SPADES.bits | Self::JACK_DIAMONDS.bits,
     };
     pub const ALL: Cards = Cards {
         bits: Self::SPADES.bits | Self::HEARTS.bits | Self::DIAMONDS.bits | Self::CLUBS.bits,
@@ -582,10 +567,10 @@ mod tests {
 
     #[test]
     fn test_card_display() {
-        assert_eq!(format!("{}", Card::NineSpades), "9S");
-        assert_eq!(format!("{}", Card::ThreeDiamonds), "3D");
-        assert_eq!(format!("{}", Card::JackClubs), "JC");
-        assert_eq!(format!("{}", Card::AceHearts), "AH");
+        assert_eq!(Card::NineSpades.to_string(), "9S");
+        assert_eq!(Card::ThreeDiamonds.to_string(), "3D");
+        assert_eq!(Card::JackClubs.to_string(), "JC");
+        assert_eq!(Card::AceHearts.to_string(), "AH");
     }
 
     #[test]

@@ -11,8 +11,7 @@ pub struct Database {
 }
 
 impl Database {
-    pub fn new() -> Self {
-        let manager = SqliteConnectionManager::file("turbo-hearts.db");
+    pub fn new(manager: SqliteConnectionManager) -> Self {
         let pool = Pool::builder()
             .connection_customizer(Box::new(Customizer))
             .build(manager)

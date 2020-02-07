@@ -49,6 +49,10 @@ impl<T> UnboundedSender<T> {
 }
 
 impl<T> UnboundedReceiver<T> {
+    pub async fn recv(&mut self) -> Option<T> {
+        self.0.recv().await
+    }
+
     pub fn map<U, F>(self, f: F) -> impl Stream<Item = U>
     where
         F: FnMut(T) -> U,
