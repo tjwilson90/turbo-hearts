@@ -29,20 +29,21 @@ pub enum LobbyEvent {
     NewGame {
         id: GameId,
         player: Player,
-        rules: ChargingRules,
     },
     LobbyState {
         subscribers: HashSet<Player>,
-        games: HashMap<GameId, HashMap<Player, ChargingRules>>,
+        games: HashMap<GameId, HashSet<Player>>,
     },
     JoinGame {
         id: GameId,
         player: Player,
-        rules: ChargingRules,
     },
     LeaveGame {
         id: GameId,
         player: Player,
+    },
+    FinishGame {
+        id: GameId,
     },
     LeaveLobby {
         player: Player,
@@ -59,9 +60,12 @@ impl Event for LobbyEvent {
 }
 
 impl Lobby {
-    pub fn new() -> Self {
+    pub fn new(games: HashMap<GameId, HashMap<Player, ChargingRules>>) -> Self {
         Self {
-            inner: Arc::new(Mutex::new(Inner::new())),
+            inner: Arc::new(Mutex::new(Inner {
+                subscribers: HashMap::new(),
+                games,
+            })),
         }
     }
 
@@ -81,7 +85,11 @@ impl Lobby {
         inner.subscribers.insert(player, tx.clone());
         tx.send(LobbyEvent::LobbyState {
             subscribers: inner.subscribers.keys().cloned().collect(),
-            games: inner.games.clone(),
+            games: inner
+                .games
+                .iter()
+                .map(|(id, players)| (*id, players.keys().cloned().collect()))
+                .collect(),
         })
         .unwrap();
         rx
@@ -93,7 +101,7 @@ impl Lobby {
         let mut game = HashMap::new();
         game.insert(player.clone(), rules);
         inner.games.insert(id, game);
-        inner.broadcast(LobbyEvent::NewGame { id, player, rules });
+        inner.broadcast(LobbyEvent::NewGame { id, player });
         id
     }
 
@@ -105,9 +113,12 @@ impl Lobby {
     ) -> Result<HashMap<Player, ChargingRules>, CardsError> {
         let mut inner = self.inner.lock().await;
         if let Some(players) = inner.games.get_mut(&id) {
+            if players.len() == 4 {
+                return Err(CardsError::GameHasStarted(id));
+            }
             players.insert(player.clone(), rules);
             let players = players.clone();
-            inner.broadcast(LobbyEvent::JoinGame { id, player, rules });
+            inner.broadcast(LobbyEvent::JoinGame { id, player });
             Ok(players)
         } else {
             Err(CardsError::UnknownGame(id))
@@ -126,16 +137,16 @@ impl Lobby {
             }
         }
     }
+
+    pub async fn remove_game(&self, id: GameId) {
+        let mut inner = self.inner.lock().await;
+        if inner.games.remove(&id).is_some() {
+            inner.broadcast(LobbyEvent::FinishGame { id });
+        }
+    }
 }
 
 impl Inner {
-    fn new() -> Self {
-        Self {
-            subscribers: HashMap::new(),
-            games: HashMap::new(),
-        }
-    }
-
     fn broadcast(&mut self, event: LobbyEvent) {
         let mut events = VecDeque::new();
         events.push_back(event);

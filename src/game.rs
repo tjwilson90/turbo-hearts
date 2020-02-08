@@ -46,9 +46,9 @@ impl Games {
         }
     }
 
-    async fn with_game<F>(&self, id: GameId, f: F) -> Result<(), CardsError>
+    async fn with_game<F, T>(&self, id: GameId, f: F) -> Result<T, CardsError>
     where
-        F: FnOnce(&mut Game) -> Result<(), CardsError>,
+        F: FnOnce(&mut Game) -> Result<T, CardsError>,
     {
         let game = {
             let mut inner = self.inner.lock().await;
@@ -86,10 +86,10 @@ impl Games {
                 &[
                     GameEvent::Sit {
                         north: order[0].clone(),
-                        east: order[0].clone(),
-                        south: order[0].clone(),
-                        west: order[0].clone(),
-                        rules: *players.get(order[0]).unwrap(),
+                        east: order[1].clone(),
+                        south: order[2].clone(),
+                        west: order[3].clone(),
+                        rules: players[order[0]],
                     },
                     deal(),
                 ],
@@ -186,7 +186,7 @@ impl Games {
         id: GameId,
         player: Player,
         card: Card,
-    ) -> Result<(), CardsError> {
+    ) -> Result<bool, CardsError> {
         self.with_game(id, |game| match game.seat(&player) {
             Some(seat) => {
                 let mut events = vec![game.play_card(id, seat, card)?];
@@ -195,13 +195,17 @@ impl Games {
                     events.push(deal());
                 }
                 self.db.run_with_retry(|tx| {
-                    persist_events(&tx, id, game.events.len() as u32, &events)
+                    persist_events(&tx, id, game.events.len() as u32, &events)?;
+                    if game.state == GameState::Complete {
+                        tx.execute("INSERT INTO game (id) VALUES (?)", &[&id])?;
+                    }
+                    Ok(())
                 })?;
                 for event in events {
                     game.broadcast(&event);
                     game.apply(event);
                 }
-                Ok(())
+                Ok(game.state == GameState::Complete)
             }
             None => Err(CardsError::IllegalPlayer(player)),
         })

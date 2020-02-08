@@ -1,8 +1,12 @@
-use crate::error::CardsError;
+use crate::{
+    error::CardsError,
+    game::GameEvent,
+    types::{ChargingRules, GameId, Player},
+};
 use r2d2::{CustomizeConnection, Pool};
 use r2d2_sqlite::SqliteConnectionManager;
-use rusqlite::{Connection, Transaction, TransactionBehavior};
-use std::time::Duration;
+use rusqlite::{Connection, DropBehavior, Transaction, TransactionBehavior, NO_PARAMS};
+use std::{collections::HashMap, time::Duration};
 use tokio::task;
 
 #[derive(Clone)]
@@ -11,19 +15,23 @@ pub struct Database {
 }
 
 impl Database {
-    pub fn new(manager: SqliteConnectionManager) -> Self {
+    pub fn new(manager: SqliteConnectionManager) -> Result<Self, CardsError> {
         let pool = Pool::builder()
             .connection_customizer(Box::new(Customizer))
             .build(manager)
             .unwrap();
-        Database::seed(&pool.get().unwrap()).unwrap();
-        Self { pool }
+        Database::seed(&pool.get().unwrap())?;
+        Ok(Self { pool })
     }
 
     fn seed(conn: &Connection) -> Result<(), rusqlite::Error> {
         conn.execute_batch(
             "PRAGMA journal_mode = WAL;
             BEGIN;
+            CREATE TABLE IF NOT EXISTS game (
+                id TEXT NOT NULL,
+                PRIMARY KEY (id)
+            );
             CREATE TABLE IF NOT EXISTS event (
                 game_id TEXT NOT NULL,
                 event_id INTEGER NOT NULL,
@@ -33,6 +41,37 @@ impl Database {
             );
             END;",
         )
+    }
+
+    pub fn hydrate_games(
+        &self,
+    ) -> Result<HashMap<GameId, HashMap<Player, ChargingRules>>, CardsError> {
+        let conn = self.pool.get().unwrap();
+        let mut stmt = conn.prepare(
+            "SELECT game_id, event FROM event
+            WHERE event_id = 0 AND game_id NOT IN (SELECT id FROM game)",
+        )?;
+        let mut rows = stmt.query(NO_PARAMS)?;
+        let mut games = HashMap::new();
+        while let Some(row) = rows.next()? {
+            let id = row.get(0)?;
+            if let GameEvent::Sit {
+                north,
+                east,
+                south,
+                west,
+                rules,
+            } = serde_json::from_str(&row.get::<_, String>(1)?)?
+            {
+                let mut players = HashMap::new();
+                players.insert(north, rules);
+                players.insert(east, rules);
+                players.insert(south, rules);
+                players.insert(west, rules);
+                games.insert(id, players);
+            }
+        }
+        Ok(games)
     }
 
     pub fn run_read_only<F, T>(&self, f: F) -> Result<T, CardsError>
@@ -58,6 +97,10 @@ impl Database {
             for i in 0.. {
                 let result = conn
                     .transaction_with_behavior(behavior)
+                    .map(|mut tx| {
+                        tx.set_drop_behavior(DropBehavior::Commit);
+                        tx
+                    })
                     .map_err(|err| CardsError::from(err))
                     .and_then(&mut f);
                 match result {

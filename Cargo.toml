@@ -6,7 +6,6 @@ edition = "2018"
 
 [dependencies]
 env_logger = "*"
-log = "*"
 rand = "*"
 r2d2 = "*"
 r2d2_sqlite = "*"
@@ -17,3 +16,6 @@ thiserror = "*"
 tokio = { version = "*", features = ["blocking", "macros", "rt-threaded", "sync"] }
 uuid = { version = "*", features = ["serde", "v4"] }
 warp = "*"
+
+[dev-dependencies]
+tempfile = "*"

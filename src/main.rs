@@ -2,6 +2,7 @@
 
 use crate::{
     cards::{Card, Cards},
+    db::Database,
     error::CardsError,
     hacks::UnboundedReceiver,
     server::Server,
@@ -157,9 +158,10 @@ where
 }
 
 #[tokio::main]
-async fn main() {
+async fn main() -> Result<(), CardsError> {
     env_logger::init();
-    let server = Server::new(SqliteConnectionManager::file("turbo-hearts.db"));
+    let db = Database::new(SqliteConnectionManager::file("turbo-hearts.db"))?;
+    let server = Server::new(db)?;
     task::spawn(ping_event_streams(server.clone()));
     let server = warp::any().map(move || server.clone());
     let player = warp::cookie::optional("player").and_then(async move |player: Option<Player>| {
@@ -222,4 +224,5 @@ async fn main() {
         .or(play_card)
         .recover(error::handle_rejection);
     warp::serve(app).run(([127, 0, 0, 1], 7380)).await;
+    Ok(())
 }

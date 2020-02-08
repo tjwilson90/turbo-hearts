@@ -34,8 +34,7 @@ Response:
 #### LobbyState
 
 Whenever a client subscribes to the lobby, a `lobby_state` message is sent to that subscriber
-containing the list of all active subscribers, as well as all partial games that need additional
-players.
+containing the list of all active subscribers, as well as all incomplete games.
 
 Response:
 ```json
@@ -43,9 +42,7 @@ Response:
   "type": "lobby_state",
   "subscribers": ["tslatcher","twilson"],
   "games": {
-    "8c9e2ff7-dcf3-49be-86f0-315f469840bc": {
-      "carrino": "blind"
-    }
+    "8c9e2ff7-dcf3-49be-86f0-315f469840bc": ["carrino"]
   }
 }
 ```
@@ -53,31 +50,28 @@ Response:
 #### NewGame
 
 Whenever a new game is created, a `new_game` message is sent to all active subscribers containg the
-id of the game, the name of the player who created the game, and the charging rules they proposed.
+id of the game and the name of the player who created the game.
 
 Response:
 ```json
 {
   "type": "new_game",
   "id": "8c9e2ff7-dcf3-49be-86f0-315f469840bc",
-  "player": "carrino",
-  "rules": "blind"
+  "player": "carrino"
 }
 ```
 
 #### JoinGame
 
 Whenever a player joins an existing game, a `join_game` message is sent to all active subscribers
-containing the id of the game, the name of the player who joined the game, and the charging rules
-they proposed.
+containing the id of the game and the name of the player who joined the game.
 
 Response:
 ```json
 {
   "type": "join_game",
   "id": "8c9e2ff7-dcf3-49be-86f0-315f469840bc",
-  "player": "dcervelli",
-  "rules": "chain"
+  "player": "dcervelli"
 }
 ```
 
@@ -92,6 +86,18 @@ Response:
   "type": "leave_game",
   "id": "8c9e2ff7-dcf3-49be-86f0-315f469840bc",
   "player": "carrino"
+}
+```
+
+#### FinishGame
+
+When the last play is made in a game a `finish_game` event is sent to all subscribers.
+
+Response:
+```json
+{
+  "type": "finish_game",
+  "id": "8c9e2ff7-dcf3-49be-86f0-315f469840bc"
 }
 ```
 
@@ -127,9 +133,9 @@ Response:
 
 ### `POST /lobby/join`
 
-Join an existing game and propose charging rules. Returns the members of the game and their
-proposed charging rules. The actual charging rules will be selected randomly from the proposed
-rules of all players once the game has four players.
+Join an existing game and propose charging rules. Returns the members of the game. The actual
+charging rules will be selected randomly from the proposed rules of all players once the game has
+four players.
 
 Request:
 ```json
@@ -141,10 +147,10 @@ Request:
 
 Response:
 ```json
-{
-  "carrino": "blind",
-  "dcervelli": "chain"
-}
+[
+  "carrino",
+  "dcervelli"
+]
 ```
 
 ### `POST /lobby/leave`

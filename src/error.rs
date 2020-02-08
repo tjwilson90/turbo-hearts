@@ -3,7 +3,6 @@ use crate::{
     game::GameState,
     types::{GameId, Player},
 };
-use log::error;
 use rusqlite::ErrorCode;
 use serde::Serialize;
 use std::{backtrace::Backtrace, convert::Infallible};
@@ -18,6 +17,8 @@ pub enum CardsError {
     AlreadyPassed(Cards),
     #[error("game {0} is already complete")]
     GameComplete(GameId),
+    #[error("game {0} has already started")]
+    GameHasStarted(GameId),
     #[error("hearts cannot be lead if hearts are not broken")]
     HeartsNotBroken,
     #[error("cannot perform action, currently {0:?}")]

@@ -7,8 +7,7 @@ use crate::{
     lobby::{Lobby, LobbyEvent},
     types::{ChargingRules, GameId, Player},
 };
-use r2d2_sqlite::SqliteConnectionManager;
-use std::collections::HashMap;
+use std::collections::HashSet;
 
 #[derive(Clone)]
 pub struct Server {
@@ -17,11 +16,12 @@ pub struct Server {
 }
 
 impl Server {
-    pub fn new(manager: SqliteConnectionManager) -> Self {
-        Self {
-            lobby: Lobby::new(),
-            games: Games::new(Database::new(manager)),
-        }
+    pub fn new(db: Database) -> Result<Self, CardsError> {
+        let games = db.hydrate_games()?;
+        Ok(Self {
+            lobby: Lobby::new(games),
+            games: Games::new(db),
+        })
     }
 
     pub async fn ping_event_streams(&self) {
@@ -42,12 +42,12 @@ impl Server {
         id: GameId,
         player: Player,
         rules: ChargingRules,
-    ) -> Result<HashMap<Player, ChargingRules>, CardsError> {
+    ) -> Result<HashSet<Player>, CardsError> {
         let players = self.lobby.join_game(id, player, rules).await?;
         if players.len() == 4 {
             self.games.start_game(id, &players)?;
         }
-        Ok(players)
+        Ok(players.keys().cloned().collect())
     }
 
     pub async fn leave_game(&self, id: GameId, player: Player) {
@@ -86,13 +86,19 @@ impl Server {
         player: Player,
         card: Card,
     ) -> Result<(), CardsError> {
-        self.games.play_card(id, player, card).await
+        let complete = self.games.play_card(id, player, card).await?;
+        if complete {
+            self.lobby.remove_game(id).await;
+        }
+        Ok(())
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use r2d2_sqlite::SqliteConnectionManager;
+    use std::future::Future;
 
     macro_rules! p {
         ($p:ident) => {
@@ -112,101 +118,152 @@ mod tests {
         );
     }
 
-    #[tokio::test]
-    async fn join_unknown_game() {
-        let server = Server::new(SqliteConnectionManager::memory());
-        let resp = server
-            .join_game(GameId::new(), p!(twilson), ChargingRules::Classic)
-            .await;
-        assert!(matches!(resp, Err(CardsError::UnknownGame(_))));
+    async fn run<F, T>(task: T) -> F::Output
+    where
+        T: FnOnce(Database) -> F + Send + 'static,
+        F: Future + Send + 'static,
+        F::Output: Send + 'static,
+    {
+        let _ = env_logger::try_init();
+        tokio::spawn(async move {
+            let dir = tempfile::tempdir().unwrap();
+            let mut path = dir.path().to_owned();
+            path.push("test.db");
+            let db = Database::new(SqliteConnectionManager::file(path)).unwrap();
+            task(db).await
+        })
+        .await
+        .unwrap()
     }
 
-    #[tokio::test]
+    #[tokio::test(threaded_scheduler)]
+    async fn join_unknown_game() -> Result<(), CardsError> {
+        run(async move |db| {
+            let server = Server::new(db)?;
+            let resp = server
+                .join_game(GameId::new(), p!(twilson), ChargingRules::Classic)
+                .await;
+            assert!(matches!(resp, Err(CardsError::UnknownGame(_))));
+            Ok(())
+        })
+        .await
+    }
+
+    #[tokio::test(threaded_scheduler)]
     async fn test_lobby() -> Result<(), CardsError> {
-        let server = Server::new(SqliteConnectionManager::memory());
+        run(async move |db| {
+            let server = Server::new(db)?;
 
-        let mut twilson = server.subscribe_lobby(p!(twilson)).await;
-        assert_eq!(
-            twilson.recv().await,
-            Some(LobbyEvent::LobbyState {
-                subscribers: set![p!(twilson)],
-                games: HashMap::new(),
-            })
-        );
+            let mut twilson = server.subscribe_lobby(p!(twilson)).await;
+            assert_eq!(
+                twilson.recv().await,
+                Some(LobbyEvent::LobbyState {
+                    subscribers: set![p!(twilson)],
+                    games: map![],
+                })
+            );
 
-        let mut carrino = server.subscribe_lobby(p!(carrino)).await;
-        assert_eq!(
-            twilson.recv().await,
-            Some(LobbyEvent::Subscribe {
-                player: p!(carrino),
-            })
-        );
-        assert_eq!(
-            carrino.recv().await,
-            Some(LobbyEvent::LobbyState {
-                subscribers: set![p!(twilson), p!(carrino)],
-                games: HashMap::new(),
-            })
-        );
+            let mut carrino = server.subscribe_lobby(p!(carrino)).await;
+            assert_eq!(
+                twilson.recv().await,
+                Some(LobbyEvent::Subscribe {
+                    player: p!(carrino),
+                })
+            );
+            assert_eq!(
+                carrino.recv().await,
+                Some(LobbyEvent::LobbyState {
+                    subscribers: set![p!(twilson), p!(carrino)],
+                    games: map![],
+                })
+            );
 
-        drop(carrino);
-        server.ping_event_streams().await;
-        assert_eq!(twilson.recv().await, Some(LobbyEvent::Ping));
-        assert_eq!(
-            twilson.recv().await,
-            Some(LobbyEvent::LeaveLobby {
-                player: p!(carrino),
-            })
-        );
+            drop(carrino);
+            server.ping_event_streams().await;
+            assert_eq!(twilson.recv().await, Some(LobbyEvent::Ping));
+            assert_eq!(
+                twilson.recv().await,
+                Some(LobbyEvent::LeaveLobby {
+                    player: p!(carrino),
+                })
+            );
 
-        let id = server.new_game(p!(tslatcher), ChargingRules::Bridge).await;
-        assert_eq!(
-            twilson.recv().await,
-            Some(LobbyEvent::NewGame {
-                id,
-                player: p!(tslatcher),
-                rules: ChargingRules::Bridge
-            })
-        );
+            let id = server.new_game(p!(tslatcher), ChargingRules::Bridge).await;
+            assert_eq!(
+                twilson.recv().await,
+                Some(LobbyEvent::NewGame {
+                    id,
+                    player: p!(tslatcher),
+                })
+            );
 
-        drop(twilson);
-        server.ping_event_streams().await;
-        let mut twilson = server.subscribe_lobby(p!(twilson)).await;
-        assert_eq!(
-            twilson.recv().await,
-            Some(LobbyEvent::LobbyState {
-                subscribers: set![p!(twilson)],
-                games: map![id => map![p!(tslatcher) => ChargingRules::Bridge]],
-            })
-        );
+            drop(twilson);
+            server.ping_event_streams().await;
+            let mut twilson = server.subscribe_lobby(p!(twilson)).await;
+            assert_eq!(
+                twilson.recv().await,
+                Some(LobbyEvent::LobbyState {
+                    subscribers: set![p!(twilson)],
+                    games: map![id => set![p!(tslatcher)]],
+                })
+            );
 
-        let players = server
-            .join_game(id, p!(dcervelli), ChargingRules::Classic)
-            .await?;
-        assert_eq!(
-            players,
-            map![
-                p!(tslatcher) => ChargingRules::Bridge,
-                p!(dcervelli) => ChargingRules::Classic
-            ]
-        );
-        assert_eq!(
-            twilson.recv().await,
-            Some(LobbyEvent::JoinGame {
-                id,
-                player: p!(dcervelli),
-                rules: ChargingRules::Classic
-            })
-        );
+            let players = server
+                .join_game(id, p!(dcervelli), ChargingRules::Classic)
+                .await?;
+            assert_eq!(players, set![p!(tslatcher), p!(dcervelli)]);
+            assert_eq!(
+                twilson.recv().await,
+                Some(LobbyEvent::JoinGame {
+                    id,
+                    player: p!(dcervelli),
+                })
+            );
 
-        server.leave_game(id, p!(tslatcher)).await;
-        assert_eq!(
-            twilson.recv().await,
-            Some(LobbyEvent::LeaveGame {
-                id,
-                player: p!(tslatcher),
-            })
-        );
-        Ok(())
+            server.leave_game(id, p!(tslatcher)).await;
+            assert_eq!(
+                twilson.recv().await,
+                Some(LobbyEvent::LeaveGame {
+                    id,
+                    player: p!(tslatcher),
+                })
+            );
+            Ok(())
+        })
+        .await
+    }
+
+    #[tokio::test(threaded_scheduler)]
+    async fn test_game() -> Result<(), CardsError> {
+        run(async move |db| {
+            let server = Server::new(db)?;
+            let id = server.new_game(p!(twilson), ChargingRules::Classic).await;
+            server
+                .join_game(id, p!(tslatcher), ChargingRules::Classic)
+                .await?;
+            server
+                .join_game(id, p!(dcervelli), ChargingRules::Classic)
+                .await?;
+            server
+                .join_game(id, p!(carrino), ChargingRules::Classic)
+                .await?;
+
+            let mut twilson = server.subscribe_game(id, p!(twilson)).await?;
+            match twilson.recv().await {
+                Some(GameEvent::Sit {
+                    north,
+                    east,
+                    south,
+                    west,
+                    rules: ChargingRules::Classic,
+                }) => assert_eq!(
+                    set![north, east, south, west],
+                    set![p!(twilson), p!(tslatcher), p!(dcervelli), p!(carrino)]
+                ),
+                e => assert!(false, "Expected sit event, found {:?}", e),
+            }
+            Ok(())
+        })
+        .await
     }
 }
