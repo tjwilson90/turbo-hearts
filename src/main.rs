@@ -214,6 +214,13 @@ async fn main() -> Result<(), CardsError> {
         .and(player.clone())
         .and(warp::body::json())
         .and_then(play_card);
+    let lobby_html = warp::path!("lobby")
+        .and(warp::get())
+        .and(warp::fs::file("./lobby.html"));
+    let game_html = warp::path("game")
+        .and(warp::get())
+        .and(warp::fs::file("./game.html"));
+    let assets = warp::path("assets").and(warp::fs::dir("./assets"));
     let app = subscribe_lobby
         .or(new_game)
         .or(join_game)
@@ -222,6 +229,9 @@ async fn main() -> Result<(), CardsError> {
         .or(pass_cards)
         .or(charge_cards)
         .or(play_card)
+        .or(lobby_html)
+        .or(game_html)
+        .or(assets)
         .recover(error::handle_rejection);
     warp::serve(app).run(([127, 0, 0, 1], 7380)).await;
     Ok(())

@@ -18,15 +18,15 @@ and left from this page.
 Returns a `text/event-stream` of events in the lobby. The following events can be returned in the
 lobby event stream.
   
-#### Subscribe
+#### JoinLobby
 
-Whenever a client subscribes to the lobby, a `subscribe` message is sent to every other subscriber
+Whenever a client subscribes to the lobby, a `join_lobby` message is sent to every other subscriber
 in the lobby.
 
 Response:
 ```json
 {
-  "type": "subscribe",
+  "type": "join_lobby",
   "player": "twilson"
 }
 ```

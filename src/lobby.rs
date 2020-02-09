@@ -23,7 +23,7 @@ struct Inner {
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub enum LobbyEvent {
     Ping,
-    Subscribe {
+    JoinLobby {
         player: Player,
     },
     NewGame {
@@ -78,7 +78,7 @@ impl Lobby {
         let (tx, rx) = unbounded_channel();
         let mut inner = self.inner.lock().await;
         if inner.subscribers.remove(&player).is_none() {
-            inner.broadcast(LobbyEvent::Subscribe {
+            inner.broadcast(LobbyEvent::JoinLobby {
                 player: player.clone(),
             });
         }

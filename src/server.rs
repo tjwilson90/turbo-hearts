@@ -124,7 +124,7 @@ mod tests {
         F: Future + Send + 'static,
         F::Output: Send + 'static,
     {
-        let _ = env_logger::try_init();
+        let _ = env_logger::builder().is_test(true).try_init();
         tokio::spawn(async move {
             let dir = tempfile::tempdir().unwrap();
             let mut path = dir.path().to_owned();
@@ -166,7 +166,7 @@ mod tests {
             let mut carrino = server.subscribe_lobby(p!(carrino)).await;
             assert_eq!(
                 twilson.recv().await,
-                Some(LobbyEvent::Subscribe {
+                Some(LobbyEvent::JoinLobby {
                     player: p!(carrino),
                 })
             );
