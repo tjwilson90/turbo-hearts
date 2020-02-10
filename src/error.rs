@@ -5,7 +5,7 @@ use crate::{
 };
 use rusqlite::ErrorCode;
 use serde::Serialize;
-use std::{backtrace::Backtrace, convert::Infallible};
+use std::convert::Infallible;
 use thiserror::Error;
 use warp::{http::StatusCode, reject::Reject, Rejection};
 
@@ -45,13 +45,11 @@ pub enum CardsError {
     Serde {
         #[from]
         source: serde_json::Error,
-        backtrace: Backtrace,
     },
     #[error("unexpected sqlite error")]
     Sqlite {
         #[from]
         source: rusqlite::Error,
-        backtrace: Backtrace,
     },
     #[error("the cards {0} cannot be charged")]
     Unchargeable(Cards),

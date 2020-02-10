@@ -1,5 +1,3 @@
-#![feature(async_closure, backtrace)]
-
 use crate::{
     cards::{Card, Cards},
     db::Database,
@@ -159,6 +157,10 @@ where
     })
 }
 
+async fn player_cookie(player: Option<String>) -> Result<Player, Rejection> {
+    player.ok_or(warp::reject::custom(CardsError::MissingPlayerCookie))
+}
+
 #[tokio::main]
 async fn main() -> Result<(), CardsError> {
     env_logger::init();
@@ -166,9 +168,7 @@ async fn main() -> Result<(), CardsError> {
     let server = Server::new(db)?;
     task::spawn(ping_event_streams(server.clone()));
     let server = warp::any().map(move || server.clone());
-    let player = warp::cookie::optional("player").and_then(async move |player: Option<Player>| {
-        player.ok_or(warp::reject::custom(CardsError::MissingPlayerCookie))
-    });
+    let player = warp::cookie::optional("player").and_then(player_cookie);
 
     let subscribe_lobby = warp::path!("lobby" / "subscribe")
         .and(warp::get())

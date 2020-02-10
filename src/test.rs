@@ -28,6 +28,15 @@ macro_rules! map {
     );
 }
 
+macro_rules! matches {
+    ($expression:expr, $( $pattern:pat )|+ $( if $guard: expr )?) => {
+        match $expression {
+            $( $pattern )|+ $( if $guard )? => true,
+            _ => false
+        }
+    }
+}
+
 async fn run<F, T>(task: T) -> F::Output
 where
     T: FnOnce(Database) -> F + Send + 'static,
@@ -113,7 +122,7 @@ fn test_cards_parse() {
 
 #[tokio::test(threaded_scheduler)]
 async fn test_join_unknown_game() -> Result<(), CardsError> {
-    run(async move |db| {
+    async fn test(db: Database) -> Result<(), CardsError> {
         let server = Server::new(db)?;
         let id = GameId::new();
         let resp = server
@@ -121,13 +130,13 @@ async fn test_join_unknown_game() -> Result<(), CardsError> {
             .await;
         assert!(matches!(resp, Err(CardsError::UnknownGame(game)) if game == id));
         Ok(())
-    })
-    .await
+    }
+    run(test).await
 }
 
 #[tokio::test(threaded_scheduler)]
 async fn test_lobby() -> Result<(), CardsError> {
-    run(async move |db| {
+    async fn test(db: Database) -> Result<(), CardsError> {
         let server = Server::new(db)?;
 
         let mut twilson = server.subscribe_lobby(p!(twilson)).await;
@@ -205,13 +214,13 @@ async fn test_lobby() -> Result<(), CardsError> {
             })
         );
         Ok(())
-    })
-    .await
+    }
+    run(test).await
 }
 
 #[tokio::test(threaded_scheduler)]
 async fn test_new_game() -> Result<(), CardsError> {
-    run(async move |db| {
+    async fn test(db: Database) -> Result<(), CardsError> {
         let server = Server::new(db)?;
         let id = server.new_game(p!(twilson), ChargingRules::Classic).await;
         server
@@ -239,13 +248,13 @@ async fn test_new_game() -> Result<(), CardsError> {
             e => assert!(false, "Expected sit event, found {:?}", e),
         }
         Ok(())
-    })
-    .await
+    }
+    run(test).await
 }
 
 #[tokio::test(threaded_scheduler)]
 async fn test_pass() -> Result<(), CardsError> {
-    run(async move |db| {
+    async fn test(db: Database) -> Result<(), CardsError> {
         let id = GameId::new();
         db.run_with_retry(|tx| {
             persist_events(
@@ -315,6 +324,6 @@ async fn test_pass() -> Result<(), CardsError> {
         ));
 
         Ok(())
-    })
-    .await
+    }
+    run(test).await
 }
