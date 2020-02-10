@@ -17,16 +17,16 @@ macro_rules! p {
 }
 
 macro_rules! set {
-        ($($x:expr),*) => (
-            vec![$($x),*].into_iter().collect::<std::collections::HashSet<_>>()
-        );
-    }
+    ($($x:expr),*) => (
+        vec![$($x),*].into_iter().collect::<std::collections::HashSet<_>>()
+    );
+}
 
 macro_rules! map {
-        ($($x:expr => $y:expr),*) => (
-            vec![$(($x, $y)),*].into_iter().collect::<std::collections::HashMap<_, _>>()
-        );
-    }
+    ($($x:expr => $y:expr),*) => (
+        vec![$(($x, $y)),*].into_iter().collect::<std::collections::HashMap<_, _>>()
+    );
+}
 
 async fn run<F, T>(task: T) -> F::Output
 where
@@ -35,15 +35,18 @@ where
     F::Output: Send + 'static,
 {
     let _ = env_logger::builder().is_test(true).try_init();
-    tokio::spawn(async move {
+    let result = tokio::spawn(async move {
         let dir = tempfile::tempdir().unwrap();
         let mut path = dir.path().to_owned();
         path.push("test.db");
         let db = Database::new(SqliteConnectionManager::file(path)).unwrap();
         task(db).await
     })
-    .await
-    .unwrap()
+    .await;
+    match result {
+        Ok(v) => v,
+        Err(e) => std::panic::resume_unwind(e.into_panic()),
+    }
 }
 
 #[test]
