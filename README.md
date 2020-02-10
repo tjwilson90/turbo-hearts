@@ -1,5 +1,11 @@
 # Turbo Hearts
 
+## Getting Started
+
+1) Install rust - https://www.rust-lang.org/tools/install
+2) Run the server - `cargo run`
+3) Run the client - http://localhost:7380/lobby
+
 ## Endpoints
 
 All endpoints require the caller to pass a `"player"` cookie identifying themselves. There's no
