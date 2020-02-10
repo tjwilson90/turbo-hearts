@@ -4,9 +4,7 @@ function getName() {
 }
 
 function getGameId() {
-    let path = window.location.pathname;
-    let index = path.lastIndexOf('/');
-    return path.substring(index + 1);
+    return window.location.hash;
 }
 
 function onEvent(event) {

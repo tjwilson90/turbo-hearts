@@ -219,7 +219,7 @@ async fn main() -> Result<(), CardsError> {
     let lobby_html = warp::path!("lobby")
         .and(warp::get())
         .and(warp::fs::file("./lobby.html"));
-    let game_html = warp::path("game")
+    let game_html = warp::path!("game")
         .and(warp::get())
         .and(warp::fs::file("./game.html"));
     let assets = warp::path("assets").and(warp::fs::dir("./assets"));

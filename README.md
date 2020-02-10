@@ -168,7 +168,7 @@ Request:
 }
 ```
 
-### `GET /game/<id>`
+### `GET /game#<id>`
 
 Returns an html page for a game displaying the live refreshing game state.
 
