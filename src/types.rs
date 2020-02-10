@@ -119,6 +119,15 @@ impl Seat {
         }
     }
 
+    pub fn pass_sender(&self, hand: PassDirection) -> Self {
+        match hand {
+            PassDirection::Left => self.next().next().next(),
+            PassDirection::Right => self.next(),
+            PassDirection::Across => self.next().next(),
+            PassDirection::Keeper => *self,
+        }
+    }
+
     pub fn pass_receiver(&self, hand: PassDirection) -> Self {
         match hand {
             PassDirection::Left => self.next(),

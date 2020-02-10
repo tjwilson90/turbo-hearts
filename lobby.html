@@ -14,42 +14,21 @@
         <button id="name-button">Submit</button>
     </div>
     <form id="new-game">
-        <label><input type="radio" name="rules" id="classic" value="classic" checked /> Classic</label>
-        <label><input type="radio" name="rules" id="blind" value="blind"> Blind</label>
-        <label><input type="radio" name="rules" id="bridge" value="bridge"> Bridge</label>
-        <label><input type="radio" name="rules" id="blind-bridge" value="blind-bridge"> Blind Bridge</label>
-        <label><input type="radio" name="rules" id="chain" value="chain"> Chain</label>
-        <label><input type="radio" name="rules" id="blind-chain" value="blind-chain"> Blind Chain</label>
+        <label><input type="radio" name="rules" id="classic" value="classic" checked />Classic</label>
+        <label><input type="radio" name="rules" id="blind" value="blind">Blind</label>
+        <label><input type="radio" name="rules" id="bridge" value="bridge">Bridge</label>
+        <label><input type="radio" name="rules" id="blind-bridge" value="blind_bridge">Blind Bridge</label>
+        <label><input type="radio" name="rules" id="chain" value="chain">Chain</label>
+        <label><input type="radio" name="rules" id="blind-chain" value="blind_chain">Blind Chain</label>
         <button type="submit">New Game</button>
     </form>
     <div>
         <h1>Players</h1>
-        <ul id="players">
-            <li class="twilson">twilson</li>
-            <li class="carrino">carrino</li>
-            <li class="tslatcher">tslatcher</li>
-            <li class="dcervelli">dcervelli</li>
-            <li class="jeffreyc">jeffreyc</li>
-        </ul>
+        <ul id="players"></ul>
     </div>
     <div>
         <h1>Games</h1>
-        <ul id="games">
-            <li id="8c9e2ff7-dcf3-49be-86f0-315f469840bc">
-                <ul>
-                    <li class="twilson">twilson</li>
-                    <li class="carrino">carrino</li>
-                </ul>
-                <button class="join">Join</button>
-            </li>
-            <li id="6234af7a-0f2e-8b99-1ea7-85c76a623043">
-                <ul>
-                    <li class="carrino">dcervelli</li>
-                    <li class="twilson">twilson</li>
-                </ul>
-                <button class="leave">Leave</button>
-            </li>
-        </ul>
+        <ul id="games"></ul>
     </div>
 </body>
 </html>

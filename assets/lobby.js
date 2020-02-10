@@ -27,6 +27,7 @@ function onEvent(event) {
             break;
         default:
             console.log('Unknown lobby event: %o', data);
+            break;
     }
 }
 
@@ -59,7 +60,10 @@ function onJoinGame(id, player) {
     let gameNode = document.getElementById(id);
     let playerList = gameNode.firstElementChild;
     playerList.appendChild(createPlayerElement(player));
-    if (player === getName()) {
+    if (playerList.childElementCount >= 4) {
+        gameNode.removeChild(gameNode.lastElementChild);
+        gameNode.appendChild(createOpenButton());
+    } else if (player === getName()) {
         gameNode.removeChild(gameNode.lastElementChild);
         gameNode.appendChild(createLeaveButton());
     }
@@ -108,7 +112,9 @@ function createGameElement(id, players) {
     let li = document.createElement('li');
     li.id = id;
     li.appendChild(ul);
-    if (players.includes(getName())) {
+    if (players.length >= 4) {
+        li.appendChild(createOpenButton());
+    } else if (players.includes(getName())) {
         li.appendChild(createLeaveButton());
     } else {
         li.appendChild(createJoinButton());
@@ -129,6 +135,14 @@ function createLeaveButton() {
     button.className = 'leave';
     button.textContent = 'Leave';
     button.addEventListener('click', leaveGame);
+    return button;
+}
+
+function createOpenButton() {
+    let button = document.createElement('button');
+    button.className = 'open';
+    button.textContent = 'Open';
+    button.addEventListener('click', openGame);
     return button;
 }
 
@@ -164,7 +178,7 @@ function newGame(event) {
         body: JSON.stringify({ rules: rules })
     })
     .then((response) => response.json())
-    .then((data) => console.log('Created game: %s', data));
+    .then((data) => console.log('Created game: %o', data));
 }
 
 function joinGame(event) {
@@ -192,6 +206,12 @@ function leaveGame(event) {
         },
         body: JSON.stringify({ id: id })
     });
+}
+
+function openGame(event) {
+    let id = event.target.parentNode.id;
+    console.log('openGame: %s', id);
+    window.open('/game/' + id);
 }
 
 document.addEventListener('DOMContentLoaded', (event) => {

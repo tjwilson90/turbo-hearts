@@ -25,6 +25,8 @@ mod game;
 mod hacks;
 mod lobby;
 mod server;
+#[cfg(test)]
+mod test;
 mod types;
 
 async fn ping_event_streams(server: Server) {

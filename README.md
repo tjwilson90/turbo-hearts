@@ -213,16 +213,29 @@ Response:
 }
 ```
 
-#### Pass
+#### SendPass
 
-When a player makes a pass, a `pass` event is sent to all subscribers. Players in the game but not
-involved in the pass will receive a redacted event without the actual cards passed.
+When a player makes a pass, a `send_pass` event is sent to all subscribers. Players in the game
+other than the sender will receive a redacted event without the actual cards passed.
 
 Response:
 ```json
 {
-  "type": "pass",
+  "type": "send_pass",
   "from": "south",
+  "cards": ["QH", "AC", "TD"]
+}
+```
+
+#### RecvPass
+
+When a player receives a pass, a `recv_pass` event is sent to all subscribers. Players in the game
+other than the receiver will receive a redacted event without the actual cards passed.
+
+Response:
+```json
+{
+  "type": "recv_pass",
   "to": "west",
   "cards": ["QH", "AC", "TD"]
 }
