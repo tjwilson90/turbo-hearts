@@ -13,8 +13,6 @@ authentication; please don't cheat.
 
 ### `GET /lobby`
 
-TODO: implement
-
 Returns an html page for the game lobby displaying the live refreshing set of current set of
 players in the lobby and proposed games that have not yet started. Games can be created, joined,
 and left from this page.
@@ -171,8 +169,6 @@ Request:
 ```
 
 ### `GET /game/<id>`
-
-TODO: implement
 
 Returns an html page for a game displaying the live refreshing game state.
 
