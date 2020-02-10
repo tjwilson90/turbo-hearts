@@ -273,15 +273,16 @@ Response:
 
 #### Play
 
-When a play is made, all players will receive a `play` event indicating who made the play and what
-card they played.
+When a play is made, all players will receive a `play` event indicating who made the play, what
+card they played, and what trick it was played on.
 
 Response:
 ```json
 {
   "type": "play",
   "seat": "west",
-  "card": "8D"
+  "card": "8D",
+  "trick_number": 3
 }
 ```
 

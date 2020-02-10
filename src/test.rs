@@ -2,7 +2,7 @@ use crate::{
     cards::{Card, Cards},
     db::Database,
     error::CardsError,
-    game::{persist_events, GameEvent, GameState},
+    game::{persist_events, GameDbEvent, GameFeEvent, GameState},
     lobby::LobbyEvent,
     server::Server,
     types::{ChargingRules, GameId},
@@ -223,7 +223,7 @@ async fn test_new_game() -> Result<(), CardsError> {
 
         let mut twilson = server.subscribe_game(id, p!(twilson)).await?;
         match twilson.recv().await {
-            Some(GameEvent::Sit {
+            Some(GameFeEvent::Sit {
                 north,
                 east,
                 south,
@@ -250,14 +250,14 @@ async fn test_pass() -> Result<(), CardsError> {
                 id,
                 0,
                 &[
-                    GameEvent::Sit {
+                    GameDbEvent::Sit {
                         north: p!(twilson),
                         east: p!(dcervelli),
                         south: p!(tslatcher),
                         west: p!(carrino),
                         rules: ChargingRules::Classic,
                     },
-                    GameEvent::Deal {
+                    GameDbEvent::Deal {
                         north: "A764S A96H AJD K863C".parse().unwrap(),
                         east: "JT953S QT4H K93D ATC".parse().unwrap(),
                         south: "2S 875H T542D QJ752C".parse().unwrap(),

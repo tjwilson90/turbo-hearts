@@ -2,7 +2,7 @@ use crate::{
     cards::{Card, Cards},
     db::Database,
     error::CardsError,
-    game::{GameEvent, Games},
+    game::{GameFeEvent, Games},
     hacks::UnboundedReceiver,
     lobby::{Lobby, LobbyEvent},
     types::{ChargingRules, GameId, Player},
@@ -58,7 +58,7 @@ impl Server {
         &self,
         id: GameId,
         player: Player,
-    ) -> Result<UnboundedReceiver<GameEvent>, CardsError> {
+    ) -> Result<UnboundedReceiver<GameFeEvent>, CardsError> {
         self.games.subscribe(id, player).await
     }
 

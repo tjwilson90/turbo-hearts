@@ -1,6 +1,6 @@
 use crate::{
     error::CardsError,
-    game::GameEvent,
+    game::GameDbEvent,
     types::{ChargingRules, GameId, Player},
 };
 use r2d2::{CustomizeConnection, Pool};
@@ -55,7 +55,7 @@ impl Database {
         let mut games = HashMap::new();
         while let Some(row) = rows.next()? {
             let id = row.get(0)?;
-            if let GameEvent::Sit {
+            if let GameDbEvent::Sit {
                 north,
                 east,
                 south,

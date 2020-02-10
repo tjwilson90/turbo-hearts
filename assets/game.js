@@ -32,7 +32,7 @@ function onEvent(event) {
             onCharge(data.seat, data.cards);
             break;
         case 'play':
-            onPlay(data.seat, data.card);
+            onPlay(data.seat, data.card, data.trick_number);
             break;
         default:
             console.log('Unknown lobby event: %o', data);
@@ -45,11 +45,7 @@ function onSit(north, east, south, west, rules) {
     onSitPlayer(east, document.getElementById('east'));
     onSitPlayer(south, document.getElementById('south'));
     onSitPlayer(west, document.getElementById('west'));
-
-    let p = document.createElement('p');
-    p.append("Rules are " + rules);
-    let events = document.getElementById('events');
-    events.appendChild(p);
+    document.getElementById('rules').innerHTML = rules;
 }
 
 function onSitPlayer(player, div) {
@@ -64,6 +60,7 @@ function onDeal(north, east, south, west) {
     addCards(east, document.getElementById('east'));
     addCards(south, document.getElementById('south'));
     addCards(west, document.getElementById('west'));
+    document.getElementById('events').innerHTML = '';
 }
 
 function addCards(cards, div) {
@@ -99,14 +96,19 @@ function onCharge(seat, cards) {
     events.appendChild(p);
 }
 
-function onPlay(seat, card) {
+function onPlay(seat, card, trick_number) {
     let p = document.createElement('p');
+    p.className = 'trick-' + trick_number;
     p.append(seat + " played " + card);
     let events = document.getElementById('events');
     events.appendChild(p);
     let cardElement = document.getElementById(card);
     if (cardElement != null) {
         cardElement.remove();
+    }
+    let expired = document.getElementsByClassName('trick-' + (trick_number - 2));
+    while (expired.length > 0) {
+        expired[0].remove();
     }
 }
 
@@ -157,7 +159,7 @@ function chargeCards() {
 
 function playCard() {
     let cards = getCheckedCards();
-    console.log('playCard:, %o', cards);
+    console.log('playCard: %o', cards);
     fetch("/game/play", {
         method: 'POST',
         headers: {
