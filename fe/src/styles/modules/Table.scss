@@ -1,0 +1,31 @@
+.table {
+  height: 1000px;
+  width: 1200px;
+  padding: 20px;
+  background: #77a178;
+
+  display: grid;
+  grid-template-rows: [top] 193px [center] auto [bottom] 193px [end];
+  grid-template-columns: [left] 388px [center] auto [right] 388px [end];
+
+  .north {
+    justify-self: center;
+    grid-row: top / center;
+    grid-column: center / right;
+  }
+  .east {
+    align-self: center;
+    grid-row: center / bottom;
+    grid-column: right / end;
+  }
+  .south {
+    justify-self: center;
+    grid-row: bottom / end;
+    grid-column: center / right;
+  }
+  .west {
+    align-self: center;
+    grid-row: center / bottom;
+    grid-column: left / center;
+  }
+}
