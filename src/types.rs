@@ -50,7 +50,29 @@ impl FromSql for GameId {
 
 pub type EventId = u32;
 
-pub type Player = String;
+pub type Name = String;
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct Participant {
+    pub player: Player,
+    pub rules: ChargingRules,
+}
+
+#[serde(rename_all = "snake_case")]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub enum Player {
+    Human { name: Name },
+    Bot { name: Name, algorithm: String },
+}
+
+impl Player {
+    pub fn name(&self) -> &Name {
+        match self {
+            Player::Human { name } => name,
+            Player::Bot { name, .. } => name,
+        }
+    }
+}
 
 #[repr(u8)]
 #[serde(rename_all = "snake_case")]

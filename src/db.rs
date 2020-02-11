@@ -1,12 +1,8 @@
-use crate::{
-    error::CardsError,
-    game::GameDbEvent,
-    types::{ChargingRules, GameId, Player},
-};
+use crate::error::CardsError;
 use r2d2::{CustomizeConnection, Pool};
 use r2d2_sqlite::SqliteConnectionManager;
-use rusqlite::{Connection, DropBehavior, Transaction, TransactionBehavior, NO_PARAMS};
-use std::{collections::HashMap, time::Duration};
+use rusqlite::{Connection, DropBehavior, Transaction, TransactionBehavior};
+use std::time::Duration;
 use tokio::task;
 
 #[derive(Clone)]
@@ -41,37 +37,6 @@ impl Database {
             );
             END;",
         )
-    }
-
-    pub fn hydrate_games(
-        &self,
-    ) -> Result<HashMap<GameId, HashMap<Player, ChargingRules>>, CardsError> {
-        let conn = self.pool.get().unwrap();
-        let mut stmt = conn.prepare(
-            "SELECT game_id, event FROM event
-            WHERE event_id = 0 AND game_id NOT IN (SELECT id FROM game)",
-        )?;
-        let mut rows = stmt.query(NO_PARAMS)?;
-        let mut games = HashMap::new();
-        while let Some(row) = rows.next()? {
-            let id = row.get(0)?;
-            if let GameDbEvent::Sit {
-                north,
-                east,
-                south,
-                west,
-                rules,
-            } = serde_json::from_str(&row.get::<_, String>(1)?)?
-            {
-                let mut players = HashMap::new();
-                players.insert(north, rules);
-                players.insert(east, rules);
-                players.insert(south, rules);
-                players.insert(west, rules);
-                games.insert(id, players);
-            }
-        }
-        Ok(games)
     }
 
     pub fn run_read_only<F, T>(&self, f: F) -> Result<T, CardsError>

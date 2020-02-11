@@ -1,3 +1,4 @@
+use crate::types::{Name, Participant};
 use crate::{
     cards::{Card, Cards, Suit},
     db::Database,
@@ -74,10 +75,10 @@ impl Games {
     pub fn start_game(
         &self,
         id: GameId,
-        players: &HashMap<Player, ChargingRules>,
+        participants: &Vec<Participant>,
     ) -> Result<(), CardsError> {
-        let mut order = players.keys().collect::<Vec<_>>();
-        order.shuffle(&mut rand::thread_rng());
+        let mut participants = participants.clone();
+        participants.shuffle(&mut rand::thread_rng());
         self.db.run_with_retry(|tx| {
             persist_events(
                 &tx,
@@ -85,11 +86,11 @@ impl Games {
                 0,
                 &[
                     GameDbEvent::Sit {
-                        north: order[0].clone(),
-                        east: order[1].clone(),
-                        south: order[2].clone(),
-                        west: order[3].clone(),
-                        rules: players[order[0]],
+                        north: participants[0].player.clone(),
+                        east: participants[1].player.clone(),
+                        south: participants[2].player.clone(),
+                        west: participants[3].player.clone(),
+                        rules: participants[0].rules,
                     },
                     deal(),
                 ],
@@ -101,11 +102,11 @@ impl Games {
     pub async fn subscribe(
         &self,
         id: GameId,
-        player: Player,
+        name: Name,
     ) -> Result<UnboundedReceiver<GameFeEvent>, CardsError> {
         let (tx, rx) = unbounded_channel();
         self.with_game(id, |game| {
-            let seat = game.seat(&player);
+            let seat = game.seat(&name);
             let mut copy = Game::new();
             for db_event in &game.events {
                 for fe_event in copy.as_fe_events(db_event) {
@@ -113,20 +114,15 @@ impl Games {
                 }
                 copy.apply(db_event.clone());
             }
-            game.subscribers.insert(player, tx);
+            game.subscribers.insert(name, tx);
             Ok(())
         })
         .await?;
         Ok(rx)
     }
 
-    pub async fn pass_cards(
-        &self,
-        id: GameId,
-        player: Player,
-        cards: Cards,
-    ) -> Result<(), CardsError> {
-        self.with_game(id, |game| match game.seat(&player) {
+    pub async fn pass_cards(&self, id: GameId, name: Name, cards: Cards) -> Result<(), CardsError> {
+        self.with_game(id, |game| match game.seat(&name) {
             Some(seat) => {
                 game.verify_pass(id, seat, cards)?;
                 let db_event = GameDbEvent::Pass { from: seat, cards };
@@ -139,7 +135,7 @@ impl Games {
                 game.apply(db_event);
                 Ok(())
             }
-            None => Err(CardsError::IllegalPlayer(player)),
+            None => Err(CardsError::IllegalPlayer(name)),
         })
         .await
     }
@@ -147,10 +143,10 @@ impl Games {
     pub async fn charge_cards(
         &self,
         id: GameId,
-        player: Player,
+        name: Name,
         cards: Cards,
     ) -> Result<(), CardsError> {
-        self.with_game(id, |game| match game.seat(&player) {
+        self.with_game(id, |game| match game.seat(&name) {
             Some(seat) => {
                 game.verify_charge(id, seat, cards)?;
                 let db_event = GameDbEvent::Charge { seat, cards };
@@ -163,18 +159,13 @@ impl Games {
                 game.apply(db_event);
                 Ok(())
             }
-            None => Err(CardsError::IllegalPlayer(player)),
+            None => Err(CardsError::IllegalPlayer(name)),
         })
         .await
     }
 
-    pub async fn play_card(
-        &self,
-        id: GameId,
-        player: Player,
-        card: Card,
-    ) -> Result<bool, CardsError> {
-        self.with_game(id, |game| match game.seat(&player) {
+    pub async fn play_card(&self, id: GameId, name: Name, card: Card) -> Result<bool, CardsError> {
+        self.with_game(id, |game| match game.seat(&name) {
             Some(seat) => {
                 game.verify_play(id, seat, card)?;
                 let mut db_events = vec![GameDbEvent::Play { seat, card }];
@@ -199,7 +190,7 @@ impl Games {
                 }
                 Ok(game.state == GameState::Complete)
             }
-            None => Err(CardsError::IllegalPlayer(player)),
+            None => Err(CardsError::IllegalPlayer(name)),
         })
         .await
     }
@@ -208,8 +199,8 @@ impl Games {
 #[derive(Debug)]
 struct Game {
     events: Vec<GameDbEvent>,
-    subscribers: HashMap<Player, UnboundedSender<GameFeEvent>>,
-    players: [Player; 4],
+    subscribers: HashMap<Name, UnboundedSender<GameFeEvent>>,
+    players: [Name; 4],
     rules: ChargingRules,
 
     state: GameState,
@@ -264,14 +255,14 @@ impl Game {
 
     fn broadcast(&mut self, event: &GameFeEvent) {
         let players = self.players.clone();
-        self.subscribers.retain(|p, tx| {
-            let seat = seat(&players, p);
+        self.subscribers.retain(|name, tx| {
+            let seat = seat(&players, name);
             send_event(seat, tx, event)
         });
     }
 
-    fn seat(&self, player: &Player) -> Option<Seat> {
-        seat(&self.players, player)
+    fn seat(&self, name: &Name) -> Option<Seat> {
+        seat(&self.players, name)
     }
 
     fn has_passed(&self, seat: Seat) -> bool {
@@ -287,7 +278,12 @@ impl Game {
                 west,
                 rules,
             } => {
-                self.players = [north.clone(), east.clone(), south.clone(), west.clone()];
+                self.players = [
+                    north.name().clone(),
+                    east.name().clone(),
+                    south.name().clone(),
+                    west.name().clone(),
+                ];
                 self.rules = *rules;
                 if !rules.free() {
                     self.next_charger = Some(Seat::North);
@@ -724,10 +720,10 @@ fn deal() -> GameDbEvent {
     }
 }
 
-fn seat(players: &[Player; 4], player: &Player) -> Option<Seat> {
+fn seat(players: &[Name; 4], name: &Name) -> Option<Seat> {
     players
         .iter()
-        .position(|p| p == player)
+        .position(|p| p == name)
         .map(|idx| Seat::VALUES[idx])
 }
 

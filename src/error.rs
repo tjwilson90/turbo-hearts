@@ -1,8 +1,5 @@
-use crate::{
-    cards::Cards,
-    game::GameState,
-    types::{GameId, Player},
-};
+use crate::types::Name;
+use crate::{cards::Cards, game::GameState, types::GameId};
 use rusqlite::ErrorCode;
 use serde::Serialize;
 use std::convert::Infallible;
@@ -26,7 +23,7 @@ pub enum CardsError {
     #[error("{0} is not a legal pass, passes must have 3 cards")]
     IllegalPassSize(Cards),
     #[error("{0} is not a member of the game")]
-    IllegalPlayer(Player),
+    IllegalPlayer(Name),
     #[error("charged cards cannot be played on the first trick of their suit")]
     NoChargeOnFirstTrickOfSuit,
     #[error("points cannot be played on the first trick")]
@@ -34,7 +31,7 @@ pub enum CardsError {
     #[error("your hand does not contain {0}")]
     NotYourCards(Cards),
     #[error("player {0} makes the next charge or play")]
-    NotYourTurn(Player),
+    NotYourTurn(Name),
     #[error("api endpoints require a \"player\" cookie identifying the caller")]
     MissingPlayerCookie,
     #[error("the first lead must be the two of clubs")]
