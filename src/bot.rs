@@ -3,6 +3,7 @@ use crate::error::CardsError;
 use crate::game::{GameFeEvent, Games};
 use crate::types::{GameId, Name};
 use rand::Rng;
+use std::sync::mpsc::TryRecvError;
 
 static NAMES: &[&str] = &include!("../names.json");
 
@@ -17,7 +18,7 @@ pub fn name() -> Name {
 
 pub struct Bot {
     name: Name,
-    algorithm: Box<dyn Algorithm + Send>,
+    algorithm: Box<dyn Algorithm + Send + Sync>,
 }
 
 impl Bot {
@@ -25,7 +26,7 @@ impl Bot {
         Self {
             name,
             algorithm: match algorithm {
-                "random" => Box::new(Random),
+                "random" => Box::new(Random::new()),
                 _ => panic!("Unknown algorithm"),
             },
         }
@@ -33,20 +34,30 @@ impl Bot {
 
     pub async fn run(mut self, games: Games, id: GameId) -> Result<(), CardsError> {
         let mut rx = games.subscribe(id, self.name.clone()).await?;
-        while let Some(event) = rx.recv().await {
-            for action in self.algorithm.handle(event) {
-                match action {
-                    Action::Pass(cards) => games.pass_cards(id, self.name.clone(), cards).await?,
-                    Action::Charge(cards) => {
-                        games.charge_cards(id, self.name.clone(), cards).await?
-                    }
-                    Action::Play(card) => {
-                        let complete = games.play_card(id, self.name.clone(), card).await?;
-                        if complete {
-                            return Ok(());
-                        }
+        loop {
+            match rx.try_recv() {
+                Ok(event) => self.algorithm.handle(event),
+                Err(TryRecvError::Empty) => break,
+                Err(TryRecvError::Disconnected) => return Ok(()),
+            }
+        }
+        loop {
+            match self.algorithm.reply() {
+                Some(Action::Pass(cards)) => games.pass_cards(id, self.name.clone(), cards).await?,
+                Some(Action::Charge(cards)) => {
+                    games.charge_cards(id, self.name.clone(), cards).await?
+                }
+                Some(Action::Play(card)) => {
+                    let complete = games.play_card(id, self.name.clone(), card).await?;
+                    if complete {
+                        return Ok(());
                     }
                 }
+                None => {}
+            }
+            match rx.recv().await {
+                Some(event) => self.algorithm.handle(event),
+                None => break,
             }
         }
         Ok(())
@@ -60,13 +71,37 @@ enum Action {
 }
 
 trait Algorithm {
-    fn handle(&mut self, event: GameFeEvent) -> Vec<Action>;
+    fn handle(&mut self, event: GameFeEvent);
+    fn reply(&self) -> Option<Action>;
 }
 
-struct Random;
+struct Random {
+    played: Cards,
+}
+
+impl Random {
+    fn new() -> Self {
+        Self {
+            played: Cards::NONE,
+        }
+    }
+}
 
 impl Algorithm for Random {
-    fn handle(&mut self, event: GameFeEvent) -> Vec<Action> {
+    fn handle(&mut self, event: GameFeEvent) {
+        match event {
+            GameFeEvent::Ping => {}
+            GameFeEvent::Sit { .. } => {}
+            GameFeEvent::Deal { .. } => {}
+            GameFeEvent::SendPass { .. } => {}
+            GameFeEvent::RecvPass { .. } => {}
+            GameFeEvent::BlindCharge { .. } => {}
+            GameFeEvent::Charge { .. } => {}
+            GameFeEvent::Play { .. } => {}
+        }
+    }
+
+    fn reply(&self) -> Option<Action> {
         unimplemented!()
     }
 }

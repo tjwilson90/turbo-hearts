@@ -20,6 +20,8 @@ pub enum CardsError {
     HeartsNotBroken,
     #[error("cannot perform action, currently {0:?}")]
     IllegalAction(GameState),
+    #[error("{0} is not a valid name for a human player")]
+    IllegalName(Name),
     #[error("{0} is not a legal pass, passes must have 3 cards")]
     IllegalPassSize(Cards),
     #[error("{0} is not a member of the game")]

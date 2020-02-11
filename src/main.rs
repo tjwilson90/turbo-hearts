@@ -178,7 +178,11 @@ where
 }
 
 async fn name_cookie(name: Option<String>) -> Result<Name, Rejection> {
-    name.ok_or(warp::reject::custom(CardsError::MissingPlayerCookie))
+    match name {
+        Some(name) if name.ends_with("(bot)") => Err(CardsError::IllegalName(name))?,
+        Some(name) => Ok(name),
+        None => Err(CardsError::MissingPlayerCookie)?,
+    }
 }
 
 #[tokio::main]
