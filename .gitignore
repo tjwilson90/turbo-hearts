@@ -1,3 +1,4 @@
 /target
 .idea
 turbo-hearts.db*
+.DS_Store
