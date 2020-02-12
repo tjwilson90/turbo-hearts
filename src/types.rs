@@ -132,7 +132,7 @@ impl Seat {
         *self as usize
     }
 
-    pub fn next(&self) -> Self {
+    pub fn left(&self) -> Self {
         match self {
             Seat::North => Seat::East,
             Seat::East => Seat::South,
@@ -141,20 +141,38 @@ impl Seat {
         }
     }
 
+    pub fn right(&self) -> Self {
+        match self {
+            Seat::North => Seat::West,
+            Seat::East => Seat::North,
+            Seat::South => Seat::East,
+            Seat::West => Seat::South,
+        }
+    }
+
+    pub fn across(&self) -> Self {
+        match self {
+            Seat::North => Seat::South,
+            Seat::East => Seat::West,
+            Seat::South => Seat::North,
+            Seat::West => Seat::East,
+        }
+    }
+
     pub fn pass_sender(&self, hand: PassDirection) -> Self {
         match hand {
-            PassDirection::Left => self.next().next().next(),
-            PassDirection::Right => self.next(),
-            PassDirection::Across => self.next().next(),
+            PassDirection::Left => self.right(),
+            PassDirection::Right => self.left(),
+            PassDirection::Across => self.across(),
             PassDirection::Keeper => *self,
         }
     }
 
     pub fn pass_receiver(&self, hand: PassDirection) -> Self {
         match hand {
-            PassDirection::Left => self.next(),
-            PassDirection::Right => self.next().next().next(),
-            PassDirection::Across => self.next().next(),
+            PassDirection::Left => self.left(),
+            PassDirection::Right => self.right(),
+            PassDirection::Across => self.across(),
             PassDirection::Keeper => *self,
         }
     }

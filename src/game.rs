@@ -122,7 +122,12 @@ impl Games {
         Ok(rx)
     }
 
-    pub async fn pass_cards(&self, id: GameId, name: Name, cards: Cards) -> Result<(), CardsError> {
+    pub async fn pass_cards(
+        &self,
+        id: GameId,
+        name: &Name,
+        cards: Cards,
+    ) -> Result<(), CardsError> {
         self.with_game(id, |game| match game.seat(&name) {
             Some(seat) => {
                 game.verify_pass(id, seat, cards)?;
@@ -136,7 +141,7 @@ impl Games {
                 }
                 Ok(())
             }
-            None => Err(CardsError::IllegalPlayer(name)),
+            None => Err(CardsError::IllegalPlayer(name.clone())),
         })
         .await
     }
@@ -144,7 +149,7 @@ impl Games {
     pub async fn charge_cards(
         &self,
         id: GameId,
-        name: Name,
+        name: &Name,
         cards: Cards,
     ) -> Result<(), CardsError> {
         self.with_game(id, |game| match game.seat(&name) {
@@ -160,12 +165,12 @@ impl Games {
                 }
                 Ok(())
             }
-            None => Err(CardsError::IllegalPlayer(name)),
+            None => Err(CardsError::IllegalPlayer(name.clone())),
         })
         .await
     }
 
-    pub async fn play_card(&self, id: GameId, name: Name, card: Card) -> Result<bool, CardsError> {
+    pub async fn play_card(&self, id: GameId, name: &Name, card: Card) -> Result<bool, CardsError> {
         self.with_game(id, |game| match game.seat(&name) {
             Some(seat) => {
                 game.verify_play(id, seat, card)?;
@@ -191,7 +196,7 @@ impl Games {
                 }
                 Ok(game.state == GameState::Complete)
             }
-            None => Err(CardsError::IllegalPlayer(name)),
+            None => Err(CardsError::IllegalPlayer(name.clone())),
         })
         .await
     }
@@ -332,7 +337,7 @@ impl Game {
             GameDbEvent::Charge { seat, cards } => {
                 self.charged |= *cards;
                 if let Some(charger) = &mut self.next_charger {
-                    *charger = charger.next();
+                    *charger = charger.left();
                 }
                 if cards.is_empty() {
                     self.done_charging[seat.idx()] = true;

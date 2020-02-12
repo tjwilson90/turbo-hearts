@@ -10,6 +10,7 @@ use crate::{
     lobby::{Lobby, LobbyEvent},
     types::{ChargingRules, GameId, Player},
 };
+use log::info;
 use rusqlite::{Transaction, NO_PARAMS};
 use std::collections::HashMap;
 use tokio::task;
@@ -23,14 +24,27 @@ pub struct Server {
 impl Server {
     pub async fn new(db: Database) -> Result<Self, CardsError> {
         let partial_games = db.run_read_only(|tx| hydrate_games(&tx))?;
-        let games = Games::new(db);
+        let server = Self {
+            lobby: Lobby::new(partial_games.clone()),
+            games: Games::new(db),
+        };
         for (id, participants) in &partial_games {
-            start_bots(&games, *id, participants).await;
+            server.start_bots(*id, participants).await;
         }
-        Ok(Self {
-            lobby: Lobby::new(partial_games),
-            games,
-        })
+        Ok(server)
+    }
+
+    async fn start_bots(&self, id: GameId, participants: &[Participant]) {
+        if participants.len() < 4 {
+            return;
+        }
+        for participant in participants {
+            if let Player::Bot { name, algorithm } = &participant.player {
+                info!("Starting {} with algorithm {}", name, algorithm);
+                let bot = Bot::new(name.clone(), algorithm);
+                task::spawn(bot.run(self.clone(), id));
+            }
+        }
     }
 
     pub async fn ping_event_streams(&self) {
@@ -39,11 +53,14 @@ impl Server {
     }
 
     pub async fn subscribe_lobby(&self, name: Name) -> UnboundedReceiver<LobbyEvent> {
+        info!("{} joined the lobby", name);
         self.lobby.subscribe(name).await
     }
 
     pub async fn new_game(&self, name: Name, rules: ChargingRules) -> GameId {
-        self.lobby.new_game(name, rules).await
+        let id = self.lobby.new_game(name.clone(), rules).await;
+        info!("{} started game {}", name, id);
+        id
     }
 
     pub async fn join_game(
@@ -52,10 +69,20 @@ impl Server {
         player: Player,
         rules: ChargingRules,
     ) -> Result<Vec<Player>, CardsError> {
-        let participants = self.lobby.join_game(id, player, rules).await?;
+        let participants = match self.lobby.join_game(id, player.clone(), rules).await {
+            Ok(participants) => {
+                info!("{:?} joined game {}", player, id);
+                participants
+            }
+            Err(e) => {
+                info!("{:?} failed to game {} with error {}", player, id, e);
+                return Err(e);
+            }
+        };
         if participants.len() == 4 {
+            info!("starting game {}", id);
             self.games.start_game(id, &participants)?;
-            start_bots(&self.games, id, &participants).await;
+            self.start_bots(id, &participants).await;
         }
         Ok(participants
             .into_iter()
@@ -64,6 +91,7 @@ impl Server {
     }
 
     pub async fn leave_game(&self, id: GameId, name: Name) {
+        info!("{} left game {}", name, id);
         self.lobby.leave_game(id, name).await
     }
 
@@ -72,11 +100,20 @@ impl Server {
         id: GameId,
         name: Name,
     ) -> Result<UnboundedReceiver<GameFeEvent>, CardsError> {
+        info!("{} subscribed to game {}", name, id);
         self.games.subscribe(id, name).await
     }
 
     pub async fn pass_cards(&self, id: GameId, name: Name, cards: Cards) -> Result<(), CardsError> {
-        self.games.pass_cards(id, name, cards).await
+        let result = self.games.pass_cards(id, &name, cards).await;
+        match &result {
+            Ok(_) => info!("{} passed {} in game {} successfully", name, cards, id),
+            Err(e) => info!(
+                "{} failed to pass {} in game {} with error {}",
+                name, cards, id, e
+            ),
+        }
+        result
     }
 
     pub async fn charge_cards(
@@ -85,27 +122,32 @@ impl Server {
         name: Name,
         cards: Cards,
     ) -> Result<(), CardsError> {
-        self.games.charge_cards(id, name, cards).await
+        let result = self.games.charge_cards(id, &name, cards).await;
+        match &result {
+            Ok(_) => info!("{} charged {} in game {} successfully", name, cards, id),
+            Err(e) => info!(
+                "{} failed to charge {} in game {} with error {}",
+                name, cards, id, e
+            ),
+        }
+        result
     }
 
-    pub async fn play_card(&self, id: GameId, name: Name, card: Card) -> Result<(), CardsError> {
-        let complete = self.games.play_card(id, name, card).await?;
-        if complete {
-            self.lobby.remove_game(id).await;
+    pub async fn play_card(&self, id: GameId, name: Name, card: Card) -> Result<bool, CardsError> {
+        let result = self.games.play_card(id, &name, card).await;
+        match &result {
+            Ok(complete) => {
+                info!("{} played {} in game {} successfully", name, card, id);
+                if *complete {
+                    self.lobby.remove_game(id).await;
+                }
+            }
+            Err(e) => info!(
+                "{} failed to play {} in game {} with error {}",
+                name, card, id, e
+            ),
         }
-        Ok(())
-    }
-}
-
-async fn start_bots(games: &Games, id: GameId, participants: &[Participant]) {
-    if participants.len() < 4 {
-        return;
-    }
-    for participant in participants {
-        if let Player::Bot { name, algorithm } = &participant.player {
-            let bot = Bot::new(name.clone(), algorithm);
-            task::spawn(bot.run(games.clone(), id));
-        }
+        result
     }
 }
 

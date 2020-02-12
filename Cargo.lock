@@ -1270,6 +1270,7 @@ name = "turbo-hearts"
 version = "0.1.0"
 dependencies = [
  "env_logger",
+ "log 0.4.8",
  "r2d2",
  "r2d2_sqlite",
  "rand 0.7.3",

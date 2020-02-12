@@ -1,7 +1,7 @@
 use crate::bot::{Action, Algorithm};
 use crate::cards::{legal_plays, Card, Cards, Trick};
 use crate::game::GameFeEvent;
-use crate::types::{ChargingRules, Name, PassDirection, Seat};
+use crate::types::{ChargingRules, Name, Seat};
 use rand::seq::SliceRandom;
 use rand::Rng;
 
@@ -9,7 +9,6 @@ pub struct Random {
     name: Name,
     seat: Seat,
     rules: ChargingRules,
-    pass_direction: PassDirection,
     pre_pass_hand: Cards,
     post_pass_hand: Cards,
     done_charging: bool,
@@ -20,15 +19,12 @@ pub struct Random {
     next_action: Option<Action>,
 }
 
-enum State {}
-
 impl Random {
     pub fn new(name: Name) -> Self {
         Self {
             name,
             seat: Seat::North,
             rules: ChargingRules::Classic,
-            pass_direction: PassDirection::Left,
             pre_pass_hand: Cards::NONE,
             post_pass_hand: Cards::NONE,
             done_charging: false,
@@ -47,7 +43,7 @@ impl Random {
     }
 
     fn charge(&self) -> Cards {
-        let cards = self.post_pass_hand & Cards::CHARGEABLE;
+        let cards = (self.post_pass_hand & Cards::CHARGEABLE) - self.charged;
         cards
             .into_iter()
             .filter(|_| rand::thread_rng().gen())
@@ -99,6 +95,7 @@ impl Algorithm for Random {
                 east,
                 south,
                 west,
+                ..
             } => {
                 self.pre_pass_hand = north | east | south | west;
                 self.post_pass_hand = self.pre_pass_hand;
@@ -106,31 +103,53 @@ impl Algorithm for Random {
                 self.charged = Cards::NONE;
                 self.led_suits = Cards::NONE;
                 self.played = Cards::NONE;
-                if self.rules.free() {
-                    self.next_action = Some(Action::Pass(self.pass()))
-                }
             }
             GameFeEvent::SendPass { cards, .. } => self.post_pass_hand -= cards,
             GameFeEvent::RecvPass { cards, .. } => {
                 self.post_pass_hand |= cards;
-                self.pass_direction = self.pass_direction.next().unwrap_or(PassDirection::Keeper);
+                self.done_charging = false;
             }
             GameFeEvent::BlindCharge { seat, .. } => {
-                if seat == self.seat {
+                if !self.done_charging && seat == self.seat.right() {
+                    self.next_action = Some(Action::Charge(self.charge()));
                     self.done_charging = true;
                 }
             }
             GameFeEvent::Charge { seat, cards } => {
-                if seat == self.seat {
+                self.charged |= cards;
+                if !self.done_charging && seat == self.seat.right() {
+                    self.next_action = Some(Action::Charge(self.charge()));
                     self.done_charging = true;
                 }
-                self.charged |= cards;
             }
-            GameFeEvent::Play { .. } => {}
+            GameFeEvent::Play { seat, card, .. } => {
+                self.played |= card;
+                if self.trick.cards.is_empty() {
+                    self.led_suits |= card.suit().cards();
+                }
+                self.trick.play(card);
+                if seat == self.seat.right() {
+                    self.next_action = Some(Action::Play(self.play()));
+                }
+            }
+            GameFeEvent::StartPassing => self.next_action = Some(Action::Pass(self.pass())),
+            GameFeEvent::StartCharging { seat } => match seat {
+                Some(seat) if seat != self.seat => {}
+                _ => {
+                    self.next_action = Some(Action::Charge(self.charge()));
+                    self.done_charging = true;
+                }
+            },
+            GameFeEvent::StartTrick { leader, .. } => {
+                self.trick = Trick::new(leader);
+                if leader == self.seat {
+                    self.next_action = Some(Action::Play(self.play()));
+                }
+            }
         }
     }
 
-    fn reply(&self) -> Option<Action> {
-        self.next_action
+    fn reply(&mut self) -> Option<Action> {
+        self.next_action.take()
     }
 }

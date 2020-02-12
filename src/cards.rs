@@ -579,7 +579,7 @@ impl Trick {
     }
 
     pub fn play(&mut self, card: Card) {
-        self.next = self.next.next();
+        self.next = self.next.left();
         if self.lead.is_none() {
             self.lead = Some(card.suit());
         }

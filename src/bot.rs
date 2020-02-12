@@ -1,7 +1,8 @@
 use crate::bot::random::Random;
 use crate::cards::{Card, Cards};
 use crate::error::CardsError;
-use crate::game::{GameFeEvent, Games};
+use crate::game::GameFeEvent;
+use crate::server::Server;
 use crate::types::{GameId, Name};
 use rand::Rng;
 use std::sync::mpsc::TryRecvError;
@@ -33,23 +34,25 @@ impl Bot {
         Self { name, algorithm }
     }
 
-    pub async fn run(mut self, games: Games, id: GameId) -> Result<(), CardsError> {
-        let mut rx = games.subscribe(id, self.name.clone()).await?;
+    pub async fn run(mut self, server: Server, id: GameId) -> Result<(), CardsError> {
+        let mut rx = server.subscribe_game(id, self.name.clone()).await?;
         loop {
-            match rx.try_recv() {
-                Ok(event) => self.algorithm.handle(event),
-                Err(TryRecvError::Empty) => break,
-                Err(TryRecvError::Disconnected) => return Ok(()),
+            loop {
+                match rx.try_recv() {
+                    Ok(event) => self.algorithm.handle(event),
+                    Err(TryRecvError::Empty) => break,
+                    Err(TryRecvError::Disconnected) => return Ok(()),
+                }
             }
-        }
-        loop {
             match self.algorithm.reply() {
-                Some(Action::Pass(cards)) => games.pass_cards(id, self.name.clone(), cards).await?,
+                Some(Action::Pass(cards)) => {
+                    server.pass_cards(id, self.name.clone(), cards).await?
+                }
                 Some(Action::Charge(cards)) => {
-                    games.charge_cards(id, self.name.clone(), cards).await?
+                    server.charge_cards(id, self.name.clone(), cards).await?
                 }
                 Some(Action::Play(card)) => {
-                    let complete = games.play_card(id, self.name.clone(), card).await?;
+                    let complete = server.play_card(id, self.name.clone(), card).await?;
                     if complete {
                         return Ok(());
                     }
@@ -74,5 +77,5 @@ enum Action {
 
 trait Algorithm {
     fn handle(&mut self, event: GameFeEvent);
-    fn reply(&self) -> Option<Action>;
+    fn reply(&mut self) -> Option<Action>;
 }
