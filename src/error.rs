@@ -36,8 +36,12 @@ pub enum CardsError {
     NotYourTurn(Name),
     #[error("api endpoints require a \"player\" cookie identifying the caller")]
     MissingPlayerCookie,
+    #[error("on the first trick if you have nothing but points, you must play the jack of diamonds if you have it")]
+    MustPlayJackOfDiamonds,
+    #[error("on the first trick if you have nothing but positive points, you must play the queen of spades if you have it")]
+    MustPlayQueenOfSpades,
     #[error("the first lead must be the two of clubs")]
-    MustStartWithTwoOfClubs,
+    MustPlayTwoOfClubs,
     #[error("suit must be followed")]
     MustFollowSuit,
     #[error("unexpected serde error")]

@@ -1,3 +1,4 @@
+use crate::types::Seat;
 use serde::{
     de::{SeqAccess, Visitor},
     export::{fmt::Error, Formatter},
@@ -559,4 +560,113 @@ impl FromIterator<Card> for Cards {
         iter.into_iter().for_each(|c| cards |= c);
         cards
     }
+}
+
+#[derive(Debug)]
+pub struct Trick {
+    pub next: Seat,
+    pub lead: Option<Suit>,
+    pub cards: Cards,
+}
+
+impl Trick {
+    pub fn new(leader: Seat) -> Self {
+        Self {
+            next: leader,
+            lead: None,
+            cards: Cards::NONE,
+        }
+    }
+
+    pub fn play(&mut self, card: Card) {
+        self.next = self.next.next();
+        if self.lead.is_none() {
+            self.lead = Some(card.suit());
+        }
+        self.cards |= card;
+    }
+
+    pub fn winner(&self) -> Option<Card> {
+        let complete = match self.cards.len() {
+            8 => true,
+            4 => !self.cards.contains(self.lead.unwrap().nine()),
+            _ => false,
+        };
+        if complete {
+            Some((self.cards & self.lead.unwrap().cards()).max())
+        } else {
+            None
+        }
+    }
+}
+
+pub fn legal_plays(
+    hand: Cards,
+    trick: &Trick,
+    led_suits: Cards,
+    charged: Cards,
+    played: Cards,
+) -> Cards {
+    let mut plays = hand - played;
+    // if this is the first trick
+    if led_suits.is_empty() {
+        // if you have the two of clubs
+        if plays.contains(Card::TwoClubs) {
+            // you must play it
+            return Card::TwoClubs.into();
+        }
+
+        // if you have a non-point card
+        if !Cards::POINTS.contains_all(plays) {
+            // you cannot play points
+            plays -= Cards::POINTS;
+
+        // otherwise, if you have the jack of diamonds
+        } else if plays.contains(Card::JackDiamonds) {
+            // you must play it
+            return Card::JackDiamonds.into();
+
+        // otherwise, if you have the queen of spades
+        } else if plays.contains(Card::QueenSpades) {
+            // you must play it
+            return Card::QueenSpades.into();
+        }
+    }
+
+    // if this is not the first card in the trick
+    if let Some(suit) = trick.lead {
+        // and you have any cards in suit
+        if suit.cards().contains_any(plays) {
+            // you must play in suit
+            plays &= suit.cards();
+
+            // and if this is the first trick of this suit
+            if !led_suits.contains_any(suit.cards())
+                // and you have multiple plays
+                && plays.len() > 1
+            {
+                // you cannot play charged cards from the suit
+                plays -= charged;
+            }
+        }
+
+    // otherwise, you are leading the trick
+    } else {
+        // If hearts are not broken
+        if !led_suits.contains_any(Cards::HEARTS)
+            // and you have a non-heart
+            && !Cards::HEARTS.contains_all(plays)
+        {
+            // you cannot lead hearts
+            plays -= Cards::HEARTS;
+        }
+
+        let unled_charges = charged - led_suits;
+        // if you have cards other than charged cards from unled suits
+        if !unled_charges.contains_all(plays) {
+            // you must lead one of them
+            plays -= unled_charges;
+        }
+    }
+    plays
 }

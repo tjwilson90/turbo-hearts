@@ -1,9 +1,12 @@
+use crate::bot::random::Random;
 use crate::cards::{Card, Cards};
 use crate::error::CardsError;
 use crate::game::{GameFeEvent, Games};
 use crate::types::{GameId, Name};
 use rand::Rng;
 use std::sync::mpsc::TryRecvError;
+
+mod random;
 
 static NAMES: &[&str] = &include!("../names.json");
 
@@ -23,13 +26,11 @@ pub struct Bot {
 
 impl Bot {
     pub fn new(name: Name, algorithm: &str) -> Self {
-        Self {
-            name,
-            algorithm: match algorithm {
-                "random" => Box::new(Random::new()),
-                _ => panic!("Unknown algorithm"),
-            },
-        }
+        let algorithm = match algorithm {
+            "random" => Box::new(Random::new(name.clone())),
+            _ => panic!("Unknown algorithm"),
+        };
+        Self { name, algorithm }
     }
 
     pub async fn run(mut self, games: Games, id: GameId) -> Result<(), CardsError> {
@@ -64,6 +65,7 @@ impl Bot {
     }
 }
 
+#[derive(Copy, Clone, Eq, PartialEq)]
 enum Action {
     Pass(Cards),
     Charge(Cards),
@@ -73,35 +75,4 @@ enum Action {
 trait Algorithm {
     fn handle(&mut self, event: GameFeEvent);
     fn reply(&self) -> Option<Action>;
-}
-
-struct Random {
-    played: Cards,
-}
-
-impl Random {
-    fn new() -> Self {
-        Self {
-            played: Cards::NONE,
-        }
-    }
-}
-
-impl Algorithm for Random {
-    fn handle(&mut self, event: GameFeEvent) {
-        match event {
-            GameFeEvent::Ping => {}
-            GameFeEvent::Sit { .. } => {}
-            GameFeEvent::Deal { .. } => {}
-            GameFeEvent::SendPass { .. } => {}
-            GameFeEvent::RecvPass { .. } => {}
-            GameFeEvent::BlindCharge { .. } => {}
-            GameFeEvent::Charge { .. } => {}
-            GameFeEvent::Play { .. } => {}
-        }
-    }
-
-    fn reply(&self) -> Option<Action> {
-        unimplemented!()
-    }
 }

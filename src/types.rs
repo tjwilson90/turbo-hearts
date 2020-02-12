@@ -184,6 +184,15 @@ impl PassDirection {
             PassDirection::Keeper => None,
         }
     }
+
+    pub fn first_charger(self) -> Seat {
+        match self {
+            PassDirection::Left => Seat::North,
+            PassDirection::Right => Seat::East,
+            PassDirection::Across => Seat::South,
+            PassDirection::Keeper => Seat::West,
+        }
+    }
 }
 
 pub trait Event {
