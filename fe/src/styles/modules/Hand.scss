@@ -19,7 +19,15 @@
   &.playable > .card {
     transition: margin-top 0.1s ease-in-out;
     cursor: pointer;
+
+    &.charged {
+      margin-top: -40px;
+    }
+
     &:hover {
+      &.charged {
+        margin-top: -60px;
+      }
       margin-top: -20px;
     }
   }

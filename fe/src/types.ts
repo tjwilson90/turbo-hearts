@@ -1,3 +1,16 @@
+export interface WithCharged {
+  chargedAh: boolean;
+  chargedJd: boolean;
+  chargedTc: boolean;
+  chargedQs: boolean;
+}
+
+export interface Player extends WithCharged {
+  hand: Card[];
+  name: string;
+  dealer: boolean;
+}
+
 export type Card =
   | "BACK"
   | "2C"

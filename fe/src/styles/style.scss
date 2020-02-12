@@ -4,3 +4,10 @@
 @import "modules/base";
 @import "modules/Table";
 @import "modules/Hand";
+@import "modules/PlayerInfo";
+
+.turbo-hearts-container {
+  background: #dfd;
+  width: 100vw;
+  height: 100vh;
+}

@@ -1,13 +1,18 @@
 import * as React from "react";
-import { Card } from "../types";
+import { Card, Player } from "../types";
 import * as classNames from "classnames";
 import { Hand } from "./Hand";
+import { PlayerInfo } from "./PlayerInfo";
 
 export interface TableProps {
-  north: Card[];
-  east: Card[];
-  south: Card[];
-  west: Card[];
+  top: Player;
+  right: Player;
+  bottom: Player;
+  left: Player;
+  topPlays: Card[];
+  rightPlays: Card[];
+  bottomPlays: Card[];
+  leftPlays: Card[];
 }
 
 export class Table extends React.Component<TableProps, {}> {
@@ -18,17 +23,58 @@ export class Table extends React.Component<TableProps, {}> {
   render() {
     return (
       <div className={classNames("table")}>
-        <div className="north">
-          <Hand cards={this.props.north} playable={false} />
+        <div className="top-info">
+          <PlayerInfo player={this.props.top} />
         </div>
-        <div className="east">
-          <Hand cards={this.props.east} playable={false} />
+        <div className="top">
+          <Hand
+            charges={this.props.top}
+            cards={this.props.top.hand}
+            playable={false}
+          />
         </div>
-        <div className="south">
-          <Hand cards={this.props.south} playable={true} />
+        <div className="right-info">
+          <PlayerInfo player={this.props.right} />
         </div>
-        <div className="west">
-          <Hand cards={this.props.west} playable={false} />
+        <div className="right">
+          <Hand
+            charges={this.props.right}
+            cards={this.props.right.hand}
+            playable={false}
+          />
+        </div>
+        <div className="bottom-info">
+          <PlayerInfo player={this.props.bottom} />
+        </div>
+        <div className="bottom">
+          <Hand
+            charges={this.props.bottom}
+            cards={this.props.bottom.hand}
+            playable={true}
+          />
+        </div>
+        <div className="left-info">
+          <PlayerInfo player={this.props.left} />
+        </div>
+        <div className="left">
+          <Hand
+            charges={this.props.left}
+            cards={this.props.left.hand}
+            playable={false}
+          />
+        </div>
+        <div className="center"></div>
+        <div className="top-plays">
+          <Hand cards={this.props.topPlays} playable={false} />
+        </div>
+        <div className="right-plays">
+          <Hand cards={this.props.rightPlays} playable={false} />
+        </div>
+        <div className="bottom-plays">
+          <Hand cards={this.props.bottomPlays} playable={false} />
+        </div>
+        <div className="left-plays">
+          <Hand cards={this.props.leftPlays} playable={false} />
         </div>
       </div>
     );
