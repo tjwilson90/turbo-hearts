@@ -58,7 +58,7 @@ pub struct Participant {
     pub rules: ChargingRules,
 }
 
-#[serde(rename_all = "snake_case")]
+#[serde(tag = "type", rename_all = "snake_case")]
 #[derive(Clone, Debug, Eq, PartialEq, Hash, Serialize, Deserialize)]
 pub enum Player {
     Human { name: Name },

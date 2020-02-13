@@ -189,7 +189,7 @@ async fn name_cookie(name: Option<String>) -> Result<Name, Rejection> {
 async fn main() -> Result<(), CardsError> {
     env_logger::init();
     let db = Database::new(SqliteConnectionManager::file("turbo-hearts.db"))?;
-    let server = Server::new(db).await?;
+    let server = Server::new(db)?;
     task::spawn(ping_event_streams(server.clone()));
     let server = warp::any().map(move || server.clone());
     let name = warp::cookie::optional("name").and_then(name_cookie);

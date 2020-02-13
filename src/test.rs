@@ -140,7 +140,7 @@ fn test_cards_parse() {
 #[tokio::test(threaded_scheduler)]
 async fn test_join_unknown_game() -> Result<(), CardsError> {
     async fn test(db: Database) -> Result<(), CardsError> {
-        let server = Server::new(db).await?;
+        let server = Server::new(db)?;
         let id = GameId::new();
         let resp = server
             .join_game(id, h!(twilson), ChargingRules::Classic)
@@ -154,7 +154,7 @@ async fn test_join_unknown_game() -> Result<(), CardsError> {
 #[tokio::test(threaded_scheduler)]
 async fn test_lobby() -> Result<(), CardsError> {
     async fn test(db: Database) -> Result<(), CardsError> {
-        let server = Server::new(db).await?;
+        let server = Server::new(db)?;
 
         let mut twilson = server.subscribe_lobby(s!(twilson)).await;
         assert_eq!(
@@ -234,7 +234,7 @@ async fn test_lobby() -> Result<(), CardsError> {
 #[tokio::test(threaded_scheduler)]
 async fn test_new_game() -> Result<(), CardsError> {
     async fn test(db: Database) -> Result<(), CardsError> {
-        let server = Server::new(db).await?;
+        let server = Server::new(db)?;
         let id = server.new_game(s!(twilson), ChargingRules::Classic).await;
         server
             .join_game(id, h!(tslatcher), ChargingRules::Classic)
@@ -292,7 +292,7 @@ async fn test_pass() -> Result<(), CardsError> {
             )?;
             Ok(())
         })?;
-        let server = Server::new(db).await?;
+        let server = Server::new(db)?;
 
         assert!(matches!(
             server.pass_cards(id, s!(twilson), c!(A73S)).await,
@@ -329,7 +329,7 @@ async fn test_pass() -> Result<(), CardsError> {
 #[tokio::test(threaded_scheduler)]
 async fn test_random_bot_game() -> Result<(), CardsError> {
     async fn test(db: Database) -> Result<(), CardsError> {
-        let server = Server::new(db).await?;
+        let server = Server::new(db)?;
         let id = server.new_game(s!(fake), ChargingRules::Classic).await;
         server
             .join_game(

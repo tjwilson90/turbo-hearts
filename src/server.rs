@@ -22,19 +22,19 @@ pub struct Server {
 }
 
 impl Server {
-    pub async fn new(db: Database) -> Result<Self, CardsError> {
-        let partial_games = db.run_read_only(|tx| hydrate_games(&tx))?;
+    pub fn new(db: Database) -> Result<Self, CardsError> {
+        let partial_games = db.run_blocking_read_only(|tx| hydrate_games(&tx))?;
         let server = Self {
             lobby: Lobby::new(partial_games.clone()),
             games: Games::new(db),
         };
         for (id, participants) in &partial_games {
-            server.start_bots(*id, participants).await;
+            server.start_bots(*id, participants);
         }
         Ok(server)
     }
 
-    async fn start_bots(&self, id: GameId, participants: &HashSet<Participant>) {
+    fn start_bots(&self, id: GameId, participants: &HashSet<Participant>) {
         if participants.len() < 4 {
             return;
         }
@@ -82,7 +82,7 @@ impl Server {
         if participants.len() == 4 {
             info!("starting game {}", id);
             self.games.start_game(id, &participants)?;
-            self.start_bots(id, &participants).await;
+            self.start_bots(id, &participants);
         }
         Ok(participants
             .into_iter()

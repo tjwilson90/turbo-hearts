@@ -39,6 +39,13 @@ impl Database {
         )
     }
 
+    pub fn run_blocking_read_only<F, T>(&self, f: F) -> Result<T, CardsError>
+    where
+        F: FnMut(Transaction) -> Result<T, CardsError>,
+    {
+        self.run_blocking(TransactionBehavior::Deferred, f)
+    }
+
     pub fn run_read_only<F, T>(&self, f: F) -> Result<T, CardsError>
     where
         F: FnMut(Transaction) -> Result<T, CardsError>,
@@ -53,28 +60,33 @@ impl Database {
         self.run_sql(TransactionBehavior::Immediate, f)
     }
 
-    fn run_sql<F, T>(&self, behavior: TransactionBehavior, mut f: F) -> Result<T, CardsError>
+    fn run_sql<F, T>(&self, behavior: TransactionBehavior, f: F) -> Result<T, CardsError>
     where
         F: FnMut(Transaction) -> Result<T, CardsError>,
     {
-        task::block_in_place(|| {
-            let mut conn = self.pool.get().unwrap();
-            for i in 0.. {
-                let result = conn
-                    .transaction_with_behavior(behavior)
-                    .map(|mut tx| {
-                        tx.set_drop_behavior(DropBehavior::Commit);
-                        tx
-                    })
-                    .map_err(|err| CardsError::from(err))
-                    .and_then(&mut f);
-                match result {
-                    Err(e) if i < 5 && e.is_retriable() => continue,
-                    v => return v,
-                }
+        task::block_in_place(|| self.run_blocking(behavior, f))
+    }
+
+    fn run_blocking<F, T>(&self, behavior: TransactionBehavior, mut f: F) -> Result<T, CardsError>
+    where
+        F: FnMut(Transaction) -> Result<T, CardsError>,
+    {
+        let mut conn = self.pool.get().unwrap();
+        for i in 0.. {
+            let result = conn
+                .transaction_with_behavior(behavior)
+                .map(|mut tx| {
+                    tx.set_drop_behavior(DropBehavior::Commit);
+                    tx
+                })
+                .map_err(|err| CardsError::from(err))
+                .and_then(&mut f);
+            match result {
+                Err(e) if i < 5 && e.is_retriable() => continue,
+                v => return v,
             }
-            unreachable!()
-        })
+        }
+        unreachable!()
     }
 }
 

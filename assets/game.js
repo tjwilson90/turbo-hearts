@@ -1,10 +1,10 @@
 
 function getName() {
-    return document.cookie.replace(/(?:(?:^|.*;\s*)player\s*\=\s*([^;]*).*$)|^.*$/, '$1');
+    return document.cookie.replace(/(?:(?:^|.*;\s*)name\s*\=\s*([^;]*).*$)|^.*$/, '$1');
 }
 
 function getGameId() {
-    return window.location.hash;
+    return window.location.hash.substring(1);
 }
 
 function onEvent(event) {
@@ -29,6 +29,9 @@ function onEvent(event) {
         case 'charge':
             onCharge(data.seat, data.cards);
             break;
+        case 'reveal_charge':
+            onCharge(data.seat, data.cards);
+            break;
         case 'play':
             onPlay(data.seat, data.card, data.trick_number);
             break;
@@ -49,7 +52,7 @@ function onSit(north, east, south, west, rules) {
 function onSitPlayer(player, div) {
     div.innerHTML = '';
     let h1 = document.createElement('h1');
-    h1.append(player);
+    h1.append(player.name);
     div.appendChild(h1);
 }
 
@@ -97,7 +100,7 @@ function onCharge(seat, cards) {
 function onPlay(seat, card, trick_number) {
     let p = document.createElement('p');
     p.className = 'trick-' + trick_number;
-    p.append(seat + " played " + card);
+    p.append(seat + " played " + card + " on trick " + trick_number);
     let events = document.getElementById('events');
     events.appendChild(p);
     let cardElement = document.getElementById(card);
