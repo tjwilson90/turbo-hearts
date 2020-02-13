@@ -50,11 +50,33 @@ impl FromSql for GameId {
 
 pub type EventId = u32;
 
-pub type Player = String;
+pub type Name = String;
+
+#[derive(Clone, Debug, Eq, PartialEq, Hash)]
+pub struct Participant {
+    pub player: Player,
+    pub rules: ChargingRules,
+}
+
+#[serde(tag = "type", rename_all = "snake_case")]
+#[derive(Clone, Debug, Eq, PartialEq, Hash, Serialize, Deserialize)]
+pub enum Player {
+    Human { name: Name },
+    Bot { name: Name, algorithm: String },
+}
+
+impl Player {
+    pub fn name(&self) -> &Name {
+        match self {
+            Player::Human { name } => name,
+            Player::Bot { name, .. } => name,
+        }
+    }
+}
 
 #[repr(u8)]
 #[serde(rename_all = "snake_case")]
-#[derive(Copy, Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash, Serialize, Deserialize)]
 pub enum ChargingRules {
     Classic,
     Blind,
@@ -110,7 +132,7 @@ impl Seat {
         *self as usize
     }
 
-    pub fn next(&self) -> Self {
+    pub fn left(&self) -> Self {
         match self {
             Seat::North => Seat::East,
             Seat::East => Seat::South,
@@ -119,20 +141,38 @@ impl Seat {
         }
     }
 
+    pub fn right(&self) -> Self {
+        match self {
+            Seat::North => Seat::West,
+            Seat::East => Seat::North,
+            Seat::South => Seat::East,
+            Seat::West => Seat::South,
+        }
+    }
+
+    pub fn across(&self) -> Self {
+        match self {
+            Seat::North => Seat::South,
+            Seat::East => Seat::West,
+            Seat::South => Seat::North,
+            Seat::West => Seat::East,
+        }
+    }
+
     pub fn pass_sender(&self, hand: PassDirection) -> Self {
         match hand {
-            PassDirection::Left => self.next().next().next(),
-            PassDirection::Right => self.next(),
-            PassDirection::Across => self.next().next(),
+            PassDirection::Left => self.right(),
+            PassDirection::Right => self.left(),
+            PassDirection::Across => self.across(),
             PassDirection::Keeper => *self,
         }
     }
 
     pub fn pass_receiver(&self, hand: PassDirection) -> Self {
         match hand {
-            PassDirection::Left => self.next(),
-            PassDirection::Right => self.next().next().next(),
-            PassDirection::Across => self.next().next(),
+            PassDirection::Left => self.left(),
+            PassDirection::Right => self.right(),
+            PassDirection::Across => self.across(),
             PassDirection::Keeper => *self,
         }
     }
@@ -160,6 +200,15 @@ impl PassDirection {
             PassDirection::Right => Some(PassDirection::Across),
             PassDirection::Across => Some(PassDirection::Keeper),
             PassDirection::Keeper => None,
+        }
+    }
+
+    pub fn first_charger(self) -> Seat {
+        match self {
+            PassDirection::Left => Seat::North,
+            PassDirection::Right => Seat::East,
+            PassDirection::Across => Seat::South,
+            PassDirection::Keeper => Seat::West,
         }
     }
 }

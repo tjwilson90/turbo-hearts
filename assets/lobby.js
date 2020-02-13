@@ -5,10 +5,10 @@ function onEvent(event) {
     console.log('Event: %o', data);
     switch (data.type) {
         case 'join_lobby':
-            onJoinLobby(data.player);
+            onJoinLobby(data.name);
             break;
         case 'new_game':
-            onNewGame(data.id, data.player);
+            onNewGame(data.id, data.name);
             break;
         case 'lobby_state':
             onLobbyState(data.subscribers, data.games);
@@ -17,13 +17,13 @@ function onEvent(event) {
             onJoinGame(data.id, data.player);
             break;
         case 'leave_game':
-            onLeaveGame(data.id, data.player);
+            onLeaveGame(data.id, data.name);
             break;
         case 'finish_game':
             onFinishGame(data.id);
             break;
         case 'leave_lobby':
-            onLeaveLobby(data.player);
+            onLeaveLobby(data.name);
             break;
         default:
             console.log('Unknown lobby event: %o', data);
@@ -31,53 +31,54 @@ function onEvent(event) {
     }
 }
 
-function onJoinLobby(player) {
-    if (document.querySelector('#players > .' + player) == null) {
+function onJoinLobby(name) {
+    if (document.querySelector('#players > .' + name) == null) {
         let playerList = document.getElementById('players');
-        playerList.appendChild(createPlayerElement(player));
+        playerList.appendChild(createPlayerElement(name));
     }
 }
 
-function onNewGame(id, player) {
+function onNewGame(id, name) {
     let gamesList = document.getElementById('games');
-    gamesList.appendChild(createGameElement(id, [player]));
+    gamesList.appendChild(createGameElement(id, [name]));
 }
 
 function onLobbyState(subscribers, games) {
     let playerList = document.getElementById('players');
     playerList.innerHTML = '';
-    for (let player of subscribers) {
-        playerList.appendChild(createPlayerElement(player));
+    for (let name of subscribers) {
+        playerList.appendChild(createPlayerElement(name));
     }
     let gamesList = document.getElementById('games');
     gamesList.innerHTML = '';
     for (let id in games) {
-        gamesList.appendChild(createGameElement(id, games[id]));
+        let names = games[id].map(player => player.name);
+        gamesList.appendChild(createGameElement(id, names));
     }
 }
 
 function onJoinGame(id, player) {
     let gameNode = document.getElementById(id);
     let playerList = gameNode.firstElementChild;
-    playerList.appendChild(createPlayerElement(player));
+    playerList.appendChild(createPlayerElement(player.name));
     if (playerList.childElementCount >= 4) {
         gameNode.removeChild(gameNode.lastElementChild);
         gameNode.appendChild(createOpenButton());
-    } else if (player === getName()) {
+    } else if (player.name === getName()) {
         gameNode.removeChild(gameNode.lastElementChild);
         gameNode.appendChild(createLeaveButton());
     }
 }
 
-function onLeaveGame(id, player) {
+function onLeaveGame(id, name) {
     let gameNode = document.getElementById(id);
     let playerList = gameNode.firstElementChild;
-    for (playerNode of playerList.getElementsByClassName(player)) {
+    for (playerNode of playerList.getElementsByClassName(name)) {
         playerNode.remove();
     }
     if (!playerList.hasChildNodes()) {
         gameNode.remove();
-    } else if (player === getName()) {
+    } else if (name === getName()) {
         gameNode.removeChild(gameNode.lastElementChild);
         gameNode.appendChild(createJoinButton());
     }
@@ -90,8 +91,8 @@ function onFinishGame(id) {
     }
 }
 
-function onLeaveLobby(player) {
-    let playerNode = document.querySelector('#players' + '.' + player);
+function onLeaveLobby(name) {
+    let playerNode = document.querySelector('#players' + '.' + name);
     if (playerNode != null) {
         playerNode.remove();
     }
@@ -104,22 +105,33 @@ function createPlayerElement(name) {
     return li;
 }
 
-function createGameElement(id, players) {
+function createGameElement(id, names) {
     let ul = document.createElement('ul');
-    for (let player of players) {
-        ul.appendChild(createPlayerElement(player));
+    for (let name of names) {
+        ul.appendChild(createPlayerElement(name));
     }
     let li = document.createElement('li');
     li.id = id;
     li.appendChild(ul);
-    if (players.length >= 4) {
+    if (names.length >= 4) {
         li.appendChild(createOpenButton());
-    } else if (players.includes(getName())) {
+        return li;
+    }
+    li.appendChild(createAddBotButton());
+    if (names.includes(getName())) {
         li.appendChild(createLeaveButton());
     } else {
         li.appendChild(createJoinButton());
     }
     return li;
+}
+
+function createAddBotButton() {
+    let button = document.createElement('button');
+    button.className = 'add-bot';
+    button.textContent = 'Add Bot';
+    button.addEventListener('click', addBot);
+    return button;
 }
 
 function createJoinButton() {
@@ -147,11 +159,11 @@ function createOpenButton() {
 }
 
 function getName() {
-    return document.cookie.replace(/(?:(?:^|.*;\s*)player\s*\=\s*([^;]*).*$)|^.*$/, '$1');
+    return document.cookie.replace(/(?:(?:^|.*;\s*)name\s*\=\s*([^;]*).*$)|^.*$/, '$1');
 }
 
 function setName() {
-    document.cookie = 'player=' + document.getElementById('name-input').value;
+    document.cookie = 'name=' + document.getElementById('name-input').value;
     subscribe();
 }
 
@@ -169,7 +181,7 @@ function subscribe() {
 function newGame(event) {
     event.preventDefault();
     let rules = document.querySelector('input[name="rules"]:checked').value;
-    console.log('newGame:, %s', rules);
+    console.log('newGame: %s', rules);
     fetch("/lobby/new", {
         method: 'POST',
         headers: {
@@ -179,6 +191,21 @@ function newGame(event) {
     })
     .then((response) => response.json())
     .then((data) => console.log('Created game: %o', data));
+}
+
+function addBot(event) {
+    let id = event.target.parentNode.id;
+    let rules = document.querySelector('input[name="rules"]:checked').value;
+    console.log('addBot: %s, %s', id, rules);
+    fetch("/lobby/add_bot", {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ id: id, rules: rules, algorithm: "random" })
+    })
+    .then((response) => response.json())
+    .then((data) => console.log('Add bot: %o', data));
 }
 
 function joinGame(event) {

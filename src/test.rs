@@ -1,3 +1,4 @@
+use crate::types::Player;
 use crate::{
     cards::{Card, Cards},
     db::Database,
@@ -7,12 +8,25 @@ use crate::{
     server::Server,
     types::{ChargingRules, GameId},
 };
+use log::LevelFilter;
 use r2d2_sqlite::SqliteConnectionManager;
 use std::future::Future;
 
-macro_rules! p {
-    ($p:ident) => {
-        stringify!($p).to_string()
+macro_rules! s {
+    ($string:ident) => {
+        stringify!($string).to_string()
+    };
+}
+
+macro_rules! h {
+    ($name:ident) => {
+        crate::types::Player::Human { name: s!($name) }
+    };
+}
+
+macro_rules! c {
+    ($($cards:tt)*) => {
+        stringify!($($cards)*).parse().unwrap()
     };
 }
 
@@ -43,7 +57,10 @@ where
     F: Future + Send + 'static,
     F::Output: Send + 'static,
 {
-    let _ = env_logger::builder().is_test(true).try_init();
+    let _ = env_logger::builder()
+        .filter_level(LevelFilter::Info)
+        .is_test(true)
+        .try_init();
     let result = tokio::spawn(async move {
         let dir = tempfile::tempdir().unwrap();
         let mut path = dir.path().to_owned();
@@ -117,7 +134,7 @@ fn test_cards_iter() {
 
 #[test]
 fn test_cards_parse() {
-    assert_eq!(Cards::from(Card::AceHearts), "AH".parse().unwrap())
+    assert_eq!(Cards::from(Card::AceHearts), c!(AH))
 }
 
 #[tokio::test(threaded_scheduler)]
@@ -126,7 +143,7 @@ async fn test_join_unknown_game() -> Result<(), CardsError> {
         let server = Server::new(db)?;
         let id = GameId::new();
         let resp = server
-            .join_game(id, p!(twilson), ChargingRules::Classic)
+            .join_game(id, h!(twilson), ChargingRules::Classic)
             .await;
         assert!(matches!(resp, Err(CardsError::UnknownGame(game)) if game == id));
         Ok(())
@@ -139,26 +156,24 @@ async fn test_lobby() -> Result<(), CardsError> {
     async fn test(db: Database) -> Result<(), CardsError> {
         let server = Server::new(db)?;
 
-        let mut twilson = server.subscribe_lobby(p!(twilson)).await;
+        let mut twilson = server.subscribe_lobby(s!(twilson)).await;
         assert_eq!(
             twilson.recv().await,
             Some(LobbyEvent::LobbyState {
-                subscribers: set![p!(twilson)],
+                subscribers: set![s!(twilson)],
                 games: map![],
             })
         );
 
-        let mut carrino = server.subscribe_lobby(p!(carrino)).await;
+        let mut carrino = server.subscribe_lobby(s!(carrino)).await;
         assert_eq!(
             twilson.recv().await,
-            Some(LobbyEvent::JoinLobby {
-                player: p!(carrino),
-            })
+            Some(LobbyEvent::JoinLobby { name: s!(carrino) })
         );
         assert_eq!(
             carrino.recv().await,
             Some(LobbyEvent::LobbyState {
-                subscribers: set![p!(twilson), p!(carrino)],
+                subscribers: set![s!(twilson), s!(carrino)],
                 games: map![],
             })
         );
@@ -168,49 +183,47 @@ async fn test_lobby() -> Result<(), CardsError> {
         assert_eq!(twilson.recv().await, Some(LobbyEvent::Ping));
         assert_eq!(
             twilson.recv().await,
-            Some(LobbyEvent::LeaveLobby {
-                player: p!(carrino),
-            })
+            Some(LobbyEvent::LeaveLobby { name: s!(carrino) })
         );
 
-        let id = server.new_game(p!(tslatcher), ChargingRules::Bridge).await;
+        let id = server.new_game(s!(tslatcher), ChargingRules::Bridge).await;
         assert_eq!(
             twilson.recv().await,
             Some(LobbyEvent::NewGame {
                 id,
-                player: p!(tslatcher),
+                name: s!(tslatcher),
             })
         );
 
         drop(twilson);
         server.ping_event_streams().await;
-        let mut twilson = server.subscribe_lobby(p!(twilson)).await;
+        let mut twilson = server.subscribe_lobby(s!(twilson)).await;
         assert_eq!(
             twilson.recv().await,
             Some(LobbyEvent::LobbyState {
-                subscribers: set![p!(twilson)],
-                games: map![id => set![p!(tslatcher)]],
+                subscribers: set![s!(twilson)],
+                games: map![id => vec![h!(tslatcher)]],
             })
         );
 
         let players = server
-            .join_game(id, p!(dcervelli), ChargingRules::Classic)
+            .join_game(id, h!(dcervelli), ChargingRules::Classic)
             .await?;
-        assert_eq!(players, set![p!(tslatcher), p!(dcervelli)]);
+        assert_eq!(players, set![h!(tslatcher), h!(dcervelli)]);
         assert_eq!(
             twilson.recv().await,
             Some(LobbyEvent::JoinGame {
                 id,
-                player: p!(dcervelli),
+                player: h!(dcervelli),
             })
         );
 
-        server.leave_game(id, p!(tslatcher)).await;
+        server.leave_game(id, s!(tslatcher)).await;
         assert_eq!(
             twilson.recv().await,
             Some(LobbyEvent::LeaveGame {
                 id,
-                player: p!(tslatcher),
+                name: s!(tslatcher),
             })
         );
         Ok(())
@@ -222,18 +235,18 @@ async fn test_lobby() -> Result<(), CardsError> {
 async fn test_new_game() -> Result<(), CardsError> {
     async fn test(db: Database) -> Result<(), CardsError> {
         let server = Server::new(db)?;
-        let id = server.new_game(p!(twilson), ChargingRules::Classic).await;
+        let id = server.new_game(s!(twilson), ChargingRules::Classic).await;
         server
-            .join_game(id, p!(tslatcher), ChargingRules::Classic)
+            .join_game(id, h!(tslatcher), ChargingRules::Classic)
             .await?;
         server
-            .join_game(id, p!(dcervelli), ChargingRules::Classic)
+            .join_game(id, h!(dcervelli), ChargingRules::Classic)
             .await?;
         server
-            .join_game(id, p!(carrino), ChargingRules::Classic)
+            .join_game(id, h!(carrino), ChargingRules::Classic)
             .await?;
 
-        let mut twilson = server.subscribe_game(id, p!(twilson)).await?;
+        let mut twilson = server.subscribe_game(id, s!(twilson)).await?;
         match twilson.recv().await {
             Some(GameFeEvent::Sit {
                 north,
@@ -243,7 +256,7 @@ async fn test_new_game() -> Result<(), CardsError> {
                 rules: ChargingRules::Classic,
             }) => assert_eq!(
                 set![north, east, south, west],
-                set![p!(twilson), p!(tslatcher), p!(dcervelli), p!(carrino)]
+                set![h!(twilson), h!(tslatcher), h!(dcervelli), h!(carrino)]
             ),
             e => assert!(false, "Expected sit event, found {:?}", e),
         }
@@ -263,17 +276,17 @@ async fn test_pass() -> Result<(), CardsError> {
                 0,
                 &[
                     GameDbEvent::Sit {
-                        north: p!(twilson),
-                        east: p!(dcervelli),
-                        south: p!(tslatcher),
-                        west: p!(carrino),
+                        north: h!(twilson),
+                        east: h!(dcervelli),
+                        south: h!(tslatcher),
+                        west: h!(carrino),
                         rules: ChargingRules::Classic,
                     },
                     GameDbEvent::Deal {
-                        north: "A764S A96H AJD K863C".parse().unwrap(),
-                        east: "JT953S QT4H K93D ATC".parse().unwrap(),
-                        south: "2S 875H T542D QJ752C".parse().unwrap(),
-                        west: "KQ8S KJ32H Q876D 94C".parse().unwrap(),
+                        north: c!(A764S A96H AJD K863C),
+                        east: c!(JT953S QT4H K93D ATC),
+                        south: c!(2S 875H T542D QJ752C),
+                        west: c!(KQ8S KJ32H Q876D 94C),
                     },
                 ],
             )?;
@@ -281,48 +294,95 @@ async fn test_pass() -> Result<(), CardsError> {
         })?;
         let server = Server::new(db)?;
 
-        let bad_pass = server
-            .pass_cards(id, p!(twilson), "A73S".parse().unwrap())
-            .await;
         assert!(matches!(
-            bad_pass,
-            Err(CardsError::NotYourCards(c)) if c == "3S".parse().unwrap()
+            server.pass_cards(id, s!(twilson), c!(A73S)).await,
+            Err(CardsError::NotYourCards(c)) if c == c!(3S)
         ));
 
-        let bad_pass = server
-            .pass_cards(id, p!(twilson), "A7S A9H".parse().unwrap())
-            .await;
         assert!(matches!(
-            bad_pass,
-            Err(CardsError::IllegalPassSize(c)) if c == "A7S A9H".parse().unwrap()
+            server.pass_cards(id, s!(twilson), c!(A7S A9H)).await,
+            Err(CardsError::IllegalPassSize(c)) if c == c!(A7S A9H)
         ));
 
-        let bad_charge = server
-            .charge_cards(id, p!(twilson), "AH".parse().unwrap())
-            .await;
         assert!(matches!(
-            bad_charge,
+            server.charge_cards(id, s!(twilson), c!(AH)).await,
             Err(CardsError::IllegalAction(state)) if state == GameState::Passing
         ));
 
-        let bad_play = server.play_card(id, p!(twilson), Card::SixClubs).await;
         assert!(matches!(
-            bad_play,
+            server.play_card(id, s!(twilson), Card::SixClubs).await,
             Err(CardsError::IllegalAction(state)) if state == GameState::Passing
         ));
 
+        server.pass_cards(id, s!(twilson), c!(K86C)).await?;
+
+        assert!(matches!(
+            server.pass_cards(id, s!(twilson), c!(A96H)).await,
+            Err(CardsError::AlreadyPassed(c)) if c == c!(K86C)
+        ));
+
+        Ok(())
+    }
+    run(test).await
+}
+
+#[tokio::test(threaded_scheduler)]
+async fn test_random_bot_game() -> Result<(), CardsError> {
+    async fn test(db: Database) -> Result<(), CardsError> {
+        let server = Server::new(db)?;
+        let id = server.new_game(s!(fake), ChargingRules::Classic).await;
         server
-            .pass_cards(id, p!(twilson), "K86C".parse().unwrap())
+            .join_game(
+                id,
+                Player::Bot {
+                    name: s!(one),
+                    algorithm: s!(random),
+                },
+                ChargingRules::BlindChain,
+            )
             .await?;
-
-        let bad_pass = server
-            .pass_cards(id, p!(twilson), "A96H".parse().unwrap())
-            .await;
-        assert!(matches!(
-            bad_pass,
-            Err(CardsError::AlreadyPassed(c)) if c == "K86C".parse().unwrap()
-        ));
-
+        server.leave_game(id, s!(fake)).await;
+        server
+            .join_game(
+                id,
+                Player::Bot {
+                    name: s!(two),
+                    algorithm: s!(random),
+                },
+                ChargingRules::Classic,
+            )
+            .await?;
+        server
+            .join_game(
+                id,
+                Player::Bot {
+                    name: s!(three),
+                    algorithm: s!(random),
+                },
+                ChargingRules::Bridge,
+            )
+            .await?;
+        server
+            .join_game(
+                id,
+                Player::Bot {
+                    name: s!(four),
+                    algorithm: s!(random),
+                },
+                ChargingRules::Blind,
+            )
+            .await?;
+        let mut rx = server.subscribe_game(id, s!(foo)).await?;
+        let mut plays = 0;
+        while let Some(event) = rx.recv().await {
+            if let GameFeEvent::Play { .. } = event {
+                plays += 1;
+                if plays == 208 {
+                    break;
+                }
+            }
+        }
+        assert_eq!(plays, 208);
         Ok(())
     }
     run(test).await
