@@ -649,6 +649,30 @@ impl ChargeState {
         }
     }
 
+    pub fn reset_for_round(&mut self, pass_direction: PassDirection) {
+        self.pass_direction = pass_direction;
+        if pass_direction != PassDirection::Keeper {
+            self.charged = Cards::NONE;
+        }
+        self.done_charging = [false, false, false, false];
+        self.next_charger = if self.rules.free() {
+            None
+        } else {
+            Some(pass_direction.first_charger())
+        }
+    }
+
+    pub fn reset_for_first_keeper(&mut self) {
+        self.pass_direction = PassDirection::Keeper;
+        self.charged = Cards::NONE;
+        self.done_charging = [false, false, false, false];
+        self.next_charger = if self.rules.free() {
+            None
+        } else {
+            Some(self.pass_direction.first_charger())
+        }
+    }
+
     pub fn can_charge(&self, seat: Seat) -> bool {
         self.next_charger.map_or(true, |s| s == seat)
     }
