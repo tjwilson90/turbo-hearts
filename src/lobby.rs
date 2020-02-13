@@ -17,7 +17,7 @@ pub struct Lobby {
 
 struct Inner {
     subscribers: HashMap<Name, UnboundedSender<LobbyEvent>>,
-    games: HashMap<GameId, Vec<Participant>>,
+    games: HashMap<GameId, HashSet<Participant>>,
 }
 
 #[serde(tag = "type", rename_all = "snake_case")]
@@ -61,7 +61,7 @@ impl Event for LobbyEvent {
 }
 
 impl Lobby {
-    pub fn new(games: HashMap<GameId, Vec<Participant>>) -> Self {
+    pub fn new(games: HashMap<GameId, HashSet<Participant>>) -> Self {
         Self {
             inner: Arc::new(Mutex::new(Inner {
                 subscribers: HashMap::new(),
@@ -106,8 +106,8 @@ impl Lobby {
     pub async fn new_game(&self, name: Name, rules: ChargingRules) -> GameId {
         let id = GameId::new();
         let mut inner = self.inner.lock().await;
-        let mut game = Vec::new();
-        game.push(Participant {
+        let mut game = HashSet::new();
+        game.insert(Participant {
             player: Player::Human { name: name.clone() },
             rules,
         });
@@ -121,13 +121,13 @@ impl Lobby {
         id: GameId,
         player: Player,
         rules: ChargingRules,
-    ) -> Result<Vec<Participant>, CardsError> {
+    ) -> Result<HashSet<Participant>, CardsError> {
         let mut inner = self.inner.lock().await;
         if let Some(players) = inner.games.get_mut(&id) {
             if players.len() == 4 {
                 return Err(CardsError::GameHasStarted(id));
             }
-            players.push(Participant {
+            players.insert(Participant {
                 player: player.clone(),
                 rules,
             });

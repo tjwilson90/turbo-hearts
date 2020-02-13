@@ -12,7 +12,7 @@ use crate::{
 };
 use log::info;
 use rusqlite::{Transaction, NO_PARAMS};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use tokio::task;
 
 #[derive(Clone)]
@@ -34,7 +34,7 @@ impl Server {
         Ok(server)
     }
 
-    async fn start_bots(&self, id: GameId, participants: &[Participant]) {
+    async fn start_bots(&self, id: GameId, participants: &HashSet<Participant>) {
         if participants.len() < 4 {
             return;
         }
@@ -68,14 +68,14 @@ impl Server {
         id: GameId,
         player: Player,
         rules: ChargingRules,
-    ) -> Result<Vec<Player>, CardsError> {
+    ) -> Result<HashSet<Player>, CardsError> {
         let participants = match self.lobby.join_game(id, player.clone(), rules).await {
             Ok(participants) => {
                 info!("{:?} joined game {}", player, id);
                 participants
             }
             Err(e) => {
-                info!("{:?} failed to game {} with error {}", player, id, e);
+                info!("{:?} failed to join game {} with error {}", player, id, e);
                 return Err(e);
             }
         };
@@ -140,6 +140,7 @@ impl Server {
                 info!("{} played {} in game {} successfully", name, card, id);
                 if *complete {
                     self.lobby.remove_game(id).await;
+                    info!("Removed completed game {} from the lobby", id);
                 }
             }
             Err(e) => info!(
@@ -151,7 +152,7 @@ impl Server {
     }
 }
 
-fn hydrate_games(tx: &Transaction) -> Result<HashMap<GameId, Vec<Participant>>, CardsError> {
+fn hydrate_games(tx: &Transaction) -> Result<HashMap<GameId, HashSet<Participant>>, CardsError> {
     let mut stmt = tx.prepare(
         "SELECT game_id, event FROM event
             WHERE event_id = 0 AND game_id NOT IN (SELECT id FROM game)",
@@ -168,20 +169,20 @@ fn hydrate_games(tx: &Transaction) -> Result<HashMap<GameId, Vec<Participant>>, 
             rules,
         } = serde_json::from_str(&row.get::<_, String>(1)?)?
         {
-            let mut participants = Vec::new();
-            participants.push(Participant {
+            let mut participants = HashSet::new();
+            participants.insert(Participant {
                 player: north,
                 rules,
             });
-            participants.push(Participant {
+            participants.insert(Participant {
                 player: east,
                 rules,
             });
-            participants.push(Participant {
+            participants.insert(Participant {
                 player: south,
                 rules,
             });
-            participants.push(Participant {
+            participants.insert(Participant {
                 player: west,
                 rules,
             });

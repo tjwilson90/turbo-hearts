@@ -64,11 +64,12 @@ impl Bot {
                 None => break,
             }
         }
+
         Ok(())
     }
 }
 
-#[derive(Copy, Clone, Eq, PartialEq)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 enum Action {
     Pass(Cards),
     Charge(Cards),

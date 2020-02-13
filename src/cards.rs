@@ -1,4 +1,4 @@
-use crate::types::Seat;
+use crate::types::{ChargingRules, PassDirection, Seat};
 use serde::{
     de::{SeqAccess, Visitor},
     export::{fmt::Error, Formatter},
@@ -562,54 +562,130 @@ impl FromIterator<Card> for Cards {
     }
 }
 
-#[derive(Debug)]
-pub struct Trick {
-    pub next: Seat,
-    pub lead: Option<Suit>,
-    pub cards: Cards,
+#[derive(Debug, Clone)]
+pub struct HandState {
+    pub played: Cards,
+    pub led_suits: Cards,
+    pub trick_number: usize,
+    pub next_player: Seat,
+    pub previous_trick: Vec<Card>,
+    pub current_trick: Vec<Card>,
 }
 
-impl Trick {
-    pub fn new(leader: Seat) -> Self {
+impl HandState {
+    pub fn new(first_player: Seat) -> Self {
         Self {
-            next: leader,
-            lead: None,
-            cards: Cards::NONE,
+            played: Cards::NONE,
+            led_suits: Cards::NONE,
+            trick_number: 0,
+            next_player: first_player,
+            previous_trick: Vec::with_capacity(8),
+            current_trick: Vec::with_capacity(8),
         }
+    }
+
+    pub fn reset(&mut self, first_player: Seat) {
+        self.played = Cards::NONE;
+        self.led_suits = Cards::NONE;
+        self.trick_number = 0;
+        self.next_player = first_player;
+        self.previous_trick.clear();
+        self.current_trick.clear();
     }
 
     pub fn play(&mut self, card: Card) {
-        self.next = self.next.left();
-        if self.lead.is_none() {
-            self.lead = Some(card.suit());
+        self.played |= card;
+        if self.current_trick.is_empty() {
+            self.led_suits |= card.suit().cards();
         }
-        self.cards |= card;
-    }
-
-    pub fn winner(&self) -> Option<Card> {
-        let complete = match self.cards.len() {
-            8 => true,
-            4 => !self.cards.contains(self.lead.unwrap().nine()),
-            _ => false,
-        };
-        if complete {
-            Some((self.cards & self.lead.unwrap().cards()).max())
-        } else {
-            None
+        self.current_trick.push(card);
+        self.next_player = self.next_player.left();
+        if self.current_trick.len() == 8
+            || self.played == Cards::ALL
+            || (self.current_trick.len() == 4
+                && !self
+                    .current_trick
+                    .contains(&self.current_trick[0].suit().nine()))
+        {
+            let mut seat = self.next_player.left();
+            let mut winning_seat = self.next_player;
+            let mut winning_card = self.current_trick[0];
+            for card in &self.current_trick[1..] {
+                seat = seat.left();
+                if card.suit() == winning_card.suit() && card.rank() > winning_card.rank() {
+                    winning_card = *card;
+                    winning_seat = seat;
+                }
+            }
+            self.next_player = winning_seat;
+            mem::swap(&mut self.current_trick, &mut self.previous_trick);
+            self.current_trick.clear();
+            self.trick_number += 1;
         }
     }
 }
 
-pub fn legal_plays(
-    hand: Cards,
-    trick: &Trick,
-    led_suits: Cards,
-    charged: Cards,
-    played: Cards,
-) -> Cards {
-    let mut plays = hand - played;
+#[derive(Debug)]
+pub struct ChargeState {
+    pub rules: ChargingRules,
+    pub pass_direction: PassDirection,
+    pub charged: Cards,
+    pub done_charging: [bool; 4],
+    pub next_charger: Option<Seat>,
+}
+
+impl ChargeState {
+    pub fn new(rules: ChargingRules, pass_direction: PassDirection) -> Self {
+        Self {
+            rules,
+            pass_direction,
+            charged: Cards::NONE,
+            done_charging: [false, false, false, false],
+            next_charger: if rules.free() {
+                None
+            } else {
+                Some(pass_direction.first_charger())
+            },
+        }
+    }
+
+    pub fn can_charge(&self, seat: Seat) -> bool {
+        self.next_charger.map_or(true, |s| s == seat)
+    }
+
+    pub fn done_charging(&self, seat: Seat) -> bool {
+        self.done_charging[seat.idx()]
+    }
+
+    pub fn all_done_charging(&self) -> bool {
+        self.done_charging.iter().all(|done| *done)
+    }
+
+    pub fn charge(&mut self, seat: Seat, cards: Cards) -> bool {
+        self.charged |= cards;
+        self.blind_charge(seat, cards.len())
+    }
+
+    pub fn blind_charge(&mut self, seat: Seat, count: usize) -> bool {
+        if let Some(charger) = &mut self.next_charger {
+            *charger = charger.left();
+        }
+        if count == 0 {
+            self.done_charging[seat.idx()] = true;
+        } else {
+            for done_charging in &mut self.done_charging {
+                *done_charging = false;
+            }
+            self.done_charging[seat.idx()] = !self.rules.chain();
+        }
+        self.all_done_charging()
+    }
+}
+
+pub fn legal_plays(cards: Cards, hand: &HandState, charged: Cards) -> Cards {
+    let mut plays = cards - hand.played;
     // if this is the first trick
-    if led_suits.is_empty() {
+    if hand.led_suits.is_empty() {
         // if you have the two of clubs
         if plays.contains(Card::TwoClubs) {
             // you must play it
@@ -634,14 +710,16 @@ pub fn legal_plays(
     }
 
     // if this is not the first card in the trick
-    if let Some(suit) = trick.lead {
+    if !hand.current_trick.is_empty() {
+        let suit = hand.current_trick[0].suit();
+
         // and you have any cards in suit
         if suit.cards().contains_any(plays) {
             // you must play in suit
             plays &= suit.cards();
 
             // and if this is the first trick of this suit
-            if !led_suits.contains_any(suit.cards())
+            if !hand.led_suits.contains_any(suit.cards())
                 // and you have multiple plays
                 && plays.len() > 1
             {
@@ -653,7 +731,7 @@ pub fn legal_plays(
     // otherwise, you are leading the trick
     } else {
         // If hearts are not broken
-        if !led_suits.contains_any(Cards::HEARTS)
+        if !hand.led_suits.contains_any(Cards::HEARTS)
             // and you have a non-heart
             && !Cards::HEARTS.contains_all(plays)
         {
@@ -661,7 +739,7 @@ pub fn legal_plays(
             plays -= Cards::HEARTS;
         }
 
-        let unled_charges = charged - led_suits;
+        let unled_charges = charged - hand.led_suits;
         // if you have cards other than charged cards from unled suits
         if !unled_charges.contains_all(plays) {
             // you must lead one of them

@@ -14,7 +14,7 @@ rusqlite = "*"
 serde = { version = "*", features = ["derive"] }
 serde_json = "*"
 thiserror = "*"
-tokio = { version = "*", features = ["blocking", "macros", "rt-threaded", "sync"] }
+tokio = { version = "*", features = ["full"] }
 uuid = { version = "*", features = ["serde", "v4"] }
 warp = "*"
 
