@@ -349,12 +349,12 @@ impl Game {
                 self.post_pass_hand[Seat::South.idx()] = *south;
                 self.pre_pass_hand[Seat::West.idx()] = *west;
                 self.post_pass_hand[Seat::West.idx()] = *west;
-                self.charges = ChargeState::new(self.rules, self.pass_direction);
-                self.state = if self.pass_direction == PassDirection::Keeper {
-                    GameState::KeeperCharging
+                if self.pass_direction == PassDirection::Keeper {
+                    self.state = GameState::KeeperCharging;
+                    self.charges.reset_for_first_keeper();
                 } else {
-                    GameState::Passing
-                };
+                    self.state = GameState::Passing;
+                }
             }
             GameDbEvent::SendPass { from, cards } => {
                 self.post_pass_hand[from.idx()] -= *cards;
@@ -363,6 +363,7 @@ impl Game {
                 self.post_pass_hand[to.idx()] |= *cards;
                 if Seat::VALUES.iter().all(|seat| self.has_passed(*seat)) {
                     self.state = GameState::Charging;
+                    self.charges.reset_for_round(self.pass_direction);
                 }
             }
             GameDbEvent::Charge { seat, cards } => {
@@ -546,7 +547,7 @@ impl Game {
                     pass: self.pass_direction,
                 }];
                 if self.state == GameState::KeeperCharging {
-                    events.push(GameFeEvent::StartCharging {
+                    events.push(GameFeEvent::StartFirstKeeperCharging {
                         seat: self.charges.next_charger,
                     });
                 } else if self.state == GameState::Passing {
@@ -688,6 +689,9 @@ pub enum GameFeEvent {
         to: Seat,
         cards: Cards,
     },
+    StartFirstKeeperCharging {
+        seat: Option<Seat>,
+    },
     StartCharging {
         seat: Option<Seat>,
     },
@@ -792,6 +796,7 @@ fn send_event(seat: Option<Seat>, tx: &UnboundedSender<GameFeEvent>, event: &Gam
         | GameFeEvent::BlindCharge { .. }
         | GameFeEvent::RevealCharge { .. }
         | GameFeEvent::StartPassing
+        | GameFeEvent::StartFirstKeeperCharging { .. }
         | GameFeEvent::StartCharging { .. }
         | GameFeEvent::StartTrick { .. } => event.clone(),
         GameFeEvent::Deal {

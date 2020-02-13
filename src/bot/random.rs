@@ -10,6 +10,7 @@ pub struct Random {
     name: Name,
     seat: Seat,
     rules: ChargingRules,
+    pass_direction: PassDirection,
     passed: bool,
     pre_pass_hand: Cards,
     post_pass_hand: Cards,
@@ -25,6 +26,7 @@ impl Random {
             name,
             seat: Seat::North,
             rules: ChargingRules::Classic,
+            pass_direction: PassDirection::Left,
             passed: false,
             pre_pass_hand: Cards::NONE,
             post_pass_hand: Cards::NONE,
@@ -100,7 +102,7 @@ impl Algorithm for Random {
             } => {
                 self.pre_pass_hand = north | east | south | west;
                 self.post_pass_hand = self.pre_pass_hand;
-                self.charges = ChargeState::new(self.rules, pass);
+                self.pass_direction = pass;
             }
             GameFeEvent::SendPass { from, cards } => {
                 self.post_pass_hand -= cards;
@@ -152,8 +154,17 @@ impl Algorithm for Random {
                 self.passed = false;
                 self.next_action = Some(Action::Pass(self.pass()));
             }
+            GameFeEvent::StartFirstKeeperCharging { seat } => {
+                self.charged = false;
+                self.charges.reset_for_first_keeper();
+                match seat {
+                    Some(seat) if seat != self.seat => {}
+                    _ => self.next_action = Some(Action::Charge(self.charge())),
+                }
+            }
             GameFeEvent::StartCharging { seat } => {
                 self.charged = false;
+                self.charges.reset_for_round(self.pass_direction);
                 match seat {
                     Some(seat) if seat != self.seat => {}
                     _ => self.next_action = Some(Action::Charge(self.charge())),
