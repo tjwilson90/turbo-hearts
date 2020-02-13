@@ -1,5 +1,7 @@
 # Turbo Hearts
 
+![](https://github.com/tjwilson90/turbo-hearts/workflows/Rust/badge.svg)
+
 ## Getting Started
 
 1) Install rust - https://www.rust-lang.org/tools/install
