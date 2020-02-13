@@ -1,3 +1,4 @@
+use crate::types::Name;
 use crate::{
     cards::{Card, Cards},
     db::Database,
@@ -16,6 +17,7 @@ use tokio::{
 };
 use warp::{filters::sse::ServerSentEvent, sse, Filter, Rejection, Reply};
 
+mod bot;
 mod cards;
 mod db;
 mod error;
@@ -34,8 +36,8 @@ async fn ping_event_streams(server: Server) {
     }
 }
 
-async fn subscribe_lobby(server: Server, player: Player) -> Result<impl Reply, Infallible> {
-    let rx = server.subscribe_lobby(player).await;
+async fn subscribe_lobby(server: Server, name: Name) -> Result<impl Reply, Infallible> {
+    let rx = server.subscribe_lobby(name).await;
     Ok(sse::reply(as_stream(rx)))
 }
 
@@ -44,13 +46,9 @@ struct NewGame {
     rules: ChargingRules,
 }
 
-async fn new_game(
-    server: Server,
-    player: Player,
-    request: NewGame,
-) -> Result<impl Reply, Infallible> {
+async fn new_game(server: Server, name: Name, request: NewGame) -> Result<impl Reply, Infallible> {
     let NewGame { rules } = request;
-    let id = server.new_game(player, rules).await;
+    let id = server.new_game(name, rules).await;
     Ok(warp::reply::json(&id))
 }
 
@@ -60,13 +58,9 @@ struct JoinGame {
     rules: ChargingRules,
 }
 
-async fn join_game(
-    server: Server,
-    player: Player,
-    request: JoinGame,
-) -> Result<impl Reply, Rejection> {
+async fn join_game(server: Server, name: Name, request: JoinGame) -> Result<impl Reply, Rejection> {
     let JoinGame { id, rules } = request;
-    let players = server.join_game(id, player, rules).await?;
+    let players = server.join_game(id, Player::Human { name }, rules).await?;
     Ok(warp::reply::json(&players))
 }
 
@@ -77,20 +71,50 @@ struct LeaveGame {
 
 async fn leave_game(
     server: Server,
-    player: Player,
+    name: Name,
     request: LeaveGame,
 ) -> Result<impl Reply, Infallible> {
     let LeaveGame { id } = request;
-    server.leave_game(id, player).await;
+    server.leave_game(id, name).await;
     Ok(warp::reply())
 }
 
-async fn subscribe_game(
+#[derive(Debug, Deserialize)]
+struct AddBot {
     id: GameId,
-    server: Server,
-    player: Player,
-) -> Result<impl Reply, Rejection> {
-    let rx = server.subscribe_game(id, player).await?;
+    rules: ChargingRules,
+    algorithm: String,
+}
+
+async fn add_bot(server: Server, request: AddBot) -> Result<impl Reply, Rejection> {
+    let AddBot {
+        id,
+        rules,
+        algorithm,
+    } = request;
+    let name = bot::name();
+    let player = Player::Bot {
+        name: name.clone(),
+        algorithm,
+    };
+    let _ = server.join_game(id, player, rules).await?;
+    Ok(warp::reply::json(&name))
+}
+
+#[derive(Debug, Deserialize)]
+struct RemoveBot {
+    id: GameId,
+    name: Name,
+}
+
+async fn remove_bot(server: Server, request: RemoveBot) -> Result<impl Reply, Infallible> {
+    let RemoveBot { id, name } = request;
+    server.leave_game(id, name).await;
+    Ok(warp::reply())
+}
+
+async fn subscribe_game(id: GameId, server: Server, name: Name) -> Result<impl Reply, Rejection> {
+    let rx = server.subscribe_game(id, name).await?;
     Ok(sse::reply(as_stream(rx)))
 }
 
@@ -102,11 +126,11 @@ struct PassCards {
 
 async fn pass_cards(
     server: Server,
-    player: Player,
+    name: Name,
     request: PassCards,
 ) -> Result<impl Reply, Rejection> {
     let PassCards { id, cards } = request;
-    server.pass_cards(id, player, cards).await?;
+    server.pass_cards(id, name, cards).await?;
     Ok(warp::reply())
 }
 
@@ -118,11 +142,11 @@ struct ChargeCards {
 
 async fn charge_cards(
     server: Server,
-    player: Player,
+    name: Name,
     request: ChargeCards,
 ) -> Result<impl Reply, Rejection> {
     let ChargeCards { id, cards } = request;
-    server.charge_cards(id, player, cards).await?;
+    server.charge_cards(id, name, cards).await?;
     Ok(warp::reply())
 }
 
@@ -132,13 +156,9 @@ struct PlayCard {
     card: Card,
 }
 
-async fn play_card(
-    server: Server,
-    player: Player,
-    request: PlayCard,
-) -> Result<impl Reply, Rejection> {
+async fn play_card(server: Server, name: Name, request: PlayCard) -> Result<impl Reply, Rejection> {
     let PlayCard { id, card } = request;
-    server.play_card(id, player, card).await?;
+    server.play_card(id, name, card).await?;
     Ok(warp::reply())
 }
 
@@ -157,8 +177,12 @@ where
     })
 }
 
-async fn player_cookie(player: Option<String>) -> Result<Player, Rejection> {
-    player.ok_or(warp::reject::custom(CardsError::MissingPlayerCookie))
+async fn name_cookie(name: Option<String>) -> Result<Name, Rejection> {
+    match name {
+        Some(name) if name.ends_with("(bot)") => Err(CardsError::IllegalName(name))?,
+        Some(name) => Ok(name),
+        None => Err(CardsError::MissingPlayerCookie)?,
+    }
 }
 
 #[tokio::main]
@@ -168,52 +192,62 @@ async fn main() -> Result<(), CardsError> {
     let server = Server::new(db)?;
     task::spawn(ping_event_streams(server.clone()));
     let server = warp::any().map(move || server.clone());
-    let player = warp::cookie::optional("player").and_then(player_cookie);
+    let name = warp::cookie::optional("name").and_then(name_cookie);
 
     let subscribe_lobby = warp::path!("lobby" / "subscribe")
         .and(warp::get())
         .and(server.clone())
-        .and(player.clone())
+        .and(name.clone())
         .and_then(subscribe_lobby);
     let new_game = warp::path!("lobby" / "new")
         .and(warp::post())
         .and(server.clone())
-        .and(player.clone())
+        .and(name.clone())
         .and(warp::body::json())
         .and_then(new_game);
     let join_game = warp::path!("lobby" / "join")
         .and(warp::post())
         .and(server.clone())
-        .and(player.clone())
+        .and(name.clone())
         .and(warp::body::json())
         .and_then(join_game);
     let leave_game = warp::path!("lobby" / "leave")
         .and(warp::post())
         .and(server.clone())
-        .and(player.clone())
+        .and(name.clone())
         .and(warp::body::json())
         .and_then(leave_game);
+    let add_bot = warp::path!("lobby" / "add_bot")
+        .and(warp::post())
+        .and(server.clone())
+        .and(warp::body::json())
+        .and_then(add_bot);
+    let remove_bot = warp::path!("lobby" / "remove_bot")
+        .and(warp::post())
+        .and(server.clone())
+        .and(warp::body::json())
+        .and_then(remove_bot);
     let subscribe_game = warp::path!("game" / "subscribe" / GameId)
         .and(warp::get())
         .and(server.clone())
-        .and(player.clone())
+        .and(name.clone())
         .and_then(subscribe_game);
     let pass_cards = warp::path!("game" / "pass")
         .and(warp::post())
         .and(server.clone())
-        .and(player.clone())
+        .and(name.clone())
         .and(warp::body::json())
         .and_then(pass_cards);
     let charge_cards = warp::path!("game" / "charge")
         .and(warp::post())
         .and(server.clone())
-        .and(player.clone())
+        .and(name.clone())
         .and(warp::body::json())
         .and_then(charge_cards);
     let play_card = warp::path!("game" / "play")
         .and(warp::post())
         .and(server.clone())
-        .and(player.clone())
+        .and(name.clone())
         .and(warp::body::json())
         .and_then(play_card);
     let lobby_html = warp::path!("lobby")
@@ -227,6 +261,8 @@ async fn main() -> Result<(), CardsError> {
         .or(new_game)
         .or(join_game)
         .or(leave_game)
+        .or(add_bot)
+        .or(remove_bot)
         .or(subscribe_game)
         .or(pass_cards)
         .or(charge_cards)

@@ -6,6 +6,7 @@ edition = "2018"
 
 [dependencies]
 env_logger = "*"
+log = "*"
 rand = "*"
 r2d2 = "*"
 r2d2_sqlite = "*"
@@ -13,7 +14,7 @@ rusqlite = "*"
 serde = { version = "*", features = ["derive"] }
 serde_json = "*"
 thiserror = "*"
-tokio = { version = "*", features = ["blocking", "macros", "rt-threaded", "sync"] }
+tokio = { version = "*", features = ["full"] }
 uuid = { version = "*", features = ["serde", "v4"] }
 warp = "*"
 

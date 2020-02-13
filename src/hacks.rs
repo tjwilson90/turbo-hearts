@@ -1,4 +1,5 @@
 use std::ops::{Deref, DerefMut};
+use std::sync::mpsc::TryRecvError;
 use tokio::{
     stream::{Stream, StreamExt},
     sync,
@@ -51,6 +52,13 @@ impl<T> UnboundedSender<T> {
 impl<T> UnboundedReceiver<T> {
     pub async fn recv(&mut self) -> Option<T> {
         self.0.recv().await
+    }
+    pub fn try_recv(&mut self) -> Result<T, TryRecvError> {
+        match self.0.try_recv() {
+            Err(tokio::sync::mpsc::error::TryRecvError::Empty) => Err(TryRecvError::Empty),
+            Err(tokio::sync::mpsc::error::TryRecvError::Closed) => Err(TryRecvError::Disconnected),
+            Ok(v) => Ok(v),
+        }
     }
 
     pub fn map<U, F>(self, f: F) -> impl Stream<Item = U>
