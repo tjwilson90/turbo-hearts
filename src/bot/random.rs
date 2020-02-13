@@ -1,7 +1,7 @@
 use crate::bot::{Action, Algorithm};
 use crate::cards::{legal_plays, Card, Cards, ChargeState, HandState};
 use crate::game::GameFeEvent;
-use crate::types::{ChargingRules, Name, PassDirection, Seat};
+use crate::types::{ChargingRules, Event, Name, PassDirection, Seat};
 use log::info;
 use rand::seq::SliceRandom;
 use rand::Rng;
@@ -10,6 +10,7 @@ pub struct Random {
     name: Name,
     seat: Seat,
     rules: ChargingRules,
+    passed: bool,
     pre_pass_hand: Cards,
     post_pass_hand: Cards,
     charged: bool,
@@ -24,6 +25,7 @@ impl Random {
             name,
             seat: Seat::North,
             rules: ChargingRules::Classic,
+            passed: false,
             pre_pass_hand: Cards::NONE,
             post_pass_hand: Cards::NONE,
             charged: false,
@@ -64,6 +66,9 @@ fn random(cards: Cards) -> Card {
 impl Algorithm for Random {
     fn handle(&mut self, event: GameFeEvent) {
         info!("{} handling event {:?}", self.name, event);
+        if !event.is_ping() {
+            self.next_action = None;
+        }
         match event {
             GameFeEvent::Ping => {}
             GameFeEvent::Sit {
@@ -97,9 +102,18 @@ impl Algorithm for Random {
                 self.post_pass_hand = self.pre_pass_hand;
                 self.charges = ChargeState::new(self.rules, pass);
             }
-            GameFeEvent::SendPass { cards, .. } => self.post_pass_hand -= cards,
+            GameFeEvent::SendPass { from, cards } => {
+                self.post_pass_hand -= cards;
+                self.passed |= from == self.seat;
+                if !self.passed {
+                    self.next_action = Some(Action::Pass(self.pass()));
+                }
+            }
             GameFeEvent::RecvPass { cards, .. } => {
                 self.post_pass_hand |= cards;
+                if !self.passed {
+                    self.next_action = Some(Action::Pass(self.pass()));
+                }
             }
             GameFeEvent::BlindCharge { seat, count } => {
                 self.charges.blind_charge(seat, count);
@@ -134,7 +148,10 @@ impl Algorithm for Random {
                     self.next_action = Some(Action::Play(self.play()));
                 }
             }
-            GameFeEvent::StartPassing => self.next_action = Some(Action::Pass(self.pass())),
+            GameFeEvent::StartPassing => {
+                self.passed = false;
+                self.next_action = Some(Action::Pass(self.pass()));
+            }
             GameFeEvent::StartCharging { seat } => {
                 self.charged = false;
                 match seat {
@@ -154,10 +171,14 @@ impl Algorithm for Random {
                 }
             }
         }
+        info!(
+            "{} ready to reply with action {:?}",
+            self.name, self.next_action
+        );
     }
 
     fn reply(&mut self) -> Option<Action> {
-        info!("{} reply with action {:?}", self.name, self.next_action);
+        info!("{} replying with action {:?}", self.name, self.next_action);
         self.next_action.take()
     }
 }

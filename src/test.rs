@@ -11,8 +11,6 @@ use crate::{
 use log::LevelFilter;
 use r2d2_sqlite::SqliteConnectionManager;
 use std::future::Future;
-use tokio::time;
-use tokio::time::Duration;
 
 macro_rules! s {
     ($string:ident) => {
@@ -374,11 +372,17 @@ async fn test_random_bot_game() -> Result<(), CardsError> {
                 ChargingRules::Blind,
             )
             .await?;
-        time::delay_for(Duration::from_secs(1)).await;
-        assert!(matches!(
-            server.subscribe_lobby(s!(foo)).await.recv().await,
-            Some(LobbyEvent::LobbyState { games, .. }) if !games.contains_key(&id)
-        ));
+        let mut rx = server.subscribe_game(id, s!(foo)).await?;
+        let mut plays = 0;
+        while let Some(event) = rx.recv().await {
+            if let GameFeEvent::Play { .. } = event {
+                plays += 1;
+                if plays == 208 {
+                    break;
+                }
+            }
+        }
+        assert_eq!(plays, 208);
         Ok(())
     }
     run(test).await

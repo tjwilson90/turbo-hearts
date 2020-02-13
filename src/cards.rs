@@ -607,7 +607,7 @@ impl HandState {
                     .current_trick
                     .contains(&self.current_trick[0].suit().nine()))
         {
-            let mut seat = self.next_player.left();
+            let mut seat = self.next_player;
             let mut winning_seat = self.next_player;
             let mut winning_card = self.current_trick[0];
             for card in &self.current_trick[1..] {

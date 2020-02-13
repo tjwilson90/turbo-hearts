@@ -116,7 +116,9 @@ impl Games {
                     send_event(seat, &tx, &fe_event);
                 }
             }
-            game.subscribers.insert(name, tx);
+            if game.state != GameState::Complete {
+                game.subscribers.insert(name, tx);
+            }
             Ok(())
         })
         .await?;
