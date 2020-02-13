@@ -188,6 +188,11 @@ impl Games {
                         game.broadcast(&fe_event);
                     }
                 }
+                if game.state == GameState::Charging {
+                    game.broadcast(&GameFeEvent::StartCharging {
+                        seat: game.charges.next_charger,
+                    });
+                }
                 Ok(())
             }
             None => Err(CardsError::IllegalPlayer(name.clone())),
@@ -553,18 +558,10 @@ impl Game {
                 from: *from,
                 cards: *cards,
             }],
-            GameDbEvent::RecvPass { to, cards } => {
-                let mut events = vec![GameFeEvent::RecvPass {
-                    to: *to,
-                    cards: *cards,
-                }];
-                if self.state == GameState::Charging {
-                    events.push(GameFeEvent::StartCharging {
-                        seat: self.charges.next_charger,
-                    });
-                }
-                events
-            }
+            GameDbEvent::RecvPass { to, cards } => vec![GameFeEvent::RecvPass {
+                to: *to,
+                cards: *cards,
+            }],
             GameDbEvent::Charge { seat, cards } => {
                 let mut events = vec![];
                 if self.rules.blind() {
