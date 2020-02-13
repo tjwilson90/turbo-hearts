@@ -731,7 +731,7 @@ pub fn legal_plays(cards: Cards, hand: &HandState, charged: Cards) -> Cards {
     // otherwise, you are leading the trick
     } else {
         // If hearts are not broken
-        if !hand.led_suits.contains_any(Cards::HEARTS)
+        if !hand.played.contains_any(Cards::HEARTS)
             // and you have a non-heart
             && !Cards::HEARTS.contains_all(plays)
         {

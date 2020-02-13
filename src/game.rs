@@ -492,7 +492,7 @@ impl Game {
                 }
             }
         } else {
-            if !self.hand.led_suits.contains_any(Cards::HEARTS)
+            if !self.hand.played.contains_any(Cards::HEARTS)
                 && !Cards::HEARTS.contains_all(plays)
                 && card.suit() == Suit::Hearts
             {
