@@ -2,7 +2,14 @@ import "./styles/style.scss";
 import { TEST_EVENTS } from "./test";
 import * as PIXI from "pixi.js";
 import TWEEN, { Tween } from "@tweenjs/tween.js";
-import { CARDS, Card, DealEventData, SendPassData, Pass } from "./types";
+import {
+  CARDS,
+  Card,
+  DealEventData,
+  SendPassData,
+  Pass,
+  EventData
+} from "./types";
 
 const SIZE = 1000;
 const INSET = 40;
@@ -47,17 +54,32 @@ class SendPassEvent implements Event {
     const dest = this.getDestination();
     const cards = this.getCards();
     let delay = 0;
-    let offset = 0;
+    let i = 0;
+    const duration = 300;
+    const interval = 80;
     for (const card of cards) {
       this.tweens.push(
         new TWEEN.Tween(card.sprite.position)
-          .to({ x: dest.x + offset, y: dest.y }, 1000)
+          .to(
+            {
+              x: dest.x + dest.offsetX * (i - 1),
+              y: dest.y + dest.offsetY * (i - 1)
+            },
+            1000
+          )
           .delay(delay)
           .easing(TWEEN.Easing.Quadratic.Out)
           .start()
       );
-      offset += 25;
-      delay += 120;
+      this.tweens.push(
+        new TWEEN.Tween(card.sprite)
+          .to({ rotation: dest.rotation }, duration)
+          .delay(delay)
+          .easing(TWEEN.Easing.Quadratic.Out)
+          .start()
+      );
+      delay += interval;
+      i++;
     }
   }
 
@@ -88,11 +110,54 @@ class SendPassEvent implements Event {
   }
 
   private getDestination() {
+    const r2o2 = Math.sqrt(2) / 2;
     switch (this.event.from) {
       case "north":
         switch (this.th.pass) {
           case "Left":
-            return { x: 90, y: 110 };
+            return {
+              x: SIZE - INSET * 4,
+              y: INSET * 4,
+              rotation: (Math.PI * 5) / 4,
+              offsetX: r2o2 * 25,
+              offsetY: r2o2 * 25
+            };
+        }
+        break;
+      case "east":
+        switch (this.th.pass) {
+          case "Left":
+            return {
+              x: SIZE - INSET * 4,
+              y: SIZE - INSET * 4,
+              rotation: (Math.PI * 3) / 4,
+              offsetX: r2o2 * 25,
+              offsetY: -r2o2 * 25
+            };
+        }
+        break;
+      case "south":
+        switch (this.th.pass) {
+          case "Left":
+            return {
+              x: INSET * 4,
+              y: SIZE - INSET * 4,
+              rotation: Math.PI / 4,
+              offsetX: r2o2 * 25,
+              offsetY: r2o2 * 25
+            };
+        }
+        break;
+      case "west":
+        switch (this.th.pass) {
+          case "Left":
+            return {
+              x: INSET * 4,
+              y: INSET * 4,
+              rotation: (Math.PI * 3) / 4,
+              offsetX: r2o2 * 25,
+              offsetY: -r2o2 * 25
+            };
         }
         break;
     }
@@ -167,7 +232,8 @@ class DealEvent implements Event {
       );
       this.tweens.push(
         new TWEEN.Tween(card.sprite)
-          .to({ rotation: rotation + Math.PI * 2 }, duration)
+          // .to({ rotation: rotation + Math.PI * 2 }, duration)
+          .to({ rotation: rotation }, duration)
           .delay(delay)
           .easing(TWEEN.Easing.Quadratic.Out)
           .start()
@@ -277,11 +343,26 @@ class TurboHearts {
   };
 }
 
+function toEvent(th: TurboHearts, event: EventData) {
+  switch (event.type) {
+    case "deal":
+      return new DealEvent(th, event);
+    case "send_pass":
+      return new SendPassEvent(th, event);
+    default:
+      return undefined;
+  }
+}
+
 document.addEventListener("DOMContentLoaded", event => {
   const th = new TurboHearts(
     document.getElementById("turbo-hearts") as HTMLCanvasElement
   );
   // const events = [...TEST_EVENTS];
-  th.pushEvent(new DealEvent(th, TEST_EVENTS[1] as DealEventData));
-  th.pushEvent(new SendPassEvent(th, TEST_EVENTS[3] as SendPassData));
+  for (const event of TEST_EVENTS) {
+    const realEvent = toEvent(th, event as EventData);
+    if (realEvent !== undefined) {
+      th.pushEvent(realEvent);
+    }
+  }
 });

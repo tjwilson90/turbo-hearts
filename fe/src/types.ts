@@ -30,6 +30,8 @@ export interface SendPassData {
   cards: Card[];
 }
 
+export type EventData = DealEventData | SendPassData;
+
 export type Card =
   | "BACK"
   | "2C"
