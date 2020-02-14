@@ -1,6 +1,6 @@
 import * as React from "react";
 import { Card, WithCharged } from "../types";
-import * as classNames from "classnames";
+import classNames from "classnames";
 import { isCharged } from "../util/charges";
 
 export interface HandProps {

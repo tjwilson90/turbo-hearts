@@ -1,6 +1,6 @@
 import * as React from "react";
 import { Card, Player } from "../types";
-import * as classNames from "classnames";
+import classNames from "classnames";
 import { Hand } from "./Hand";
 import { PlayerInfo } from "./PlayerInfo";
 
