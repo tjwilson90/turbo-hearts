@@ -1,14 +1,14 @@
 import { DealEventData } from "./types";
 
 export const TEST_EVENTS = [
-  {
-    type: "sit",
-    north: { type: "bot", name: "gdawson (bot)", algorithm: "random" },
-    east: { type: "bot", name: "nhardin (bot)", algorithm: "random" },
-    south: { type: "human", name: "dan" },
-    west: { type: "bot", name: "mlove (bot)", algorithm: "random" },
-    rules: "classic"
-  },
+  //   {
+  //     type: "sit",
+  //     north: { type: "bot", name: "gdawson (bot)", algorithm: "random" },
+  //     east: { type: "bot", name: "nhardin (bot)", algorithm: "random" },
+  //     south: { type: "human", name: "dan" },
+  //     west: { type: "bot", name: "mlove (bot)", algorithm: "random" },
+  //     rules: "classic"
+  //   },
   {
     type: "deal",
     north: [
@@ -73,18 +73,18 @@ export const TEST_EVENTS = [
     ],
     pass: "Left"
   },
-  { type: "start_passing" },
+  //   { type: "start_passing" },
   { type: "send_pass", from: "north", cards: ["2H", "8D", "QC"] },
   { type: "send_pass", from: "west", cards: ["4S", "4H", "6D"] },
-  { type: "recv_pass", to: "north", cards: ["4S", "4H", "6D"] },
+  //   { type: "recv_pass", to: "north", cards: ["4S", "4H", "6D"] },
   { type: "send_pass", from: "east", cards: ["2S", "AD", "AC"] },
-  { type: "recv_pass", to: "east", cards: ["2H", "8D", "QC"] },
-  { type: "send_pass", from: "south", cards: ["7D", "5D", "3D"] },
-  { type: "recv_pass", to: "south", cards: ["2S", "AD", "AC"] },
-  { type: "recv_pass", to: "west", cards: ["7D", "5D", "3D"] },
-  { type: "charge", seat: "north", cards: ["QS"] },
-  { type: "charge", seat: "east", cards: ["AH"] },
-  { type: "charge", seat: "west", cards: ["JD"] },
-  { type: "charge", seat: "north", cards: [] },
-  { type: "charge", seat: "east", cards: [] }
+  //   { type: "recv_pass", to: "east", cards: ["2H", "8D", "QC"] },
+  { type: "send_pass", from: "south", cards: ["7D", "5D", "3D"] }
+  //   { type: "recv_pass", to: "south", cards: ["2S", "AD", "AC"] },
+  //   { type: "recv_pass", to: "west", cards: ["7D", "5D", "3D"] },
+  //   { type: "charge", seat: "north", cards: ["QS"] },
+  //   { type: "charge", seat: "east", cards: ["AH"] },
+  //   { type: "charge", seat: "west", cards: ["JD"] },
+  //   { type: "charge", seat: "north", cards: [] },
+  //   { type: "charge", seat: "east", cards: [] }
 ];
