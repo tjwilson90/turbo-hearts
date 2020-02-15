@@ -10,7 +10,7 @@
 
 ## Endpoints
 
-All endpoints require the caller to pass a `"player"` cookie identifying themselves. There's no
+All endpoints require the caller to pass a `name` cookie identifying themselves. There's no
 authentication; please don't cheat.
 
 ### `GET /lobby`
@@ -159,6 +159,24 @@ Response:
 ]
 ```
 
+### `POST /lobby/add_bot`
+
+Add a bot to an existing game and propose charging rules. Returns the name of the bot.
+
+Request:
+```json
+{
+  "id": "8c9e2ff7-dcf3-49be-86f0-315f469840bc",
+  "rules": "chain",
+  "algorithm": "random"
+}
+```
+
+Response:
+```json
+"dharper (bot)"
+```
+
 ### `POST /lobby/leave`
 
 Leave an existing game.
@@ -185,26 +203,25 @@ The following events can be returned in the game event stream.
 
 #### Sit
 
-When a game starts, the first event sent is a `sit` event indicating where each player is sitting
-and what the charging rules are. The charging rules will be the rules proposed by the player in the
-`north` seat.
+When a game starts, a `sit` event is be sent indicating where each player is sitting and what the
+charging rules are. The charging rules will be the rules proposed by the player in the `north`
+seat.
 
 ```json
 {
   "type": "sit",
-  "north": "carrino",
-  "east": "tslatcher",
-  "south": "twilson",
-  "west": "dcervelli",
+  "north": {"type": "human", "name": "carrino"},
+  "east": {"type": "human", "name": "tslatcher"},
+  "south": {"type": "human", "name": "twilson"},
+  "west": {"type": "bot", "name": "hjarvis (bot)", "algorithm": "random"},
   "rules": "blind"
 }
 ```
 
 #### Deal
 
-When a new hand starts, a `deal` event is sent to every subscriber indicating which cards were
-dealt to which players. Players in the game will receive a redacted event containing only their
-cards.
+When a new hand starts, a `deal` event is sent indicating which cards were dealt to which players.
+Players in the game will receive a redacted event containing only their cards.
 
 Response:
 ```json
@@ -219,8 +236,9 @@ Response:
 
 #### SendPass
 
-When a player makes a pass, a `send_pass` event is sent to all subscribers. Players in the game
-other than the sender will receive a redacted event without the actual cards passed.
+When a player makes a pass, a `send_pass` event is sent indicating who sent the pass and what cards
+were passed. Players in the game other than the sender will receive a redacted event without the
+actual cards passed.
 
 Response:
 ```json
@@ -233,8 +251,9 @@ Response:
 
 #### RecvPass
 
-When a player receives a pass, a `recv_pass` event is sent to all subscribers. Players in the game
-other than the receiver will receive a redacted event without the actual cards passed.
+When a player receives a pass, a `recv_pass` event is sent indicating who received the pass and
+what cards they received. Players in the game other than the receiver will receive a redacted event
+without the actual cards passed.
 
 Response:
 ```json
@@ -247,9 +266,9 @@ Response:
 
 #### Charge
 
-When a charge is made (including an empty charge), all players will receive a `charge` event
-indicating who made the charge and what cards they charged. If the charging rules use blind
-charges, players in the game other than the charger will receive a `blind_charge` event instead.
+When a charge is made (including an empty charge), a `charge` event is sent indicating who made the
+charge and what cards they charged. If the charging rules use blind charges, players in the game
+other than the charger will receive a `blind_charge` event instead.
 
 Response:
 ```json
@@ -263,8 +282,8 @@ Response:
 #### BlindCharge
 
 When a blind variant of the charging rules has been chosen and a charge is made (including an empty
-charge), other players in the game will receive a `blind_charge` event indicating who made the
-charge and how many cards they charged.
+charge), a `blind_charge` event will be sent to other players in the game (the charger will receive
+a `charge` event) indicating who made the charge and how many cards they charged.
 
 Response:
 ```json
@@ -275,24 +294,39 @@ Response:
 }
 ```
 
+#### RevealCharges
+
+When a blind variant of the charging rules has been chosen and a round of charging completes, a
+`reveal_charges` event will be sent indicating what charges were made.
+
+Response:
+```json
+{
+  "type": "reveal_charges",
+  "north": ["JD"],
+  "east": [],
+  "south": ["QS", "TC"],
+  "west": []
+}
+```
+
 #### Play
 
-When a play is made, all players will receive a `play` event indicating who made the play, what
-card they played, and what trick it was played on.
+When a play is made,a `play` event will be sent indicating who made the play, and what card they
+played.
 
 Response:
 ```json
 {
   "type": "play",
   "seat": "west",
-  "card": "8D",
-  "trick_number": 3
+  "card": "8D"
 }
 ```
 
 ### `POST /game/pass`
 
-Pass cards to another player.
+Pass cards.
 
 Request:
 ```json

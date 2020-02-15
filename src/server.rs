@@ -1,6 +1,6 @@
 use crate::bot::Bot;
-use crate::game::GameDbEvent;
-use crate::types::{Name, Participant};
+use crate::game::GameBeEvent;
+use crate::types::Participant;
 use crate::{
     cards::{Card, Cards},
     db::Database,
@@ -52,13 +52,13 @@ impl Server {
         self.games.ping().await;
     }
 
-    pub async fn subscribe_lobby(&self, name: Name) -> UnboundedReceiver<LobbyEvent> {
+    pub async fn subscribe_lobby(&self, name: String) -> UnboundedReceiver<LobbyEvent> {
         info!("{} joined the lobby", name);
         self.lobby.subscribe(name).await
     }
 
-    pub async fn new_game(&self, name: Name, rules: ChargingRules) -> GameId {
-        let id = self.lobby.new_game(name.clone(), rules).await;
+    pub async fn new_game(&self, name: &str, rules: ChargingRules) -> GameId {
+        let id = self.lobby.new_game(name.to_string(), rules).await;
         info!("{} started game {}", name, id);
         id
     }
@@ -90,7 +90,7 @@ impl Server {
             .collect())
     }
 
-    pub async fn leave_game(&self, id: GameId, name: Name) {
+    pub async fn leave_game(&self, id: GameId, name: String) {
         info!("{} left game {}", name, id);
         self.lobby.leave_game(id, name).await
     }
@@ -98,13 +98,13 @@ impl Server {
     pub async fn subscribe_game(
         &self,
         id: GameId,
-        name: Name,
+        name: String,
     ) -> Result<UnboundedReceiver<GameFeEvent>, CardsError> {
         info!("{} subscribed to game {}", name, id);
         self.games.subscribe(id, name).await
     }
 
-    pub async fn pass_cards(&self, id: GameId, name: Name, cards: Cards) -> Result<(), CardsError> {
+    pub async fn pass_cards(&self, id: GameId, name: &str, cards: Cards) -> Result<(), CardsError> {
         let result = self.games.pass_cards(id, &name, cards).await;
         match &result {
             Ok(_) => info!("{} passed {} in game {} successfully", name, cards, id),
@@ -119,7 +119,7 @@ impl Server {
     pub async fn charge_cards(
         &self,
         id: GameId,
-        name: Name,
+        name: &str,
         cards: Cards,
     ) -> Result<(), CardsError> {
         let result = self.games.charge_cards(id, &name, cards).await;
@@ -133,7 +133,7 @@ impl Server {
         result
     }
 
-    pub async fn play_card(&self, id: GameId, name: Name, card: Card) -> Result<bool, CardsError> {
+    pub async fn play_card(&self, id: GameId, name: &str, card: Card) -> Result<bool, CardsError> {
         let result = self.games.play_card(id, &name, card).await;
         match &result {
             Ok(complete) => {
@@ -161,7 +161,7 @@ fn hydrate_games(tx: &Transaction) -> Result<HashMap<GameId, HashSet<Participant
     let mut games = HashMap::new();
     while let Some(row) = rows.next()? {
         let id = row.get(0)?;
-        if let GameDbEvent::Sit {
+        if let GameBeEvent::Sit {
             north,
             east,
             south,

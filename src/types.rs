@@ -48,10 +48,6 @@ impl FromSql for GameId {
     }
 }
 
-pub type EventId = u32;
-
-pub type Name = String;
-
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub struct Participant {
     pub player: Player,
@@ -61,12 +57,12 @@ pub struct Participant {
 #[serde(tag = "type", rename_all = "snake_case")]
 #[derive(Clone, Debug, Eq, PartialEq, Hash, Serialize, Deserialize)]
 pub enum Player {
-    Human { name: Name },
-    Bot { name: Name, algorithm: String },
+    Human { name: String },
+    Bot { name: String, algorithm: String },
 }
 
 impl Player {
-    pub fn name(&self) -> &Name {
+    pub fn name(&self) -> &str {
         match self {
             Player::Human { name } => name,
             Player::Bot { name, .. } => name,
@@ -128,6 +124,13 @@ pub enum Seat {
 impl Seat {
     pub const VALUES: [Seat; 4] = [Seat::North, Seat::East, Seat::South, Seat::West];
 
+    pub fn all<F>(f: F) -> bool
+    where
+        F: Fn(Seat) -> bool,
+    {
+        f(Seat::North) && f(Seat::East) && f(Seat::South) && f(Seat::West)
+    }
+
     pub fn idx(&self) -> usize {
         *self as usize
     }
@@ -158,58 +161,11 @@ impl Seat {
             Seat::West => Seat::East,
         }
     }
-
-    pub fn pass_sender(&self, hand: PassDirection) -> Self {
-        match hand {
-            PassDirection::Left => self.right(),
-            PassDirection::Right => self.left(),
-            PassDirection::Across => self.across(),
-            PassDirection::Keeper => *self,
-        }
-    }
-
-    pub fn pass_receiver(&self, hand: PassDirection) -> Self {
-        match hand {
-            PassDirection::Left => self.left(),
-            PassDirection::Right => self.right(),
-            PassDirection::Across => self.across(),
-            PassDirection::Keeper => *self,
-        }
-    }
 }
 
 impl Display for Seat {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         Debug::fmt(&self, f)
-    }
-}
-
-#[repr(u8)]
-#[derive(Copy, Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
-pub enum PassDirection {
-    Left,
-    Right,
-    Across,
-    Keeper,
-}
-
-impl PassDirection {
-    pub fn next(self) -> Option<PassDirection> {
-        match self {
-            PassDirection::Left => Some(PassDirection::Right),
-            PassDirection::Right => Some(PassDirection::Across),
-            PassDirection::Across => Some(PassDirection::Keeper),
-            PassDirection::Keeper => None,
-        }
-    }
-
-    pub fn first_charger(self) -> Seat {
-        match self {
-            PassDirection::Left => Seat::North,
-            PassDirection::Right => Seat::East,
-            PassDirection::Across => Seat::South,
-            PassDirection::Keeper => Seat::West,
-        }
     }
 }
 
