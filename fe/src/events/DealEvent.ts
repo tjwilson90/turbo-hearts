@@ -1,11 +1,25 @@
-import { TurboHearts } from "../game/TurboHearts";
-import { DealEventData, Card, SpriteCard, Event, Point } from "../types";
-import * as PIXI from "pixi.js";
 import TWEEN from "@tweenjs/tween.js";
-
-const SIZE = 1000;
-const INSET = 40;
-const CARDS_LENGTH = 400;
+import * as PIXI from "pixi.js";
+import {
+  ANIMATION_DELAY,
+  ANIMATION_DURATION,
+  BOTTOM,
+  CARD_SCALE,
+  LEFT,
+  RIGHT,
+  TABLE_CENTER_X,
+  TABLE_CENTER_Y,
+  TOP
+} from "../const";
+import { TurboHearts } from "../game/TurboHearts";
+import {
+  Card,
+  DealEventData,
+  Event,
+  PointWithRotation,
+  SpriteCard
+} from "../types";
+import { groupCards } from "./groupCards";
 
 export class DealEvent implements Event {
   private tweens: TWEEN.Tween[] = [];
@@ -14,12 +28,7 @@ export class DealEvent implements Event {
     this.th.pass = event.pass;
   }
 
-  private createSpriteCards(
-    hand: Card[],
-    from: Point,
-    to: Point,
-    rotation: number
-  ) {
+  private createSpriteCards(hand: Card[], center: PointWithRotation) {
     const cards: SpriteCard[] = [];
     if (hand.length === 0) {
       for (let i = 0; i < 13; i++) {
@@ -38,20 +47,23 @@ export class DealEvent implements Event {
         });
       }
     }
-    let delay = 0;
-    let i = 0;
-    const duration = 300;
-    const interval = 80;
     for (const card of cards) {
-      card.sprite.scale.set(0.5);
-      card.sprite.position.set(500, 500);
+      card.sprite.scale.set(CARD_SCALE);
+      card.sprite.position.set(TABLE_CENTER_X, TABLE_CENTER_Y);
       card.sprite.anchor.set(0.5, 0.5);
-      card.sprite.rotation = rotation;
-      const destX = from.x + (to.x - from.x) * (i / 12);
-      const destY = from.y + (to.y - from.y) * (i / 12);
+      card.sprite.rotation = -Math.PI;
+    }
+    let delay = 0;
+    const duration = ANIMATION_DURATION;
+    const interval = ANIMATION_DELAY;
+    const dests = groupCards(cards, center.x, center.y, center.rotation);
+    for (let i = 0; i < cards.length; i++) {
+      const card = cards[i];
+      const dest = dests[i];
+
       this.tweens.push(
         new TWEEN.Tween(card.sprite.position)
-          .to({ x: destX, y: destY }, duration)
+          .to({ x: dest.x, y: dest.y }, duration)
           .delay(delay)
           .easing(TWEEN.Easing.Quadratic.Out)
           .onComplete(() => {
@@ -66,45 +78,22 @@ export class DealEvent implements Event {
       );
       this.tweens.push(
         new TWEEN.Tween(card.sprite)
-          // .to({ rotation: rotation + Math.PI * 2 }, duration)
-          .to({ rotation: rotation }, duration)
+          .to({ rotation: center.rotation }, duration)
           .delay(delay)
           .easing(TWEEN.Easing.Quadratic.Out)
           .start()
       );
       this.th.app.stage.addChild(card.sprite);
       delay += interval;
-      i++;
     }
     return cards;
   }
 
   public begin() {
-    const d = (SIZE - CARDS_LENGTH) / 2;
-    this.th.topCards = this.createSpriteCards(
-      this.event.north,
-      { x: SIZE - d, y: INSET },
-      { x: d, y: INSET },
-      Math.PI
-    );
-    this.th.rightCards = this.createSpriteCards(
-      this.event.east,
-      { x: SIZE - INSET, y: SIZE - d },
-      { x: SIZE - INSET, y: d },
-      Math.PI / 2
-    );
-    this.th.bottomCards = this.createSpriteCards(
-      this.event.south,
-      { x: d, y: SIZE - INSET },
-      { x: SIZE - d, y: SIZE - INSET },
-      0
-    );
-    this.th.leftCards = this.createSpriteCards(
-      this.event.west,
-      { x: INSET, y: d },
-      { x: INSET, y: SIZE - d },
-      (Math.PI * 3) / 2
-    );
+    this.th.topCards = this.createSpriteCards(this.event.north, TOP);
+    this.th.rightCards = this.createSpriteCards(this.event.east, RIGHT);
+    this.th.bottomCards = this.createSpriteCards(this.event.south, BOTTOM);
+    this.th.leftCards = this.createSpriteCards(this.event.west, LEFT);
   }
 
   public isFinished() {

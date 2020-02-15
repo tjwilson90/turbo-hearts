@@ -27,6 +27,10 @@ export interface Point {
   y: number;
 }
 
+export interface PointWithRotation extends Point {
+  rotation: number;
+}
+
 export interface SpriteCard {
   card: Card;
   sprite: PIXI.Sprite;
