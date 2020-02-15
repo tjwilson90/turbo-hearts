@@ -39,7 +39,7 @@ pub struct BotState {
 impl Bot {
     pub fn new(name: String, algorithm: &str) -> Self {
         let algorithm = match algorithm {
-            "random" => Box::new(Random::new()),
+            Random::NAME => Box::new(Random::new()),
             _ => panic!("Unknown algorithm"),
         };
         Self {

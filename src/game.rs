@@ -533,7 +533,7 @@ pub enum GameBeEvent {
 }
 
 #[serde(tag = "type", rename_all = "snake_case")]
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
 pub enum GameFeEvent {
     Ping,
     Sit {
@@ -642,7 +642,10 @@ fn hydrate_events(tx: &Transaction, id: GameId, game: &mut Game) -> Result<(), C
         .prepare("SELECT event FROM event WHERE game_id = ? AND event_id >= ? ORDER BY event_id")?;
     let mut rows = stmt.query::<&[&dyn ToSql]>(&[&id, &(game.events.len() as i64)])?;
     while let Some(row) = rows.next()? {
-        game.apply(&serde_json::from_str(&row.get::<_, String>(0)?)?);
+        let event = serde_json::from_str(&row.get::<_, String>(0)?)?;
+        for event in game.as_fe_events(&event) {
+            game.apply(&event);
+        }
     }
     Ok(())
 }

@@ -641,9 +641,7 @@ pub struct GameState {
     pub next_charger: Option<Seat>,
     pub played: Cards,
     pub led_suits: Cards,
-    pub trick_number: usize,
     pub next_player: Option<Seat>,
-    pub previous_trick: Vec<Card>,
     pub current_trick: Vec<Card>,
 }
 
@@ -661,9 +659,7 @@ impl GameState {
             next_charger: None,
             played: Cards::NONE,
             led_suits: Cards::NONE,
-            trick_number: 0,
             next_player: None,
-            previous_trick: Vec::with_capacity(8),
             current_trick: Vec::with_capacity(8),
         }
     }
@@ -788,9 +784,7 @@ impl GameState {
                         }
                     }
                     self.next_player = Some(winning_seat);
-                    mem::swap(&mut self.current_trick, &mut self.previous_trick);
                     self.current_trick.clear();
-                    self.trick_number += 1;
                     if self.played == Cards::ALL {
                         self.phase = self.phase.next(self.charge_count != 0);
                     }
@@ -810,8 +804,6 @@ impl GameState {
                 if self.is_playing() {
                     self.played = Cards::NONE;
                     self.led_suits = Cards::NONE;
-                    self.trick_number = 0;
-                    self.previous_trick.clear();
                     self.current_trick.clear();
                 }
             }
