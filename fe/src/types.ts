@@ -1,16 +1,3 @@
-export interface WithCharged {
-  chargedAh: boolean;
-  chargedJd: boolean;
-  chargedTc: boolean;
-  chargedQs: boolean;
-}
-
-export interface Player extends WithCharged {
-  hand: Card[];
-  name: string;
-  dealer: boolean;
-}
-
 export type Pass = "Left" | "Right" | "Across" | "Keep";
 
 export interface DealEventData {
@@ -28,6 +15,22 @@ export interface SendPassData {
   type: "send_pass";
   from: Seat;
   cards: Card[];
+}
+
+export interface Event {
+  begin(): void;
+  isFinished(): boolean;
+}
+
+export interface Point {
+  x: number;
+  y: number;
+}
+
+export interface SpriteCard {
+  card: Card;
+  sprite: PIXI.Sprite;
+  hidden: boolean;
 }
 
 export type EventData = DealEventData | SendPassData;
