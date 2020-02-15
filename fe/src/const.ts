@@ -16,26 +16,61 @@ export const FAST_ANIMATION_DURATION = ANIMATION_DURATION / 2;
 export const FAST_ANIMATION_DELAY = ANIMATION_DELAY / 2;
 
 export const TABLE_CARD_UNDERLAP = 0.2;
+export const CHARGE_OFFSET =
+  CARD_DISPLAY_HEIGHT * (1 + TABLE_CARD_UNDERLAP) + 10;
+export const CHARGE_OVERLAP = CARD_DISPLAY_WIDTH + 10;
 
 export const TOP_X = TABLE_CENTER_X;
 export const TOP_Y = CARD_DISPLAY_HEIGHT * TABLE_CARD_UNDERLAP;
 export const TOP_ROTATION = Math.PI;
-export const TOP = { x: TOP_X, y: TOP_Y, rotation: TOP_ROTATION };
+export const TOP_CHARGE_X = TOP_X;
+export const TOP_CHARGE_Y = CHARGE_OFFSET;
+export const TOP = {
+  x: TOP_X,
+  y: TOP_Y,
+  chargeX: TOP_CHARGE_X,
+  chargeY: TOP_CHARGE_Y,
+  rotation: TOP_ROTATION
+};
 
 export const RIGHT_X = TABLE_SIZE - CARD_DISPLAY_HEIGHT * TABLE_CARD_UNDERLAP;
 export const RIGHT_Y = TABLE_CENTER_Y;
 export const RIGHT_ROTATION = -Math.PI / 2;
-export const RIGHT = { x: RIGHT_X, y: RIGHT_Y, rotation: RIGHT_ROTATION };
+export const RIGHT_CHARGE_X = TABLE_SIZE - CHARGE_OFFSET;
+export const RIGHT_CHARGE_Y = TABLE_CENTER_Y;
+export const RIGHT = {
+  x: RIGHT_X,
+  y: RIGHT_Y,
+  chargeX: RIGHT_CHARGE_X,
+  chargeY: RIGHT_CHARGE_Y,
+  rotation: RIGHT_ROTATION
+};
 
 export const BOTTOM_X = TABLE_CENTER_X;
 export const BOTTOM_Y = TABLE_SIZE - CARD_DISPLAY_HEIGHT * TABLE_CARD_UNDERLAP;
 export const BOTTOM_ROTATION = 0;
-export const BOTTOM = { x: BOTTOM_X, y: BOTTOM_Y, rotation: BOTTOM_ROTATION };
+export const BOTTOM_CHARGE_X = TABLE_CENTER_X;
+export const BOTTOM_CHARGE_Y = TABLE_SIZE - CHARGE_OFFSET;
+export const BOTTOM = {
+  x: BOTTOM_X,
+  y: BOTTOM_Y,
+  chargeX: BOTTOM_CHARGE_X,
+  chargeY: BOTTOM_CHARGE_Y,
+  rotation: BOTTOM_ROTATION
+};
 
 export const LEFT_X = CARD_DISPLAY_HEIGHT * TABLE_CARD_UNDERLAP;
 export const LEFT_Y = TABLE_CENTER_Y;
 export const LEFT_ROTATION = Math.PI / 2;
-export const LEFT = { x: LEFT_X, y: LEFT_Y, rotation: LEFT_ROTATION };
+export const LEFT_CHARGE_X = TABLE_CENTER_Y;
+export const LEFT_CHARGE_Y = CHARGE_OFFSET;
+export const LEFT = {
+  x: LEFT_X,
+  y: LEFT_Y,
+  chargeX: LEFT_CHARGE_X,
+  chargeY: LEFT_CHARGE_Y,
+  rotation: LEFT_ROTATION
+};
 
 const CORNER_OFFSET = CARD_DISPLAY_HEIGHT * (4 * TABLE_CARD_UNDERLAP);
 export const TOP_RIGHT_X = TABLE_SIZE - CORNER_OFFSET;

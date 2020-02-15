@@ -13,6 +13,7 @@ import { groupCards } from "./groupCards";
 import { getPlayerAccessor } from "./playerAccessors";
 import { getHandPosition } from "./handPositions";
 import { removeAll, pushAll } from "../util/array";
+import { spriteCardsOf, spriteCardsOfNot } from "./helpers";
 
 const passDestinations: {
   [pass: string]: {
@@ -90,8 +91,7 @@ export class SendPassEvent implements Event {
     for (const card of cards.cardsToKeep) {
       this.tweens.push(
         new TWEEN.Tween(card.sprite.position)
-          .to(keepDests[i], 1000)
-          .delay(delay)
+          .to(keepDests[i], FAST_ANIMATION_DURATION)
           .easing(TWEEN.Easing.Quadratic.Out)
           .start()
       );
@@ -108,10 +108,8 @@ export class SendPassEvent implements Event {
       // TODO pass hidden cards
       return { cardsToMove: [], cardsToKeep: [] };
     } else {
-      const set = new Set(this.event.cards);
-      // const hand = handAccessor.getCards();
-      const cardsToMove = player.cards.filter(c => set.has(c.card));
-      const cardsToKeep = player.cards.filter(c => !set.has(c.card));
+      const cardsToMove = spriteCardsOf(player.cards, this.event.cards);
+      const cardsToKeep = spriteCardsOfNot(player.cards, this.event.cards);
       removeAll(player.cards, cardsToMove);
       pushAll(player.limboCards, cardsToMove);
       return { cardsToMove, cardsToKeep };

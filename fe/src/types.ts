@@ -24,6 +24,12 @@ export interface ReceivePassData {
   cards: Card[];
 }
 
+export interface ChargeEventData {
+  type: "charge";
+  seat: Seat;
+  cards: Card[];
+}
+
 export interface Event {
   begin(): void;
   isFinished(): boolean;
@@ -38,13 +44,22 @@ export interface PointWithRotation extends Point {
   rotation: number;
 }
 
+export interface PlayerCardPositions extends PointWithRotation {
+  chargeX: number;
+  chargeY: number;
+}
+
 export interface SpriteCard {
   card: Card;
   sprite: PIXI.Sprite;
   hidden: boolean;
 }
 
-export type EventData = DealEventData | SendPassData | ReceivePassData;
+export type EventData =
+  | DealEventData
+  | SendPassData
+  | ReceivePassData
+  | ChargeEventData;
 
 export type Card =
   | "BACK"
