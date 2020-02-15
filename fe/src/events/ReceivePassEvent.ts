@@ -64,15 +64,10 @@ export class ReceivePassEvent implements Event {
     let delay = 0;
     let i = 0;
     for (const card of cards) {
+      card.sprite.zIndex = i;
       this.tweens.push(
         new TWEEN.Tween(card.sprite.position)
-          .to(
-            {
-              x: cardDests[i].x,
-              y: cardDests[i].y
-            },
-            1000
-          )
+          .to(cardDests[i], FAST_ANIMATION_DURATION)
           .delay(delay)
           .easing(TWEEN.Easing.Quadratic.Out)
           .start()
@@ -88,6 +83,8 @@ export class ReceivePassEvent implements Event {
       delay += FAST_ANIMATION_DELAY;
       i++;
     }
+    // TODO: this is resulting in jarring card flip
+    this.th.app.stage.sortChildren();
   }
 
   private updateCards(hand: SpriteCard[]) {

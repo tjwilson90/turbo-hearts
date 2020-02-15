@@ -1,15 +1,14 @@
 import { Pass, SpriteCard, CARDS, Event, Seat } from "../types";
 import TWEEN from "@tweenjs/tween.js";
 import * as PIXI from "pixi.js";
-
-const SIZE = 1000;
+import { TABLE_SIZE } from "../const";
 
 export class TurboHearts {
   public app: PIXI.Application;
 
   public pass: Pass | undefined;
 
-  public bottomSeat: Seat = "south";
+  public bottomSeat: Seat = "east";
 
   public topCards: SpriteCard[];
   public rightCards: SpriteCard[];
@@ -27,13 +26,14 @@ export class TurboHearts {
     const dpr = window.devicePixelRatio;
     this.app = new PIXI.Application({
       view: this.canvas,
-      width: SIZE,
-      height: SIZE,
+      width: TABLE_SIZE,
+      height: TABLE_SIZE,
       backgroundColor: 0x77a178,
       resolution: dpr
     });
-    this.canvas.style.width = SIZE + "px";
-    this.canvas.style.height = SIZE + "px";
+    this.app.stage.sortableChildren = true;
+    this.canvas.style.width = TABLE_SIZE + "px";
+    this.canvas.style.height = TABLE_SIZE + "px";
     this.loadCards();
   }
 
