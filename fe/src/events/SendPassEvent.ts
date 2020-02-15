@@ -1,17 +1,17 @@
 import TWEEN from "@tweenjs/tween.js";
 import {
-  BOTTOM,
   BOTTOM_LEFT,
   BOTTOM_RIGHT,
-  LEFT,
-  RIGHT,
-  TOP,
   TOP_LEFT,
-  TOP_RIGHT
+  TOP_RIGHT,
+  FAST_ANIMATION_DELAY,
+  FAST_ANIMATION_DURATION
 } from "../const";
 import { TurboHearts } from "../game/TurboHearts";
-import { Event, SendPassData, SpriteCard, PointWithRotation } from "../types";
+import { Event, PointWithRotation, SendPassData } from "../types";
 import { groupCards } from "./groupCards";
+import { getHandAccessor } from "./handAccessors";
+import { getHandPosition } from "./handPositions";
 
 const passDestinations: {
   [pass: string]: {
@@ -40,102 +40,6 @@ passDestinations["Left"]["west"]["east"] = TOP_RIGHT;
 passDestinations["Left"]["west"]["south"] = BOTTOM_RIGHT;
 passDestinations["Left"]["west"]["west"] = BOTTOM_LEFT;
 
-const handDestinations: {
-  [bottomSeat: string]: { [passFrom: string]: PointWithRotation };
-} = {};
-handDestinations["north"] = {};
-handDestinations["north"]["north"] = BOTTOM;
-handDestinations["north"]["east"] = LEFT;
-handDestinations["north"]["south"] = TOP;
-handDestinations["north"]["west"] = RIGHT;
-handDestinations["east"] = {};
-handDestinations["east"]["north"] = RIGHT;
-handDestinations["east"]["east"] = BOTTOM;
-handDestinations["east"]["south"] = LEFT;
-handDestinations["east"]["west"] = TOP;
-handDestinations["south"] = {};
-handDestinations["south"]["north"] = TOP;
-handDestinations["south"]["east"] = RIGHT;
-handDestinations["south"]["south"] = BOTTOM;
-handDestinations["south"]["west"] = LEFT;
-handDestinations["west"] = {};
-handDestinations["west"]["north"] = LEFT;
-handDestinations["west"]["east"] = TOP;
-handDestinations["west"]["south"] = RIGHT;
-handDestinations["west"]["west"] = BOTTOM;
-
-interface HandAccessor {
-  getCards: (th: TurboHearts) => SpriteCard[];
-  getLimboCards: (th: TurboHearts) => SpriteCard[];
-  setCards: (th: TurboHearts, cards: SpriteCard[]) => void;
-  setLimboCards: (th: TurboHearts, cards: SpriteCard[]) => void;
-}
-
-const TOP_HAND_ACCESSOR: HandAccessor = {
-  getCards: (th: TurboHearts) => th.topCards,
-  getLimboCards: (th: TurboHearts) => th.topLimboCards,
-  setCards: (th: TurboHearts, cards: SpriteCard[]) => {
-    th.topCards = cards;
-  },
-  setLimboCards: (th: TurboHearts, cards: SpriteCard[]) => {
-    th.topLimboCards = cards;
-  }
-};
-const RIGHT_HAND_ACCESSOR: HandAccessor = {
-  getCards: (th: TurboHearts) => th.rightCards,
-  getLimboCards: (th: TurboHearts) => th.rightLimboCards,
-  setCards: (th: TurboHearts, cards: SpriteCard[]) => {
-    th.rightCards = cards;
-  },
-  setLimboCards: (th: TurboHearts, cards: SpriteCard[]) => {
-    th.rightLimboCards = cards;
-  }
-};
-const BOTTOM_HAND_ACCESSOR: HandAccessor = {
-  getCards: (th: TurboHearts) => th.bottomCards,
-  getLimboCards: (th: TurboHearts) => th.bottomLimboCards,
-  setCards: (th: TurboHearts, cards: SpriteCard[]) => {
-    th.bottomCards = cards;
-  },
-  setLimboCards: (th: TurboHearts, cards: SpriteCard[]) => {
-    th.bottomLimboCards = cards;
-  }
-};
-const LEFT_HAND_ACCESSOR: HandAccessor = {
-  getCards: (th: TurboHearts) => th.leftCards,
-  getLimboCards: (th: TurboHearts) => th.leftLimboCards,
-  setCards: (th: TurboHearts, cards: SpriteCard[]) => {
-    th.leftCards = cards;
-  },
-  setLimboCards: (th: TurboHearts, cards: SpriteCard[]) => {
-    th.leftLimboCards = cards;
-  }
-};
-
-const handAccessors: {
-  [bottomSeat: string]: { [passFrom: string]: HandAccessor };
-} = {};
-handAccessors["north"] = {};
-handAccessors["north"]["north"] = BOTTOM_HAND_ACCESSOR;
-handAccessors["north"]["east"] = LEFT_HAND_ACCESSOR;
-handAccessors["north"]["south"] = TOP_HAND_ACCESSOR;
-handAccessors["north"]["west"] = RIGHT_HAND_ACCESSOR;
-handAccessors["east"] = {};
-handAccessors["east"]["north"] = RIGHT_HAND_ACCESSOR;
-handAccessors["east"]["east"] = BOTTOM_HAND_ACCESSOR;
-handAccessors["east"]["south"] = LEFT_HAND_ACCESSOR;
-handAccessors["east"]["west"] = TOP_HAND_ACCESSOR;
-handAccessors["south"] = {};
-handAccessors["south"]["north"] = TOP_HAND_ACCESSOR;
-handAccessors["south"]["east"] = RIGHT_HAND_ACCESSOR;
-handAccessors["south"]["south"] = BOTTOM_HAND_ACCESSOR;
-handAccessors["south"]["west"] = LEFT_HAND_ACCESSOR;
-handAccessors["west"] = {};
-handAccessors["west"]["north"] = LEFT_HAND_ACCESSOR;
-handAccessors["west"]["east"] = TOP_HAND_ACCESSOR;
-handAccessors["west"]["south"] = RIGHT_HAND_ACCESSOR;
-handAccessors["west"]["west"] = BOTTOM_HAND_ACCESSOR;
-
 export class SendPassEvent implements Event {
   private tweens: TWEEN.Tween[] = [];
   constructor(private th: TurboHearts, private event: SendPassData) {}
@@ -145,8 +49,6 @@ export class SendPassEvent implements Event {
     const cards = this.updateCards();
     let delay = 0;
     let i = 0;
-    const duration = 300;
-    const interval = 80;
 
     const cardDests = groupCards(
       cards.cardsToMove,
@@ -170,16 +72,19 @@ export class SendPassEvent implements Event {
       );
       this.tweens.push(
         new TWEEN.Tween(card.sprite)
-          .to({ rotation: passDestination.rotation }, duration)
+          .to({ rotation: passDestination.rotation }, FAST_ANIMATION_DURATION)
           .delay(delay)
           .easing(TWEEN.Easing.Quadratic.Out)
           .start()
       );
 
-      delay += interval;
+      delay += FAST_ANIMATION_DELAY;
       i++;
     }
-    const handDestination = this.getHandDestination();
+    const handDestination = getHandPosition(
+      this.th.bottomSeat,
+      this.event.from
+    );
     const keepDests = groupCards(
       cards.cardsToKeep,
       handDestination.x,
@@ -206,23 +111,23 @@ export class SendPassEvent implements Event {
   }
 
   private updateCards() {
-    const handAccessor = handAccessors[this.th.bottomSeat][this.event.from];
+    const handAccessor = getHandAccessor(
+      this.th,
+      this.th.bottomSeat,
+      this.event.from
+    );
     if (this.event.cards.length === 0) {
       // pass hidden cards
       return { cardsToMove: [], cardsToKeep: [] };
     } else {
       const set = new Set(this.event.cards);
-      const hand = handAccessor.getCards(this.th);
+      const hand = handAccessor.getCards();
       const cardsToMove = hand.filter(c => set.has(c.card));
       const cardsToKeep = hand.filter(c => !set.has(c.card));
-      handAccessor.setCards(this.th, cardsToKeep);
-      handAccessor.setLimboCards(this.th, cardsToMove);
+      handAccessor.setCards(cardsToKeep);
+      handAccessor.setLimboCards(cardsToMove);
       return { cardsToMove, cardsToKeep };
     }
-  }
-
-  private getHandDestination() {
-    return handDestinations[this.th.bottomSeat][this.event.from];
   }
 
   private getPassDestination() {
