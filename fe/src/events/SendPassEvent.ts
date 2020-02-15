@@ -1,29 +1,43 @@
-import { TurboHearts } from "../game/TurboHearts";
-import { SendPassData, Event, SpriteCard } from "../types";
 import TWEEN from "@tweenjs/tween.js";
-
-const SIZE = 1000;
-const INSET = 40;
-const CARDS_LENGTH = 400;
+import {
+  BOTTOM,
+  BOTTOM_LEFT,
+  BOTTOM_RIGHT,
+  LEFT,
+  RIGHT,
+  TOP,
+  TOP_LEFT,
+  TOP_RIGHT
+} from "../const";
+import { TurboHearts } from "../game/TurboHearts";
+import { Event, SendPassData, SpriteCard } from "../types";
+import { groupCards } from "./groupCards";
 
 export class SendPassEvent implements Event {
   private tweens: TWEEN.Tween[] = [];
   constructor(private th: TurboHearts, private event: SendPassData) {}
 
   public begin() {
-    const dest = this.getDestination();
+    const passDestination = this.getPassDestination();
     const cards = this.getCards();
     let delay = 0;
     let i = 0;
     const duration = 300;
     const interval = 80;
-    for (const card of cards) {
+
+    const cardDests = groupCards(
+      cards.cardsToMove,
+      passDestination.x,
+      passDestination.y,
+      passDestination.rotation
+    );
+    for (const card of cards.cardsToMove) {
       this.tweens.push(
         new TWEEN.Tween(card.sprite.position)
           .to(
             {
-              x: dest.x + dest.offsetX * (i - 1),
-              y: dest.y + dest.offsetY * (i - 1)
+              x: cardDests[i].x,
+              y: cardDests[i].y
             },
             1000
           )
@@ -33,12 +47,37 @@ export class SendPassEvent implements Event {
       );
       this.tweens.push(
         new TWEEN.Tween(card.sprite)
-          .to({ rotation: dest.rotation }, duration)
+          .to({ rotation: passDestination.rotation }, duration)
           .delay(delay)
           .easing(TWEEN.Easing.Quadratic.Out)
           .start()
       );
+
       delay += interval;
+      i++;
+    }
+    const handDestination = this.getHandDestination();
+    const keepDests = groupCards(
+      cards.cardsToKeep,
+      handDestination.x,
+      handDestination.y,
+      handDestination.rotation
+    );
+    i = 0;
+    for (const card of cards.cardsToKeep) {
+      this.tweens.push(
+        new TWEEN.Tween(card.sprite.position)
+          .to(
+            {
+              x: keepDests[i].x,
+              y: keepDests[i].y
+            },
+            1000
+          )
+          .delay(delay)
+          .easing(TWEEN.Easing.Quadratic.Out)
+          .start()
+      );
       i++;
     }
   }
@@ -61,63 +100,52 @@ export class SendPassEvent implements Event {
     }
     if (this.event.cards.length === 0) {
       // pass hidden cards
-      return [];
+      return { cardsToMove: [], cardsToKeep: [] };
     } else {
       const set = new Set(this.event.cards);
       const cardsToMove = hand.filter(c => set.has(c.card));
-      return cardsToMove;
+      const cardsToKeep = hand.filter(c => !set.has(c.card));
+      return { cardsToMove, cardsToKeep };
     }
   }
 
-  private getDestination() {
-    const r2o2 = Math.sqrt(2) / 2;
+  private getHandDestination() {
+    switch (this.event.from) {
+      case "north":
+        return TOP;
+      case "east":
+        return RIGHT;
+      case "south":
+        return BOTTOM;
+      case "west":
+        return LEFT;
+    }
+  }
+
+  private getPassDestination() {
     switch (this.event.from) {
       case "north":
         switch (this.th.pass) {
           case "Left":
-            return {
-              x: SIZE - INSET * 4,
-              y: INSET * 4,
-              rotation: (Math.PI * 5) / 4,
-              offsetX: r2o2 * 25,
-              offsetY: r2o2 * 25
-            };
+            return TOP_RIGHT;
         }
         break;
       case "east":
         switch (this.th.pass) {
           case "Left":
-            return {
-              x: SIZE - INSET * 4,
-              y: SIZE - INSET * 4,
-              rotation: (Math.PI * 3) / 4,
-              offsetX: r2o2 * 25,
-              offsetY: -r2o2 * 25
-            };
+            return BOTTOM_RIGHT;
         }
         break;
       case "south":
         switch (this.th.pass) {
           case "Left":
-            return {
-              x: INSET * 4,
-              y: SIZE - INSET * 4,
-              rotation: Math.PI / 4,
-              offsetX: r2o2 * 25,
-              offsetY: r2o2 * 25
-            };
+            return BOTTOM_LEFT;
         }
         break;
       case "west":
         switch (this.th.pass) {
           case "Left":
-            return {
-              x: INSET * 4,
-              y: INSET * 4,
-              rotation: (Math.PI * 3) / 4,
-              offsetX: r2o2 * 25,
-              offsetY: -r2o2 * 25
-            };
+            return TOP_LEFT;
         }
         break;
     }
