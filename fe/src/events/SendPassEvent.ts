@@ -19,7 +19,7 @@ export class SendPassEvent implements Event {
 
   public begin() {
     const passDestination = this.getPassDestination();
-    const cards = this.getCards();
+    const cards = this.updateCards();
     let delay = 0;
     let i = 0;
     const duration = 300;
@@ -82,20 +82,37 @@ export class SendPassEvent implements Event {
     }
   }
 
-  private getCards() {
+  private updateCards() {
     let hand: SpriteCard[];
+    let setCards: (cards: SpriteCard[], limboCards: SpriteCard[]) => void;
     switch (this.event.from) {
       case "north":
         hand = this.th.topCards;
+        setCards = (cards, limboCards) => {
+          this.th.topCards = cards;
+          this.th.topLimboCards = limboCards;
+        };
         break;
       case "east":
         hand = this.th.rightCards;
+        setCards = (cards, limboCards) => {
+          this.th.rightCards = cards;
+          this.th.rightLimboCards = limboCards;
+        };
         break;
       case "south":
         hand = this.th.bottomCards;
+        setCards = (cards, limboCards) => {
+          this.th.bottomCards = cards;
+          this.th.bottomLimboCards = limboCards;
+        };
         break;
       case "west":
         hand = this.th.leftCards;
+        setCards = (cards, limboCards) => {
+          this.th.leftCards = cards;
+          this.th.leftLimboCards = limboCards;
+        };
         break;
     }
     if (this.event.cards.length === 0) {
@@ -105,6 +122,7 @@ export class SendPassEvent implements Event {
       const set = new Set(this.event.cards);
       const cardsToMove = hand.filter(c => set.has(c.card));
       const cardsToKeep = hand.filter(c => !set.has(c.card));
+      setCards(cardsToKeep, cardsToMove);
       return { cardsToMove, cardsToKeep };
     }
   }

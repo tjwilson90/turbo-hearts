@@ -17,6 +17,12 @@ export interface SendPassData {
   cards: Card[];
 }
 
+export interface ReceivePassData {
+  type: "recv_pass";
+  to: Seat;
+  cards: Card[];
+}
+
 export interface Event {
   begin(): void;
   isFinished(): boolean;
@@ -37,7 +43,7 @@ export interface SpriteCard {
   hidden: boolean;
 }
 
-export type EventData = DealEventData | SendPassData;
+export type EventData = DealEventData | SendPassData | ReceivePassData;
 
 export type Card =
   | "BACK"

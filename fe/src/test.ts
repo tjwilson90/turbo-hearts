@@ -76,12 +76,12 @@ export const TEST_EVENTS = [
   //   { type: "start_passing" },
   { type: "send_pass", from: "north", cards: ["2H", "8D", "QC"] },
   { type: "send_pass", from: "west", cards: ["4S", "4H", "6D"] },
-  //   { type: "recv_pass", to: "north", cards: ["4S", "4H", "6D"] },
+  { type: "recv_pass", to: "north", cards: ["4S", "4H", "6D"] },
   { type: "send_pass", from: "east", cards: ["2S", "AD", "AC"] },
-  //   { type: "recv_pass", to: "east", cards: ["2H", "8D", "QC"] },
-  { type: "send_pass", from: "south", cards: ["7D", "5D", "3D"] }
-  //   { type: "recv_pass", to: "south", cards: ["2S", "AD", "AC"] },
-  //   { type: "recv_pass", to: "west", cards: ["7D", "5D", "3D"] },
+  { type: "recv_pass", to: "east", cards: ["2H", "8D", "QC"] },
+  { type: "send_pass", from: "south", cards: ["7D", "5D", "3D"] },
+  { type: "recv_pass", to: "south", cards: ["2S", "AD", "AC"] },
+  { type: "recv_pass", to: "west", cards: ["7D", "5D", "3D"] }
   //   { type: "charge", seat: "north", cards: ["QS"] },
   //   { type: "charge", seat: "east", cards: ["AH"] },
   //   { type: "charge", seat: "west", cards: ["JD"] },
