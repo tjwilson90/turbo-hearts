@@ -12,6 +12,9 @@ export const TABLE_CENTER_Y = TABLE_SIZE / 2;
 export const ANIMATION_DURATION = 400;
 export const ANIMATION_DELAY = 80;
 
+export const FAST_ANIMATION_DURATION = ANIMATION_DURATION / 2;
+export const FAST_ANIMATION_DELAY = ANIMATION_DELAY / 2;
+
 export const TABLE_CARD_UNDERLAP = 0.2;
 
 export const TOP_X = TABLE_CENTER_X;
