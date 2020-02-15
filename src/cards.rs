@@ -1,5 +1,5 @@
 use crate::{
-    game::GameFeEvent,
+    game::GameEvent,
     types::{ChargingRules, Seat},
 };
 use serde::{
@@ -703,10 +703,10 @@ impl GameState {
         }
     }
 
-    pub fn apply(&mut self, event: &GameFeEvent) {
+    pub fn apply(&mut self, event: &GameEvent) {
         match event {
-            GameFeEvent::Ping | GameFeEvent::StartTrick { .. } | GameFeEvent::EndTrick { .. } => {}
-            GameFeEvent::Sit {
+            GameEvent::Ping | GameEvent::StartTrick { .. } | GameEvent::EndTrick { .. } => {}
+            GameEvent::Sit {
                 north,
                 east,
                 south,
@@ -719,7 +719,7 @@ impl GameState {
                 self.players[3] = west.name().to_string();
                 self.rules = *rules;
             }
-            GameFeEvent::Deal { .. } => {
+            GameEvent::Deal { .. } => {
                 self.charge_count = 0;
                 self.charged = [Cards::NONE, Cards::NONE, Cards::NONE, Cards::NONE];
                 self.done_charging = [false, false, false, false];
@@ -728,10 +728,10 @@ impl GameState {
                 self.received_pass = [false, false, false, false];
                 self.next_player = None;
             }
-            GameFeEvent::SendPass { from, .. } => {
+            GameEvent::SendPass { from, .. } => {
                 self.sent_pass[from.idx()] = true;
             }
-            GameFeEvent::RecvPass { to, .. } => {
+            GameEvent::RecvPass { to, .. } => {
                 self.received_pass[to.idx()] = true;
                 if self.received_pass.iter().all(|b| *b) {
                     self.phase = self.phase.next(self.charge_count != 0);
@@ -739,16 +739,16 @@ impl GameState {
                     self.next_charger = self.phase.first_charger(self.rules);
                 }
             }
-            GameFeEvent::BlindCharge { seat, count } => {
+            GameEvent::BlindCharge { seat, count } => {
                 self.charge_count += *count;
                 self.charge(*seat, *count);
             }
-            GameFeEvent::Charge { seat, cards } => {
+            GameEvent::Charge { seat, cards } => {
                 self.charge_count += cards.len();
                 self.charged[seat.idx()] |= *cards;
                 self.charge(*seat, cards.len());
             }
-            GameFeEvent::RevealCharges {
+            GameEvent::RevealCharges {
                 north,
                 east,
                 south,
@@ -759,7 +759,7 @@ impl GameState {
                 self.charged[2] = *south;
                 self.charged[3] = *west;
             }
-            GameFeEvent::Play { seat, card } => {
+            GameEvent::Play { seat, card } => {
                 self.played |= *card;
                 if self.current_trick.is_empty() {
                     self.led_suits |= card.suit().cards();

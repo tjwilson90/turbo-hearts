@@ -36,7 +36,7 @@ impl Games {
         let mut unwatched = Vec::new();
         for (id, game) in inner.iter_mut() {
             let mut game = game.lock().await;
-            game.broadcast(&GameFeEvent::Ping);
+            game.broadcast(&GameEvent::Ping);
             if game.subscribers.is_empty() || game.state.phase.is_complete() {
                 unwatched.push(*id);
             }
@@ -88,14 +88,14 @@ impl Games {
                 id,
                 0,
                 &[
-                    GameBeEvent::Sit {
+                    GameEvent::Sit {
                         north: participants[0].player.clone(),
                         east: participants[1].player.clone(),
                         south: participants[2].player.clone(),
                         west: participants[3].player.clone(),
                         rules: participants[0].rules,
                     },
-                    deal(),
+                    GameEvent::deal(),
                 ],
             )
         })?;
@@ -106,12 +106,12 @@ impl Games {
         &self,
         id: GameId,
         name: String,
-    ) -> Result<UnboundedReceiver<GameFeEvent>, CardsError> {
+    ) -> Result<UnboundedReceiver<GameEvent>, CardsError> {
         let (tx, rx) = unbounded_channel();
         self.with_game(id, |game| {
             let seat = game.seat(&name);
             for event in &game.events {
-                send_event(seat, &tx, game.state.rules, &event);
+                tx.send(event.redact(game.state.rules, seat)).unwrap();
             }
             game.subscribers.insert(name.to_string(), tx);
             Ok(())
@@ -124,11 +124,11 @@ impl Games {
         self.with_game(id, |game| match game.seat(&name) {
             Some(seat) => {
                 game.verify_pass(id, seat, cards)?;
-                let mut events = vec![GameBeEvent::SendPass { from: seat, cards }];
+                let mut events = vec![GameEvent::SendPass { from: seat, cards }];
                 if game.state.phase != GamePhase::PassKeeper {
                     let sender = game.state.phase.pass_sender(seat);
                     if game.state.sent_pass[sender.idx()] {
-                        events.push(GameBeEvent::RecvPass {
+                        events.push(GameEvent::RecvPass {
                             to: seat,
                             cards: game.pre_pass_hand[sender.idx()]
                                 - game.post_pass_hand[sender.idx()],
@@ -136,7 +136,7 @@ impl Games {
                     }
                     let receiver = game.state.phase.pass_receiver(seat);
                     if game.state.sent_pass[receiver.idx()] {
-                        events.push(GameBeEvent::RecvPass {
+                        events.push(GameEvent::RecvPass {
                             to: receiver,
                             cards,
                         });
@@ -153,19 +153,19 @@ impl Games {
                         | cards;
                     let mut passes = passes.into_iter().collect::<Vec<_>>();
                     passes.shuffle(&mut rand::thread_rng());
-                    events.push(GameBeEvent::RecvPass {
+                    events.push(GameEvent::RecvPass {
                         to: Seat::North,
                         cards: passes[0..3].iter().cloned().collect(),
                     });
-                    events.push(GameBeEvent::RecvPass {
+                    events.push(GameEvent::RecvPass {
                         to: Seat::East,
                         cards: passes[3..6].iter().cloned().collect(),
                     });
-                    events.push(GameBeEvent::RecvPass {
+                    events.push(GameEvent::RecvPass {
                         to: Seat::South,
                         cards: passes[6..9].iter().cloned().collect(),
                     });
-                    events.push(GameBeEvent::RecvPass {
+                    events.push(GameEvent::RecvPass {
                         to: Seat::West,
                         cards: passes[9..12].iter().cloned().collect(),
                     });
@@ -173,7 +173,7 @@ impl Games {
                 self.db
                     .run_with_retry(|tx| persist_events(&tx, id, game.events.len(), &events))?;
                 for event in events {
-                    game.apply(true, &event.as_fe_event());
+                    game.apply(true, &event);
                 }
                 Ok(())
             }
@@ -191,11 +191,11 @@ impl Games {
         self.with_game(id, |game| match game.seat(&name) {
             Some(seat) => {
                 game.verify_charge(id, seat, cards)?;
-                let event = GameBeEvent::Charge { seat, cards };
+                let event = GameEvent::Charge { seat, cards };
                 self.db.run_with_retry(|tx| {
                     persist_events(&tx, id, game.events.len(), &[event.clone()])
                 })?;
-                game.apply(true, &event.as_fe_event());
+                game.apply(true, &event);
                 Ok(())
             }
             None => Err(CardsError::IllegalPlayer(name.to_string())),
@@ -207,11 +207,11 @@ impl Games {
         self.with_game(id, |game| match game.seat(&name) {
             Some(seat) => {
                 game.verify_play(id, seat, card)?;
-                let mut events = vec![GameBeEvent::Play { seat, card }];
+                let mut events = vec![GameEvent::Play { seat, card }];
                 if game.state.played | card == Cards::ALL
                     && game.state.phase != GamePhase::PlayKeeper
                 {
-                    events.push(deal());
+                    events.push(GameEvent::deal());
                 }
                 self.db.run_with_retry(|tx| {
                     persist_events(&tx, id, game.events.len(), &events)?;
@@ -223,7 +223,7 @@ impl Games {
                     Ok(())
                 })?;
                 for event in events {
-                    game.apply(true, &event.as_fe_event());
+                    game.apply(true, &event);
                 }
                 Ok(game.state.phase == GamePhase::Complete)
             }
@@ -235,8 +235,8 @@ impl Games {
 
 #[derive(Debug)]
 struct Game {
-    events: Vec<GameFeEvent>,
-    subscribers: HashMap<String, UnboundedSender<GameFeEvent>>,
+    events: Vec<GameEvent>,
+    subscribers: HashMap<String, UnboundedSender<GameEvent>>,
     pre_pass_hand: [Cards; 4],
     post_pass_hand: [Cards; 4],
     state: GameState,
@@ -262,12 +262,12 @@ impl Game {
         unreachable!()
     }
 
-    fn broadcast(&mut self, event: &GameFeEvent) {
+    fn broadcast(&mut self, event: &GameEvent) {
         let players = &self.state.players;
         let rules = self.state.rules;
         self.subscribers.retain(|name, tx| {
             let seat = seat(&players, name);
-            send_event(seat, tx, rules, event)
+            tx.send(event.redact(rules, seat)).is_ok()
         });
     }
 
@@ -275,14 +275,14 @@ impl Game {
         seat(&self.state.players, name)
     }
 
-    fn apply(&mut self, broadcast: bool, event: &GameFeEvent) {
+    fn apply(&mut self, broadcast: bool, event: &GameEvent) {
         if broadcast {
             self.broadcast(&event);
         }
         self.state.apply(&event);
         self.events.push(event.clone());
         match &event {
-            GameFeEvent::Deal {
+            GameEvent::Deal {
                 north,
                 east,
                 south,
@@ -297,19 +297,19 @@ impl Game {
                 self.pre_pass_hand[Seat::West.idx()] = *west;
                 self.post_pass_hand[Seat::West.idx()] = *west;
             }
-            GameFeEvent::SendPass { from, cards } => {
+            GameEvent::SendPass { from, cards } => {
                 self.post_pass_hand[from.idx()] -= *cards;
             }
-            GameFeEvent::RecvPass { to, cards } => {
+            GameEvent::RecvPass { to, cards } => {
                 self.post_pass_hand[to.idx()] |= *cards;
             }
-            GameFeEvent::Charge { .. } => {
+            GameEvent::Charge { .. } => {
                 if self.state.phase.is_playing() {
                     self.state.next_player = Some(self.owner(Card::TwoClubs));
                     if self.state.rules.blind() {
                         self.apply(
                             broadcast,
-                            &GameFeEvent::RevealCharges {
+                            &GameEvent::RevealCharges {
                                 north: self.state.charged[0],
                                 east: self.state.charged[1],
                                 south: self.state.charged[2],
@@ -319,24 +319,24 @@ impl Game {
                     }
                     self.apply(
                         broadcast,
-                        &GameFeEvent::StartTrick {
+                        &GameEvent::StartTrick {
                             leader: self.state.next_player.unwrap(),
                         },
                     );
                 }
             }
-            GameFeEvent::Play { .. } => {
+            GameEvent::Play { .. } => {
                 if self.state.current_trick.is_empty() {
                     self.apply(
                         broadcast,
-                        &GameFeEvent::EndTrick {
+                        &GameEvent::EndTrick {
                             winner: self.state.next_player.unwrap(),
                         },
                     );
                     if !self.state.phase.is_complete() {
                         self.apply(
                             broadcast,
-                            &GameFeEvent::StartTrick {
+                            &GameEvent::StartTrick {
                                 leader: self.state.next_player.unwrap(),
                             },
                         )
@@ -468,88 +468,7 @@ impl Game {
 
 #[serde(tag = "type", rename_all = "snake_case")]
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
-pub enum GameBeEvent {
-    Sit {
-        north: Player,
-        east: Player,
-        south: Player,
-        west: Player,
-        rules: ChargingRules,
-    },
-    Deal {
-        north: Cards,
-        east: Cards,
-        south: Cards,
-        west: Cards,
-    },
-    SendPass {
-        from: Seat,
-        cards: Cards,
-    },
-    RecvPass {
-        to: Seat,
-        cards: Cards,
-    },
-    Charge {
-        seat: Seat,
-        cards: Cards,
-    },
-    Play {
-        seat: Seat,
-        card: Card,
-    },
-}
-
-impl GameBeEvent {
-    fn as_fe_event(&self) -> GameFeEvent {
-        match self {
-            GameBeEvent::Sit {
-                north,
-                east,
-                south,
-                west,
-                rules,
-            } => GameFeEvent::Sit {
-                north: north.clone(),
-                east: east.clone(),
-                south: south.clone(),
-                west: west.clone(),
-                rules: *rules,
-            },
-            GameBeEvent::Deal {
-                north,
-                east,
-                south,
-                west,
-            } => GameFeEvent::Deal {
-                north: *north,
-                east: *east,
-                south: *south,
-                west: *west,
-            },
-            GameBeEvent::SendPass { from, cards } => GameFeEvent::SendPass {
-                from: *from,
-                cards: *cards,
-            },
-            GameBeEvent::RecvPass { to, cards } => GameFeEvent::RecvPass {
-                to: *to,
-                cards: *cards,
-            },
-            GameBeEvent::Charge { seat, cards } => GameFeEvent::Charge {
-                seat: *seat,
-                cards: *cards,
-            },
-            GameBeEvent::Play { seat, card } => GameFeEvent::Play {
-                seat: *seat,
-                card: *card,
-            },
-        }
-    }
-}
-
-#[serde(tag = "type", rename_all = "snake_case")]
-#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
-pub enum GameFeEvent {
+pub enum GameEvent {
     Ping,
     Sit {
         north: Player,
@@ -598,36 +517,103 @@ pub enum GameFeEvent {
     },
 }
 
-impl Event for GameFeEvent {
+impl GameEvent {
+    fn deal() -> Self {
+        let mut deck = Cards::ALL.into_iter().collect::<Vec<_>>();
+        deck.shuffle(&mut rand::thread_rng());
+        GameEvent::Deal {
+            north: deck[0..13].iter().cloned().collect(),
+            east: deck[13..26].iter().cloned().collect(),
+            south: deck[26..39].iter().cloned().collect(),
+            west: deck[39..52].iter().cloned().collect(),
+        }
+    }
+
+    fn redact(&self, rules: ChargingRules, seat: Option<Seat>) -> GameEvent {
+        match self {
+            GameEvent::Ping
+            | GameEvent::Play { .. }
+            | GameEvent::Sit { .. }
+            | GameEvent::BlindCharge { .. }
+            | GameEvent::RevealCharges { .. }
+            | GameEvent::StartTrick { .. }
+            | GameEvent::EndTrick { .. } => self.clone(),
+            GameEvent::Deal {
+                north,
+                east,
+                south,
+                west,
+            } => match seat {
+                Some(Seat::North) => GameEvent::Deal {
+                    north: *north,
+                    east: Cards::NONE,
+                    south: Cards::NONE,
+                    west: Cards::NONE,
+                },
+                Some(Seat::East) => GameEvent::Deal {
+                    north: Cards::NONE,
+                    east: *east,
+                    south: Cards::NONE,
+                    west: Cards::NONE,
+                },
+                Some(Seat::South) => GameEvent::Deal {
+                    north: Cards::NONE,
+                    east: Cards::NONE,
+                    south: *south,
+                    west: Cards::NONE,
+                },
+                Some(Seat::West) => GameEvent::Deal {
+                    north: Cards::NONE,
+                    east: Cards::NONE,
+                    south: Cards::NONE,
+                    west: *west,
+                },
+                None => self.clone(),
+            },
+            GameEvent::SendPass { from, cards: _ } => match seat {
+                Some(seat) if seat != *from => GameEvent::SendPass {
+                    from: *from,
+                    cards: Cards::NONE,
+                },
+                _ => self.clone(),
+            },
+            GameEvent::RecvPass { to, cards: _ } => match seat {
+                Some(seat) if seat != *to => GameEvent::RecvPass {
+                    to: *to,
+                    cards: Cards::NONE,
+                },
+                _ => self.clone(),
+            },
+            GameEvent::Charge { seat: s, cards } => match seat {
+                Some(seat) if *s != seat && rules.blind() => GameEvent::BlindCharge {
+                    seat: *s,
+                    count: cards.len(),
+                },
+                _ => self.clone(),
+            },
+        }
+    }
+}
+
+impl Event for GameEvent {
     fn is_ping(&self) -> bool {
         match self {
-            GameFeEvent::Ping => true,
+            GameEvent::Ping => true,
             _ => false,
         }
     }
 }
 
-impl ToSql for GameBeEvent {
+impl ToSql for GameEvent {
     fn to_sql(&self) -> Result<ToSqlOutput<'_>, rusqlite::Error> {
         let json = serde_json::to_string(self).unwrap();
         Ok(ToSqlOutput::Owned(Value::Text(json)))
     }
 }
 
-impl FromSql for GameBeEvent {
+impl FromSql for GameEvent {
     fn column_result(value: ValueRef<'_>) -> Result<Self, FromSqlError> {
         value.as_str().map(|s| serde_json::from_str(s).unwrap())
-    }
-}
-
-fn deal() -> GameBeEvent {
-    let mut deck = Cards::ALL.into_iter().collect::<Vec<_>>();
-    deck.shuffle(&mut rand::thread_rng());
-    GameBeEvent::Deal {
-        north: deck[0..13].iter().cloned().collect(),
-        east: deck[13..26].iter().cloned().collect(),
-        south: deck[26..39].iter().cloned().collect(),
-        west: deck[39..52].iter().cloned().collect(),
     }
 }
 
@@ -642,7 +628,7 @@ pub fn persist_events(
     tx: &Transaction,
     id: GameId,
     event_id: usize,
-    events: &[GameBeEvent],
+    events: &[GameEvent],
 ) -> Result<(), CardsError> {
     let mut stmt =
         tx.prepare("INSERT INTO event (game_id, event_id, timestamp, event) VALUES (?, ?, ?, ?)")?;
@@ -663,79 +649,8 @@ fn hydrate_events(tx: &Transaction, id: GameId, game: &mut Game) -> Result<(), C
         .prepare("SELECT event FROM event WHERE game_id = ? AND event_id >= ? ORDER BY event_id")?;
     let mut rows = stmt.query::<&[&dyn ToSql]>(&[&id, &(game.events.len() as i64)])?;
     while let Some(row) = rows.next()? {
-        let event: GameBeEvent = serde_json::from_str(&row.get::<_, String>(0)?)?;
-        game.apply(false, &event.as_fe_event());
+        let event = serde_json::from_str(&row.get::<_, String>(0)?)?;
+        game.apply(false, &event);
     }
     Ok(())
-}
-
-fn send_event(
-    seat: Option<Seat>,
-    tx: &UnboundedSender<GameFeEvent>,
-    rules: ChargingRules,
-    event: &GameFeEvent,
-) -> bool {
-    let event = match event {
-        GameFeEvent::Ping
-        | GameFeEvent::Play { .. }
-        | GameFeEvent::Sit { .. }
-        | GameFeEvent::BlindCharge { .. }
-        | GameFeEvent::RevealCharges { .. }
-        | GameFeEvent::StartTrick { .. }
-        | GameFeEvent::EndTrick { .. } => event.clone(),
-        GameFeEvent::Deal {
-            north,
-            east,
-            south,
-            west,
-        } => match seat {
-            Some(Seat::North) => GameFeEvent::Deal {
-                north: *north,
-                east: Cards::NONE,
-                south: Cards::NONE,
-                west: Cards::NONE,
-            },
-            Some(Seat::East) => GameFeEvent::Deal {
-                north: Cards::NONE,
-                east: *east,
-                south: Cards::NONE,
-                west: Cards::NONE,
-            },
-            Some(Seat::South) => GameFeEvent::Deal {
-                north: Cards::NONE,
-                east: Cards::NONE,
-                south: *south,
-                west: Cards::NONE,
-            },
-            Some(Seat::West) => GameFeEvent::Deal {
-                north: Cards::NONE,
-                east: Cards::NONE,
-                south: Cards::NONE,
-                west: *west,
-            },
-            None => event.clone(),
-        },
-        GameFeEvent::SendPass { from, cards: _ } => match seat {
-            Some(seat) if seat != *from => GameFeEvent::SendPass {
-                from: *from,
-                cards: Cards::NONE,
-            },
-            _ => event.clone(),
-        },
-        GameFeEvent::RecvPass { to, cards: _ } => match seat {
-            Some(seat) if seat != *to => GameFeEvent::RecvPass {
-                to: *to,
-                cards: Cards::NONE,
-            },
-            _ => event.clone(),
-        },
-        GameFeEvent::Charge { seat: s, cards } => match seat {
-            Some(seat) if *s != seat && rules.blind() => GameFeEvent::BlindCharge {
-                seat: *s,
-                count: cards.len(),
-            },
-            _ => event.clone(),
-        },
-    };
-    tx.send(event).is_ok()
 }
