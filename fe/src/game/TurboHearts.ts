@@ -10,10 +10,15 @@ export class TurboHearts {
   public app: PIXI.Application;
 
   public pass: Pass | undefined;
+
   public topCards: SpriteCard[];
   public rightCards: SpriteCard[];
   public bottomCards: SpriteCard[];
   public leftCards: SpriteCard[];
+  public topLimboCards: SpriteCard[];
+  public rightLimboCards: SpriteCard[];
+  public bottomLimboCards: SpriteCard[];
+  public leftLimboCards: SpriteCard[];
 
   private eventQueue: Event[] = [];
   private currentEvent: Event | undefined = undefined;

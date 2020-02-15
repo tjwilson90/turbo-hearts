@@ -4,6 +4,7 @@ import { TurboHearts } from "./game/TurboHearts";
 import "./styles/style.scss";
 import { TEST_EVENTS } from "./test";
 import { EventData } from "./types";
+import { ReceivePassEvent } from "./events/ReceivePassEvent";
 
 function toEvent(th: TurboHearts, event: EventData) {
   switch (event.type) {
@@ -11,6 +12,8 @@ function toEvent(th: TurboHearts, event: EventData) {
       return new DealEvent(th, event);
     case "send_pass":
       return new SendPassEvent(th, event);
+    case "recv_pass":
+      return new ReceivePassEvent(th, event);
     default:
       return undefined;
   }
