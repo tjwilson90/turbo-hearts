@@ -17,9 +17,45 @@ import {
   DealEventData,
   Event,
   PointWithRotation,
-  SpriteCard
+  SpriteCard,
+  Position,
+  Seat
 } from "../types";
 import { groupCards } from "./groupCards";
+
+const handAccessors: {
+  [bottomSeat: string]: {
+    [position: string]: (event: DealEventData) => Card[];
+  };
+} = {};
+handAccessors["north"] = {};
+handAccessors["north"]["top"] = event => event.south;
+handAccessors["north"]["right"] = event => event.west;
+handAccessors["north"]["bottom"] = event => event.north;
+handAccessors["north"]["left"] = event => event.east;
+handAccessors["east"] = {};
+handAccessors["east"]["top"] = event => event.west;
+handAccessors["east"]["right"] = event => event.north;
+handAccessors["east"]["bottom"] = event => event.east;
+handAccessors["east"]["left"] = event => event.south;
+handAccessors["south"] = {};
+handAccessors["south"]["top"] = event => event.north;
+handAccessors["south"]["right"] = event => event.east;
+handAccessors["south"]["bottom"] = event => event.south;
+handAccessors["south"]["left"] = event => event.west;
+handAccessors["west"] = {};
+handAccessors["west"]["top"] = event => event.east;
+handAccessors["west"]["right"] = event => event.south;
+handAccessors["west"]["bottom"] = event => event.west;
+handAccessors["west"]["left"] = event => event.north;
+
+function getCardsForPosition(
+  bottomSeat: Seat,
+  position: Position,
+  event: DealEventData
+) {
+  return handAccessors[bottomSeat][position](event);
+}
 
 export class DealEvent implements Event {
   private tweens: TWEEN.Tween[] = [];
@@ -90,10 +126,22 @@ export class DealEvent implements Event {
   }
 
   public begin() {
-    this.th.topCards = this.createSpriteCards(this.event.north, TOP);
-    this.th.rightCards = this.createSpriteCards(this.event.east, RIGHT);
-    this.th.bottomCards = this.createSpriteCards(this.event.south, BOTTOM);
-    this.th.leftCards = this.createSpriteCards(this.event.west, LEFT);
+    this.th.topCards = this.createSpriteCards(
+      getCardsForPosition(this.th.bottomSeat, "top", this.event),
+      TOP
+    );
+    this.th.rightCards = this.createSpriteCards(
+      getCardsForPosition(this.th.bottomSeat, "right", this.event),
+      RIGHT
+    );
+    this.th.bottomCards = this.createSpriteCards(
+      getCardsForPosition(this.th.bottomSeat, "bottom", this.event),
+      BOTTOM
+    );
+    this.th.leftCards = this.createSpriteCards(
+      getCardsForPosition(this.th.bottomSeat, "left", this.event),
+      LEFT
+    );
   }
 
   public isFinished() {

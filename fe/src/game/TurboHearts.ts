@@ -1,15 +1,15 @@
-import { Pass, SpriteCard, CARDS, Event } from "../types";
+import { Pass, SpriteCard, CARDS, Event, Seat } from "../types";
 import TWEEN from "@tweenjs/tween.js";
 import * as PIXI from "pixi.js";
 
 const SIZE = 1000;
-const INSET = 40;
-const CARDS_LENGTH = 400;
 
 export class TurboHearts {
   public app: PIXI.Application;
 
   public pass: Pass | undefined;
+
+  public bottomSeat: Seat = "south";
 
   public topCards: SpriteCard[];
   public rightCards: SpriteCard[];
