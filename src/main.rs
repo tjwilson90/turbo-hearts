@@ -282,7 +282,7 @@ async fn main() -> Result<(), CardsError> {
         .or(game_html)
         .or(assets)
         .recover(error::handle_rejection)
-        .with(warp::cors().allow_any_origin());
+        .with(warp::cors().allow_any_origin().allow_credentials(true));
     warp::serve(app).run(([127, 0, 0, 1], 7380)).await;
     Ok(())
 }
