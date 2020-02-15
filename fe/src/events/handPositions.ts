@@ -1,8 +1,8 @@
-import { PointWithRotation, Seat } from "../types";
-import { BOTTOM, LEFT, TOP, RIGHT } from "../const";
+import { BOTTOM, LEFT, RIGHT, TOP } from "../const";
+import { PlayerCardPositions, Seat } from "../types";
 
 const handPositions: {
-  [bottomSeat: string]: { [seat: string]: PointWithRotation };
+  [bottomSeat: string]: { [seat: string]: PlayerCardPositions };
 } = {};
 handPositions["north"] = {};
 handPositions["north"]["north"] = BOTTOM;

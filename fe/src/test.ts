@@ -1,17 +1,16 @@
 export const TEST_EVENTS = [
-  //   {
-  //     type: "sit",
-  //     north: { type: "bot", name: "gdawson (bot)", algorithm: "random" },
-  //     east: { type: "bot", name: "nhardin (bot)", algorithm: "random" },
-  //     south: { type: "human", name: "dan" },
-  //     west: { type: "bot", name: "mlove (bot)", algorithm: "random" },
-  //     rules: "classic"
-  //   },
+  {
+    type: "sit",
+    north: { type: "bot", name: "gdawson (bot)", algorithm: "random" },
+    east: { type: "bot", name: "nhardin (bot)", algorithm: "random" },
+    south: { type: "human", name: "dan" },
+    west: { type: "bot", name: "mlove (bot)", algorithm: "random" },
+    rules: "classic"
+  },
   {
     type: "deal",
     north: [
       "2C",
-      "3C",
       "4C",
       "5C",
       "6C",
@@ -22,7 +21,8 @@ export const TEST_EVENTS = [
       "JC",
       "QC",
       "KC",
-      "AC"
+      "AC",
+      "AH"
     ],
     east: [
       "2D",
@@ -52,7 +52,7 @@ export const TEST_EVENTS = [
       "JH",
       "QH",
       "KH",
-      "AH"
+      "3C"
     ],
     west: [
       "2S",
@@ -71,7 +71,7 @@ export const TEST_EVENTS = [
     ],
     pass: "Left"
   },
-  //   { type: "start_passing" },
+  { type: "start_passing" },
   { type: "send_pass", from: "north", cards: ["2C", "8C", "KC"] },
   { type: "send_pass", from: "west", cards: ["2S", "8S", "KS"] },
   { type: "recv_pass", to: "north", cards: ["4S", "4H", "6D"] },
@@ -80,7 +80,7 @@ export const TEST_EVENTS = [
   { type: "send_pass", from: "south", cards: ["2H", "8H", "KH"] },
   { type: "recv_pass", to: "south", cards: ["2C", "8C", "KC"] },
   { type: "recv_pass", to: "west", cards: ["7D", "5D", "3D"] },
-  { type: "charge", seat: "north", cards: ["TC"] },
+  { type: "charge", seat: "north", cards: ["TC", "AH"] },
   { type: "charge", seat: "east", cards: ["JD"] },
   { type: "charge", seat: "west", cards: ["QS"] },
   { type: "charge", seat: "north", cards: [] },
