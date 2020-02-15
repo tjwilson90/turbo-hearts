@@ -1,11 +1,9 @@
-use crate::cards::{GamePhase, GameState};
-use crate::types::Participant;
 use crate::{
-    cards::{Card, Cards, Suit},
+    cards::{Card, Cards, GamePhase, GameState, Suit},
     db::Database,
     error::CardsError,
     hacks::{unbounded_channel, Mutex, UnboundedReceiver, UnboundedSender},
-    types::{ChargingRules, Event, GameId, Player, Seat},
+    types::{ChargingRules, Event, GameId, Participant, Player, Seat},
 };
 use rand::seq::SliceRandom;
 use rusqlite::{
@@ -13,9 +11,8 @@ use rusqlite::{
     ToSql, Transaction,
 };
 use serde::{Deserialize, Serialize};
-use std::collections::HashSet;
 use std::{
-    collections::{hash_map::Entry, HashMap},
+    collections::{hash_map::Entry, HashMap, HashSet},
     sync::Arc,
     time::SystemTime,
 };

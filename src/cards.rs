@@ -1,5 +1,7 @@
-use crate::game::GameFeEvent;
-use crate::types::{ChargingRules, Seat};
+use crate::{
+    game::GameFeEvent,
+    types::{ChargingRules, Seat},
+};
 use serde::{
     de::{SeqAccess, Visitor},
     export::{fmt::Error, Formatter},

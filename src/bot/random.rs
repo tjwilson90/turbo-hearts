@@ -1,8 +1,9 @@
-use crate::bot::{Algorithm, BotState};
-use crate::cards::{Card, Cards};
-use crate::types::Seat;
-use rand::seq::SliceRandom;
-use rand::Rng;
+use crate::{
+    bot::{Algorithm, BotState},
+    cards::{Card, Cards},
+    types::Seat,
+};
+use rand::{seq::SliceRandom, Rng};
 
 pub struct Random {
     charged: bool,
