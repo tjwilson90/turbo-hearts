@@ -1,5 +1,7 @@
-use crate::cards::GamePhase;
-use crate::{cards::Cards, types::GameId};
+use crate::{
+    cards::{Cards, GamePhase},
+    types::GameId,
+};
 use rusqlite::ErrorCode;
 use serde::Serialize;
 use std::convert::Infallible;

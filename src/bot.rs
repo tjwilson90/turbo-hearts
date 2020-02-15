@@ -1,9 +1,11 @@
-use crate::bot::random::Random;
-use crate::cards::{Card, Cards, GameState};
-use crate::error::CardsError;
-use crate::game::GameFeEvent;
-use crate::server::Server;
-use crate::types::{GameId, Seat};
+use crate::{
+    bot::random::Random,
+    cards::{Card, Cards, GameState},
+    error::CardsError,
+    game::GameFeEvent,
+    server::Server,
+    types::{GameId, Seat},
+};
 use log::info;
 use rand::Rng;
 use std::sync::mpsc::TryRecvError;

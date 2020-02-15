@@ -1,14 +1,12 @@
-use crate::bot::Bot;
-use crate::game::GameBeEvent;
-use crate::types::Participant;
 use crate::{
+    bot::Bot,
     cards::{Card, Cards},
     db::Database,
     error::CardsError,
-    game::{GameFeEvent, Games},
+    game::{GameBeEvent, GameFeEvent, Games},
     hacks::UnboundedReceiver,
     lobby::{Lobby, LobbyEvent},
-    types::{ChargingRules, GameId, Player},
+    types::{ChargingRules, GameId, Participant, Player},
 };
 use log::info;
 use rusqlite::{Transaction, NO_PARAMS};

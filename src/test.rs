@@ -1,4 +1,3 @@
-use crate::types::Player;
 use crate::{
     cards::{Card, Cards, GamePhase},
     db::Database,
@@ -6,7 +5,7 @@ use crate::{
     game::{persist_events, GameBeEvent, GameFeEvent},
     lobby::LobbyEvent,
     server::Server,
-    types::{ChargingRules, GameId},
+    types::{ChargingRules, GameId, Player},
 };
 use log::LevelFilter;
 use r2d2_sqlite::SqliteConnectionManager;

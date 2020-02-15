@@ -1,8 +1,7 @@
-use crate::types::Participant;
 use crate::{
     error::CardsError,
     hacks::{unbounded_channel, Mutex, UnboundedReceiver, UnboundedSender},
-    types::{ChargingRules, Event, GameId, Player},
+    types::{ChargingRules, Event, GameId, Participant, Player},
 };
 use serde::{Deserialize, Serialize};
 use std::{
