@@ -10,6 +10,7 @@ export interface DealEventData {
 }
 
 export type Seat = "north" | "east" | "south" | "west";
+export type Position = "top" | "right" | "bottom" | "left";
 
 export interface SendPassData {
   type: "send_pass";

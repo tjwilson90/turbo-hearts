@@ -10,8 +10,131 @@ import {
   TOP_RIGHT
 } from "../const";
 import { TurboHearts } from "../game/TurboHearts";
-import { Event, SendPassData, SpriteCard } from "../types";
+import { Event, SendPassData, SpriteCard, PointWithRotation } from "../types";
 import { groupCards } from "./groupCards";
+
+const passDestinations: {
+  [pass: string]: {
+    [bottomSeat: string]: { [passFrom: string]: PointWithRotation };
+  };
+} = {};
+passDestinations["Left"] = {};
+passDestinations["Left"]["north"] = {};
+passDestinations["Left"]["north"]["north"] = BOTTOM_LEFT;
+passDestinations["Left"]["north"]["east"] = TOP_LEFT;
+passDestinations["Left"]["north"]["south"] = TOP_RIGHT;
+passDestinations["Left"]["north"]["west"] = BOTTOM_RIGHT;
+passDestinations["Left"]["east"] = {};
+passDestinations["Left"]["east"]["north"] = BOTTOM_RIGHT;
+passDestinations["Left"]["east"]["east"] = BOTTOM_LEFT;
+passDestinations["Left"]["east"]["south"] = TOP_LEFT;
+passDestinations["Left"]["east"]["west"] = TOP_RIGHT;
+passDestinations["Left"]["south"] = {};
+passDestinations["Left"]["south"]["north"] = TOP_RIGHT;
+passDestinations["Left"]["south"]["east"] = BOTTOM_RIGHT;
+passDestinations["Left"]["south"]["south"] = BOTTOM_LEFT;
+passDestinations["Left"]["south"]["west"] = TOP_LEFT;
+passDestinations["Left"]["west"] = {};
+passDestinations["Left"]["west"]["north"] = TOP_LEFT;
+passDestinations["Left"]["west"]["east"] = TOP_RIGHT;
+passDestinations["Left"]["west"]["south"] = BOTTOM_RIGHT;
+passDestinations["Left"]["west"]["west"] = BOTTOM_LEFT;
+
+const handDestinations: {
+  [bottomSeat: string]: { [passFrom: string]: PointWithRotation };
+} = {};
+handDestinations["north"] = {};
+handDestinations["north"]["north"] = BOTTOM;
+handDestinations["north"]["east"] = LEFT;
+handDestinations["north"]["south"] = TOP;
+handDestinations["north"]["west"] = RIGHT;
+handDestinations["east"] = {};
+handDestinations["east"]["north"] = RIGHT;
+handDestinations["east"]["east"] = BOTTOM;
+handDestinations["east"]["south"] = LEFT;
+handDestinations["east"]["west"] = TOP;
+handDestinations["south"] = {};
+handDestinations["south"]["north"] = TOP;
+handDestinations["south"]["east"] = RIGHT;
+handDestinations["south"]["south"] = BOTTOM;
+handDestinations["south"]["west"] = LEFT;
+handDestinations["west"] = {};
+handDestinations["west"]["north"] = LEFT;
+handDestinations["west"]["east"] = TOP;
+handDestinations["west"]["south"] = RIGHT;
+handDestinations["west"]["west"] = BOTTOM;
+
+interface HandAccessor {
+  getCards: (th: TurboHearts) => SpriteCard[];
+  getLimboCards: (th: TurboHearts) => SpriteCard[];
+  setCards: (th: TurboHearts, cards: SpriteCard[]) => void;
+  setLimboCards: (th: TurboHearts, cards: SpriteCard[]) => void;
+}
+
+const TOP_HAND_ACCESSOR: HandAccessor = {
+  getCards: (th: TurboHearts) => th.topCards,
+  getLimboCards: (th: TurboHearts) => th.topLimboCards,
+  setCards: (th: TurboHearts, cards: SpriteCard[]) => {
+    th.topCards = cards;
+  },
+  setLimboCards: (th: TurboHearts, cards: SpriteCard[]) => {
+    th.topLimboCards = cards;
+  }
+};
+const RIGHT_HAND_ACCESSOR: HandAccessor = {
+  getCards: (th: TurboHearts) => th.rightCards,
+  getLimboCards: (th: TurboHearts) => th.rightLimboCards,
+  setCards: (th: TurboHearts, cards: SpriteCard[]) => {
+    th.rightCards = cards;
+  },
+  setLimboCards: (th: TurboHearts, cards: SpriteCard[]) => {
+    th.rightLimboCards = cards;
+  }
+};
+const BOTTOM_HAND_ACCESSOR: HandAccessor = {
+  getCards: (th: TurboHearts) => th.bottomCards,
+  getLimboCards: (th: TurboHearts) => th.bottomLimboCards,
+  setCards: (th: TurboHearts, cards: SpriteCard[]) => {
+    th.bottomCards = cards;
+  },
+  setLimboCards: (th: TurboHearts, cards: SpriteCard[]) => {
+    th.bottomLimboCards = cards;
+  }
+};
+const LEFT_HAND_ACCESSOR: HandAccessor = {
+  getCards: (th: TurboHearts) => th.leftCards,
+  getLimboCards: (th: TurboHearts) => th.leftLimboCards,
+  setCards: (th: TurboHearts, cards: SpriteCard[]) => {
+    th.leftCards = cards;
+  },
+  setLimboCards: (th: TurboHearts, cards: SpriteCard[]) => {
+    th.leftLimboCards = cards;
+  }
+};
+
+const handAccessors: {
+  [bottomSeat: string]: { [passFrom: string]: HandAccessor };
+} = {};
+handAccessors["north"] = {};
+handAccessors["north"]["north"] = BOTTOM_HAND_ACCESSOR;
+handAccessors["north"]["east"] = LEFT_HAND_ACCESSOR;
+handAccessors["north"]["south"] = TOP_HAND_ACCESSOR;
+handAccessors["north"]["west"] = RIGHT_HAND_ACCESSOR;
+handAccessors["east"] = {};
+handAccessors["east"]["north"] = RIGHT_HAND_ACCESSOR;
+handAccessors["east"]["east"] = BOTTOM_HAND_ACCESSOR;
+handAccessors["east"]["south"] = LEFT_HAND_ACCESSOR;
+handAccessors["east"]["west"] = TOP_HAND_ACCESSOR;
+handAccessors["south"] = {};
+handAccessors["south"]["north"] = TOP_HAND_ACCESSOR;
+handAccessors["south"]["east"] = RIGHT_HAND_ACCESSOR;
+handAccessors["south"]["south"] = BOTTOM_HAND_ACCESSOR;
+handAccessors["south"]["west"] = LEFT_HAND_ACCESSOR;
+handAccessors["west"] = {};
+handAccessors["west"]["north"] = LEFT_HAND_ACCESSOR;
+handAccessors["west"]["east"] = TOP_HAND_ACCESSOR;
+handAccessors["west"]["south"] = RIGHT_HAND_ACCESSOR;
+handAccessors["west"]["west"] = BOTTOM_HAND_ACCESSOR;
 
 export class SendPassEvent implements Event {
   private tweens: TWEEN.Tween[] = [];
@@ -83,90 +206,27 @@ export class SendPassEvent implements Event {
   }
 
   private updateCards() {
-    let hand: SpriteCard[];
-    let setCards: (cards: SpriteCard[], limboCards: SpriteCard[]) => void;
-    switch (this.event.from) {
-      case "north":
-        hand = this.th.topCards;
-        setCards = (cards, limboCards) => {
-          this.th.topCards = cards;
-          this.th.topLimboCards = limboCards;
-        };
-        break;
-      case "east":
-        hand = this.th.rightCards;
-        setCards = (cards, limboCards) => {
-          this.th.rightCards = cards;
-          this.th.rightLimboCards = limboCards;
-        };
-        break;
-      case "south":
-        hand = this.th.bottomCards;
-        setCards = (cards, limboCards) => {
-          this.th.bottomCards = cards;
-          this.th.bottomLimboCards = limboCards;
-        };
-        break;
-      case "west":
-        hand = this.th.leftCards;
-        setCards = (cards, limboCards) => {
-          this.th.leftCards = cards;
-          this.th.leftLimboCards = limboCards;
-        };
-        break;
-    }
+    const handAccessor = handAccessors[this.th.bottomSeat][this.event.from];
     if (this.event.cards.length === 0) {
       // pass hidden cards
       return { cardsToMove: [], cardsToKeep: [] };
     } else {
       const set = new Set(this.event.cards);
+      const hand = handAccessor.getCards(this.th);
       const cardsToMove = hand.filter(c => set.has(c.card));
       const cardsToKeep = hand.filter(c => !set.has(c.card));
-      setCards(cardsToKeep, cardsToMove);
+      handAccessor.setCards(this.th, cardsToKeep);
+      handAccessor.setLimboCards(this.th, cardsToMove);
       return { cardsToMove, cardsToKeep };
     }
   }
 
   private getHandDestination() {
-    switch (this.event.from) {
-      case "north":
-        return TOP;
-      case "east":
-        return RIGHT;
-      case "south":
-        return BOTTOM;
-      case "west":
-        return LEFT;
-    }
+    return handDestinations[this.th.bottomSeat][this.event.from];
   }
 
   private getPassDestination() {
-    switch (this.event.from) {
-      case "north":
-        switch (this.th.pass) {
-          case "Left":
-            return TOP_RIGHT;
-        }
-        break;
-      case "east":
-        switch (this.th.pass) {
-          case "Left":
-            return BOTTOM_RIGHT;
-        }
-        break;
-      case "south":
-        switch (this.th.pass) {
-          case "Left":
-            return BOTTOM_LEFT;
-        }
-        break;
-      case "west":
-        switch (this.th.pass) {
-          case "Left":
-            return TOP_LEFT;
-        }
-        break;
-    }
+    return passDestinations[this.th.pass][this.th.bottomSeat][this.event.from];
   }
 
   public isFinished() {
