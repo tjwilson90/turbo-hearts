@@ -5,7 +5,7 @@ authors = ["Tim Wilson <twilson@palantir.com>"]
 edition = "2018"
 
 [dependencies]
-env_logger = "*"
+env_logger = { version = "*", default-features = false, features = ["humantime"] }
 log = "*"
 rand = "*"
 r2d2 = "*"
@@ -14,9 +14,13 @@ rusqlite = { version = "*", features = ["bundled"] }
 serde = { version = "*", features = ["derive"] }
 serde_json = "*"
 thiserror = "*"
-tokio = { version = "*", features = ["full"] }
+tokio = { version = "*", features = ["macros", "rt-threaded"] }
 uuid = { version = "*", features = ["serde", "v4"] }
-warp = "*"
+warp = { version = "*", default-features = false }
 
 [dev-dependencies]
 tempfile = "*"
+
+[profile.release]
+lto = true
+codegen-units = 1

@@ -1,9 +1,11 @@
-use crate::bot::random::Random;
-use crate::cards::{Card, Cards, GameState};
-use crate::error::CardsError;
-use crate::game::GameFeEvent;
-use crate::server::Server;
-use crate::types::{GameId, Seat};
+use crate::{
+    bot::random::Random,
+    cards::{Card, Cards, GameState},
+    error::CardsError,
+    game::GameEvent,
+    server::Server,
+    types::{GameId, Seat},
+};
 use log::info;
 use rand::Rng;
 use std::sync::mpsc::TryRecvError;
@@ -37,7 +39,7 @@ pub struct BotState {
 impl Bot {
     pub fn new(name: String, algorithm: &str) -> Self {
         let algorithm = match algorithm {
-            "random" => Box::new(Random::new()),
+            Random::NAME => Box::new(Random::new()),
             _ => panic!("Unknown algorithm"),
         };
         Self {
@@ -89,12 +91,11 @@ impl Bot {
         Ok(())
     }
 
-    fn handle(&mut self, event: GameFeEvent) -> Option<Action> {
+    fn handle(&mut self, event: GameEvent) -> Option<Action> {
         info!("{} handling event {:?}", self.state.name, event);
         self.state.game.apply(&event);
         match event {
-            GameFeEvent::Ping => {}
-            GameFeEvent::Sit {
+            GameEvent::Sit {
                 north,
                 east,
                 south,
@@ -114,7 +115,7 @@ impl Bot {
                 };
                 self.algorithm.on_sit(&self.state);
             }
-            GameFeEvent::Deal {
+            GameEvent::Deal {
                 north,
                 east,
                 south,
@@ -124,29 +125,30 @@ impl Bot {
                 self.state.post_pass_hand = self.state.pre_pass_hand;
                 self.algorithm.on_deal(&self.state);
             }
-            GameFeEvent::SendPass { from, cards } => {
+            GameEvent::SendPass { from, cards } => {
                 self.state.post_pass_hand -= cards;
                 self.algorithm.on_send_pass(&self.state, from, cards);
             }
-            GameFeEvent::RecvPass { to, cards } => {
+            GameEvent::RecvPass { to, cards } => {
                 self.state.post_pass_hand |= cards;
                 self.algorithm.on_recv_pass(&self.state, to, cards);
             }
-            GameFeEvent::BlindCharge { seat, count } => {
+            GameEvent::BlindCharge { seat, count } => {
                 self.algorithm.on_blind_charge(&self.state, seat, count);
             }
-            GameFeEvent::Charge { seat, cards } => {
+            GameEvent::Charge { seat, cards } => {
                 self.algorithm.on_charge(&self.state, seat, cards);
             }
-            GameFeEvent::RevealCharges { .. } => {
+            GameEvent::RevealCharges { .. } => {
                 self.algorithm.on_reveal_charges(&self.state);
             }
-            GameFeEvent::Play { seat, card } => {
+            GameEvent::Play { seat, card } => {
                 self.algorithm.on_play(&self.state, seat, card);
             }
+            _ => {}
         }
 
-        if self.state.game.phase.charging() {
+        if self.state.game.phase.is_charging() {
             if self.state.game.can_charge(self.state.seat)
                 && !self.state.game.done_charging[self.state.seat.idx()]
             {
@@ -154,13 +156,13 @@ impl Bot {
             } else {
                 None
             }
-        } else if self.state.game.phase.passing() {
+        } else if self.state.game.phase.is_passing() {
             if !self.state.game.sent_pass[self.state.seat.idx()] {
                 Some(Action::Pass(self.algorithm.pass(&self.state)))
             } else {
                 None
             }
-        } else if self.state.game.phase.playing() {
+        } else if self.state.game.phase.is_playing() {
             if (self.state.post_pass_hand - self.state.game.played).contains(Card::TwoClubs)
                 || Some(self.state.seat) == self.state.game.next_player
             {
