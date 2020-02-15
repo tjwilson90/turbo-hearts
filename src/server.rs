@@ -1,14 +1,12 @@
-use crate::bot::Bot;
-use crate::game::GameBeEvent;
-use crate::types::Participant;
 use crate::{
+    bot::Bot,
     cards::{Card, Cards},
     db::Database,
     error::CardsError,
-    game::{GameFeEvent, Games},
+    game::{GameEvent, Games},
     hacks::UnboundedReceiver,
     lobby::{Lobby, LobbyEvent},
-    types::{ChargingRules, GameId, Player},
+    types::{ChargingRules, GameId, Participant, Player},
 };
 use log::info;
 use rusqlite::{Transaction, NO_PARAMS};
@@ -99,7 +97,7 @@ impl Server {
         &self,
         id: GameId,
         name: String,
-    ) -> Result<UnboundedReceiver<GameFeEvent>, CardsError> {
+    ) -> Result<UnboundedReceiver<GameEvent>, CardsError> {
         info!("{} subscribed to game {}", name, id);
         self.games.subscribe(id, name).await
     }
@@ -161,7 +159,7 @@ fn hydrate_games(tx: &Transaction) -> Result<HashMap<GameId, HashSet<Participant
     let mut games = HashMap::new();
     while let Some(row) = rows.next()? {
         let id = row.get(0)?;
-        if let GameBeEvent::Sit {
+        if let GameEvent::Sit {
             north,
             east,
             south,

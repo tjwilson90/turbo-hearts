@@ -1,14 +1,17 @@
-use crate::bot::{Algorithm, BotState};
-use crate::cards::{Card, Cards};
-use crate::types::Seat;
-use rand::seq::SliceRandom;
-use rand::Rng;
+use crate::{
+    bot::{Algorithm, BotState},
+    cards::{Card, Cards},
+    types::Seat,
+};
+use rand::{seq::SliceRandom, Rng};
 
 pub struct Random {
     charged: bool,
 }
 
 impl Random {
+    pub const NAME: &'static str = "random";
+
     pub fn new() -> Self {
         Self { charged: false }
     }
@@ -17,7 +20,7 @@ impl Random {
 impl Algorithm for Random {
     fn pass(&mut self, state: &BotState) -> Cards {
         let mut hand = state.pre_pass_hand.into_iter().collect::<Vec<_>>();
-        hand.shuffle(&mut rand::thread_rng());
+        hand.partial_shuffle(&mut rand::thread_rng(), 3);
         hand.into_iter().take(3).collect()
     }
 

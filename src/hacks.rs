@@ -1,5 +1,7 @@
-use std::ops::{Deref, DerefMut};
-use std::sync::mpsc::TryRecvError;
+use std::{
+    ops::{Deref, DerefMut},
+    sync::mpsc::TryRecvError,
+};
 use tokio::{
     stream::{Stream, StreamExt},
     sync,
