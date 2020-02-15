@@ -1,11 +1,11 @@
-use crate::cards::{ChargeState, HandState};
-use crate::types::{Name, Participant};
+use crate::cards::{GamePhase, GameState};
+use crate::types::Participant;
 use crate::{
     cards::{Card, Cards, Suit},
     db::Database,
     error::CardsError,
     hacks::{unbounded_channel, Mutex, UnboundedReceiver, UnboundedSender},
-    types::{ChargingRules, Event, EventId, GameId, PassDirection, Player, Seat},
+    types::{ChargingRules, Event, GameId, Player, Seat},
 };
 use rand::seq::SliceRandom;
 use rusqlite::{
@@ -40,7 +40,7 @@ impl Games {
         for (id, game) in inner.iter_mut() {
             let mut game = game.lock().await;
             game.broadcast(&GameFeEvent::Ping);
-            if game.subscribers.is_empty() || game.state == GameState::Complete {
+            if game.subscribers.is_empty() || game.state.is_complete() {
                 unwatched.push(*id);
             }
         }
@@ -87,7 +87,7 @@ impl Games {
                 id,
                 0,
                 &[
-                    GameDbEvent::Sit {
+                    GameBeEvent::Sit {
                         north: participants[0].player.clone(),
                         east: participants[1].player.clone(),
                         south: participants[2].player.clone(),
@@ -104,20 +104,18 @@ impl Games {
     pub async fn subscribe(
         &self,
         id: GameId,
-        name: Name,
+        name: String,
     ) -> Result<UnboundedReceiver<GameFeEvent>, CardsError> {
         let (tx, rx) = unbounded_channel();
         self.with_game(id, |game| {
             let seat = game.seat(&name);
             let mut copy = Game::new();
-            for db_event in &game.events {
-                copy.apply(&db_event);
-                for fe_event in copy.as_fe_events(db_event) {
-                    send_event(seat, &tx, &fe_event);
-                }
+            for event in &game.events {
+                copy.apply(&event);
+                send_event(seat, &tx, copy.state.rules, &event);
             }
-            if game.state != GameState::Complete {
-                game.subscribers.insert(name, tx);
+            if !game.state.is_complete() {
+                game.subscribers.insert(name.to_string(), tx);
             }
             Ok(())
         })
@@ -125,34 +123,30 @@ impl Games {
         Ok(rx)
     }
 
-    pub async fn pass_cards(
-        &self,
-        id: GameId,
-        name: &Name,
-        cards: Cards,
-    ) -> Result<(), CardsError> {
+    pub async fn pass_cards(&self, id: GameId, name: &str, cards: Cards) -> Result<(), CardsError> {
         self.with_game(id, |game| match game.seat(&name) {
             Some(seat) => {
                 game.verify_pass(id, seat, cards)?;
-                let mut db_events = vec![GameDbEvent::SendPass { from: seat, cards }];
-                let sender = seat.pass_sender(game.pass_direction);
-                if game.pass_direction != PassDirection::Keeper && game.has_passed(sender) {
-                    db_events.push(GameDbEvent::RecvPass {
-                        to: seat,
-                        cards: game.pre_pass_hand[sender.idx()] - game.post_pass_hand[sender.idx()],
-                    });
+                let mut db_events = vec![GameBeEvent::SendPass { from: seat, cards }];
+                if game.state.phase != GamePhase::PassKeeper {
+                    let sender = game.state.phase.pass_sender(seat);
+                    if game.state.sent_pass[sender.idx()] {
+                        db_events.push(GameBeEvent::RecvPass {
+                            to: seat,
+                            cards: game.pre_pass_hand[sender.idx()]
+                                - game.post_pass_hand[sender.idx()],
+                        });
+                    }
+                    let receiver = game.state.phase.pass_receiver(seat);
+                    if game.state.sent_pass[receiver.idx()] {
+                        db_events.push(GameBeEvent::RecvPass {
+                            to: receiver,
+                            cards,
+                        });
+                    }
                 }
-                let receiver = seat.pass_receiver(game.pass_direction);
-                if game.pass_direction != PassDirection::Keeper && game.has_passed(receiver) {
-                    db_events.push(GameDbEvent::RecvPass {
-                        to: receiver,
-                        cards,
-                    });
-                }
-                if game.pass_direction == PassDirection::Keeper
-                    && Seat::VALUES
-                        .iter()
-                        .all(|s| *s == seat || game.has_passed(*s))
+                if game.state.phase == GamePhase::PassKeeper
+                    && Seat::all(|s| s == seat || game.state.sent_pass[s.idx()])
                 {
                     let passes = Cards::ALL
                         - game.post_pass_hand[0]
@@ -162,40 +156,34 @@ impl Games {
                         | cards;
                     let mut passes = passes.into_iter().collect::<Vec<_>>();
                     passes.shuffle(&mut rand::thread_rng());
-                    db_events.push(GameDbEvent::RecvPass {
+                    db_events.push(GameBeEvent::RecvPass {
                         to: Seat::North,
                         cards: passes[0..3].iter().cloned().collect(),
                     });
-                    db_events.push(GameDbEvent::RecvPass {
+                    db_events.push(GameBeEvent::RecvPass {
                         to: Seat::East,
                         cards: passes[3..6].iter().cloned().collect(),
                     });
-                    db_events.push(GameDbEvent::RecvPass {
+                    db_events.push(GameBeEvent::RecvPass {
                         to: Seat::South,
                         cards: passes[6..9].iter().cloned().collect(),
                     });
-                    db_events.push(GameDbEvent::RecvPass {
+                    db_events.push(GameBeEvent::RecvPass {
                         to: Seat::West,
                         cards: passes[9..12].iter().cloned().collect(),
                     });
                 }
-                self.db.run_with_retry(|tx| {
-                    persist_events(&tx, id, game.events.len() as u32, &db_events)
-                })?;
+                self.db
+                    .run_with_retry(|tx| persist_events(&tx, id, game.events.len(), &db_events))?;
                 for db_event in db_events {
-                    game.apply(&db_event);
                     for fe_event in game.as_fe_events(&db_event) {
                         game.broadcast(&fe_event);
+                        game.apply(&fe_event);
                     }
-                }
-                if game.state == GameState::Charging {
-                    game.broadcast(&GameFeEvent::StartCharging {
-                        seat: game.charges.next_charger,
-                    });
                 }
                 Ok(())
             }
-            None => Err(CardsError::IllegalPlayer(name.clone())),
+            None => Err(CardsError::IllegalPlayer(name.to_string())),
         })
         .await
     }
@@ -203,55 +191,55 @@ impl Games {
     pub async fn charge_cards(
         &self,
         id: GameId,
-        name: &Name,
+        name: &str,
         cards: Cards,
     ) -> Result<(), CardsError> {
         self.with_game(id, |game| match game.seat(&name) {
             Some(seat) => {
                 game.verify_charge(id, seat, cards)?;
-                let db_event = GameDbEvent::Charge { seat, cards };
+                let db_event = GameBeEvent::Charge { seat, cards };
                 self.db.run_with_retry(|tx| {
-                    persist_events(&tx, id, game.events.len() as u32, &[db_event.clone()])
+                    persist_events(&tx, id, game.events.len(), &[db_event.clone()])
                 })?;
-                game.apply(&db_event);
                 for fe_event in game.as_fe_events(&db_event) {
                     game.broadcast(&fe_event);
+                    game.apply(&fe_event);
                 }
                 Ok(())
             }
-            None => Err(CardsError::IllegalPlayer(name.clone())),
+            None => Err(CardsError::IllegalPlayer(name.to_string())),
         })
         .await
     }
 
-    pub async fn play_card(&self, id: GameId, name: &Name, card: Card) -> Result<bool, CardsError> {
+    pub async fn play_card(&self, id: GameId, name: &str, card: Card) -> Result<bool, CardsError> {
         self.with_game(id, |game| match game.seat(&name) {
             Some(seat) => {
                 game.verify_play(id, seat, card)?;
-                let mut db_events = vec![GameDbEvent::Play { seat, card }];
-                if game.hand.played | card == Cards::ALL
-                    && game.pass_direction != PassDirection::Keeper
+                let mut db_events = vec![GameBeEvent::Play { seat, card }];
+                if game.state.played | card == Cards::ALL
+                    && game.state.phase != GamePhase::PlayKeeper
                 {
                     db_events.push(deal());
                 }
                 self.db.run_with_retry(|tx| {
-                    persist_events(&tx, id, game.events.len() as u32, &db_events)?;
-                    if game.hand.played | card == Cards::ALL
-                        && game.pass_direction == PassDirection::Keeper
+                    persist_events(&tx, id, game.events.len(), &db_events)?;
+                    if game.state.played | card == Cards::ALL
+                        && game.state.phase == GamePhase::PlayKeeper
                     {
                         tx.execute("INSERT INTO game (id) VALUES (?)", &[&id])?;
                     }
                     Ok(())
                 })?;
                 for db_event in db_events {
-                    game.apply(&db_event);
                     for fe_event in game.as_fe_events(&db_event) {
                         game.broadcast(&fe_event);
+                        game.apply(&fe_event);
                     }
                 }
-                Ok(game.state == GameState::Complete)
+                Ok(game.state.phase == GamePhase::Complete)
             }
-            None => Err(CardsError::IllegalPlayer(name.clone())),
+            None => Err(CardsError::IllegalPlayer(name.to_string())),
         })
         .await
     }
@@ -259,19 +247,11 @@ impl Games {
 
 #[derive(Debug)]
 struct Game {
-    events: Vec<GameDbEvent>,
-    subscribers: HashMap<Name, UnboundedSender<GameFeEvent>>,
-    players: [Name; 4],
-    rules: ChargingRules,
-
-    state: GameState,
+    events: Vec<GameFeEvent>,
+    subscribers: HashMap<String, UnboundedSender<GameFeEvent>>,
     pre_pass_hand: [Cards; 4],
-
-    pass_direction: PassDirection,
     post_pass_hand: [Cards; 4],
-
-    charges: ChargeState,
-    hand: HandState,
+    state: GameState,
 }
 
 impl Game {
@@ -279,17 +259,9 @@ impl Game {
         Self {
             events: Vec::new(),
             subscribers: HashMap::new(),
-            players: [String::new(), String::new(), String::new(), String::new()],
-            rules: ChargingRules::Classic,
-
-            state: GameState::Passing,
             pre_pass_hand: [Cards::NONE, Cards::NONE, Cards::NONE, Cards::NONE],
-
-            pass_direction: PassDirection::Left,
             post_pass_hand: [Cards::NONE, Cards::NONE, Cards::NONE, Cards::NONE],
-
-            charges: ChargeState::new(ChargingRules::Classic, PassDirection::Left),
-            hand: HandState::new(Seat::North),
+            state: GameState::new(),
         }
     }
 
@@ -303,39 +275,22 @@ impl Game {
     }
 
     fn broadcast(&mut self, event: &GameFeEvent) {
-        let players = self.players.clone();
+        let players = &self.state.players;
+        let rules = self.state.rules;
         self.subscribers.retain(|name, tx| {
             let seat = seat(&players, name);
-            send_event(seat, tx, event)
+            send_event(seat, tx, rules, event)
         });
     }
 
-    fn seat(&self, name: &Name) -> Option<Seat> {
-        seat(&self.players, name)
+    fn seat(&self, name: &str) -> Option<Seat> {
+        seat(&self.state.players, name)
     }
 
-    fn has_passed(&self, seat: Seat) -> bool {
-        self.pre_pass_hand[seat.idx()] != self.post_pass_hand[seat.idx()]
-    }
-
-    fn apply(&mut self, event: &GameDbEvent) {
+    fn apply(&mut self, event: &GameFeEvent) {
+        self.state.apply(&event);
         match &event {
-            GameDbEvent::Sit {
-                north,
-                east,
-                south,
-                west,
-                rules,
-            } => {
-                self.players = [
-                    north.name().clone(),
-                    east.name().clone(),
-                    south.name().clone(),
-                    west.name().clone(),
-                ];
-                self.rules = *rules;
-            }
-            GameDbEvent::Deal {
+            GameFeEvent::Deal {
                 north,
                 east,
                 south,
@@ -349,64 +304,29 @@ impl Game {
                 self.post_pass_hand[Seat::South.idx()] = *south;
                 self.pre_pass_hand[Seat::West.idx()] = *west;
                 self.post_pass_hand[Seat::West.idx()] = *west;
-                if self.pass_direction == PassDirection::Keeper {
-                    self.state = GameState::KeeperCharging;
-                    self.charges.reset_for_first_keeper();
-                } else {
-                    self.state = GameState::Passing;
-                }
             }
-            GameDbEvent::SendPass { from, cards } => {
+            GameFeEvent::SendPass { from, cards } => {
                 self.post_pass_hand[from.idx()] -= *cards;
             }
-            GameDbEvent::RecvPass { to, cards } => {
+            GameFeEvent::RecvPass { to, cards } => {
                 self.post_pass_hand[to.idx()] |= *cards;
-                if Seat::VALUES.iter().all(|seat| self.has_passed(*seat)) {
-                    self.state = GameState::Charging;
-                    self.charges.reset_for_round(self.pass_direction);
+            }
+            GameFeEvent::Charge { .. } | GameFeEvent::RevealCharges { .. } => {
+                if self.state.phase.playing() {
+                    self.state.next_player = Some(self.owner(Card::TwoClubs));
                 }
             }
-            GameDbEvent::Charge { seat, cards } => {
-                let done = self.charges.charge(*seat, *cards);
-                if done {
-                    match self.state {
-                        GameState::KeeperCharging => {
-                            if self.charges.charged.is_empty() {
-                                self.state = GameState::Passing;
-                            } else {
-                                self.state = GameState::Playing;
-                                self.hand.reset(self.owner(Card::TwoClubs));
-                            }
-                        }
-                        GameState::Charging => {
-                            self.state = GameState::Playing;
-                            self.hand.reset(self.owner(Card::TwoClubs));
-                        }
-                        _ => unreachable!(),
-                    }
-                }
-            }
-            GameDbEvent::Play { seat: _, card } => {
-                self.hand.play(*card);
-                if self.hand.played == Cards::ALL {
-                    match self.pass_direction.next() {
-                        Some(pass_direction) => {
-                            self.pass_direction = pass_direction;
-                        }
-                        None => self.state = GameState::Complete,
-                    }
-                }
-            }
+            _ => {}
         }
         self.events.push(event.clone());
     }
 
     fn verify_pass(&self, id: GameId, seat: Seat, cards: Cards) -> Result<(), CardsError> {
-        if self.state == GameState::Complete {
+        if self.state.is_complete() {
             return Err(CardsError::GameComplete(id));
         }
-        if self.state != GameState::Passing {
-            return Err(CardsError::IllegalAction(self.state));
+        if !self.state.phase.passing() {
+            return Err(CardsError::IllegalAction(self.state.phase));
         }
         if !self.pre_pass_hand[seat.idx()].contains_all(cards) {
             return Err(CardsError::NotYourCards(
@@ -424,48 +344,49 @@ impl Game {
     }
 
     fn verify_charge(&mut self, id: GameId, seat: Seat, cards: Cards) -> Result<(), CardsError> {
-        if self.state == GameState::Complete {
+        if self.state.is_complete() {
             return Err(CardsError::GameComplete(id));
         }
-        let hand_cards = match self.state {
-            GameState::KeeperCharging | GameState::Charging => self.post_pass_hand[seat.idx()],
-            _ => return Err(CardsError::IllegalAction(self.state)),
-        };
+        if !self.state.phase.charging() {
+            return Err(CardsError::IllegalAction(self.state.phase));
+        }
+        let hand_cards = self.post_pass_hand[seat.idx()];
         if !hand_cards.contains_all(cards) {
             return Err(CardsError::NotYourCards(cards - hand_cards));
         }
         if !Cards::CHARGEABLE.contains_all(cards) {
             return Err(CardsError::Unchargeable(cards - Cards::CHARGEABLE));
         }
-        if self.charges.charged.contains_any(cards) {
-            return Err(CardsError::AlreadyCharged(self.charges.charged & cards));
+        if self.state.charged[seat.idx()].contains_any(cards) {
+            return Err(CardsError::AlreadyCharged(
+                self.state.charged[seat.idx()] & cards,
+            ));
         }
-        match self.charges.next_charger {
-            Some(s) if s != seat => {
-                return Err(CardsError::NotYourTurn(self.players[s.idx()].clone()))
-            }
-            _ => {}
+        if !self.state.can_charge(seat) {
+            return Err(CardsError::NotYourTurn(
+                self.state.players[self.state.next_charger.unwrap().idx()].clone(),
+            ));
         }
         Ok(())
     }
 
     fn verify_play(&mut self, id: GameId, seat: Seat, card: Card) -> Result<(), CardsError> {
-        if self.state == GameState::Complete {
+        if self.state.is_complete() {
             return Err(CardsError::GameComplete(id));
         }
-        if self.state != GameState::Playing {
-            return Err(CardsError::IllegalAction(self.state));
+        if !self.state.phase.playing() {
+            return Err(CardsError::IllegalAction(self.state.phase));
         }
-        let mut plays = self.post_pass_hand[seat.idx()] - self.hand.played;
+        let mut plays = self.post_pass_hand[seat.idx()] - self.state.played;
         if !plays.contains(card) {
             return Err(CardsError::NotYourCards(card.into()));
         }
-        if seat != self.hand.next_player {
+        if seat != self.state.next_player.unwrap() {
             return Err(CardsError::NotYourTurn(
-                self.players[self.hand.next_player.idx()].clone(),
+                self.state.players[self.state.next_player.unwrap().idx()].clone(),
             ));
         }
-        if self.hand.led_suits.is_empty() {
+        if self.state.led_suits.is_empty() {
             if plays.contains(Card::TwoClubs) && card != Card::TwoClubs {
                 return Err(CardsError::MustPlayTwoOfClubs);
             }
@@ -483,22 +404,22 @@ impl Game {
                 return Err(CardsError::MustPlayQueenOfSpades);
             }
         }
-        if !self.hand.current_trick.is_empty() {
-            let suit = self.hand.current_trick[0].suit();
+        if !self.state.current_trick.is_empty() {
+            let suit = self.state.current_trick[0].suit();
             if suit.cards().contains_any(plays) {
                 plays &= suit.cards();
                 if !plays.contains(card) {
                     return Err(CardsError::MustFollowSuit);
                 }
-                if !self.hand.led_suits.contains_any(suit.cards()) && plays.len() > 1 {
-                    plays -= self.charges.charged;
+                if !self.state.led_suits.contains_any(suit.cards()) && plays.len() > 1 {
+                    plays -= self.state.charged[seat.idx()];
                     if !plays.contains(card) {
                         return Err(CardsError::NoChargeOnFirstTrickOfSuit);
                     }
                 }
             }
         } else {
-            if !self.hand.played.contains_any(Cards::HEARTS)
+            if !self.state.played.contains_any(Cards::HEARTS)
                 && !Cards::HEARTS.contains_all(plays)
                 && card.suit() == Suit::Hearts
             {
@@ -507,7 +428,7 @@ impl Game {
                     return Err(CardsError::HeartsNotBroken);
                 }
             }
-            let unled_charges = self.charges.charged - self.hand.led_suits;
+            let unled_charges = self.state.charged[seat.idx()] - self.state.led_suits;
             if !unled_charges.contains_all(plays) {
                 plays -= unled_charges;
                 if !plays.contains(card) {
@@ -518,9 +439,9 @@ impl Game {
         Ok(())
     }
 
-    fn as_fe_events(&self, event: &GameDbEvent) -> Vec<GameFeEvent> {
+    fn as_fe_events(&self, event: &GameBeEvent) -> Vec<GameFeEvent> {
         match event {
-            GameDbEvent::Sit {
+            GameBeEvent::Sit {
                 north,
                 east,
                 south,
@@ -533,104 +454,56 @@ impl Game {
                 west: west.clone(),
                 rules: *rules,
             }],
-            GameDbEvent::Deal {
+            GameBeEvent::Deal {
                 north,
                 east,
                 south,
                 west,
-            } => {
-                let mut events = vec![GameFeEvent::Deal {
-                    north: *north,
-                    east: *east,
-                    south: *south,
-                    west: *west,
-                    pass: self.pass_direction,
-                }];
-                if self.state == GameState::KeeperCharging {
-                    events.push(GameFeEvent::StartFirstKeeperCharging {
-                        seat: self.charges.next_charger,
-                    });
-                } else if self.state == GameState::Passing {
-                    events.push(GameFeEvent::StartPassing);
-                }
-                events
-            }
-            GameDbEvent::SendPass { from, cards } => vec![GameFeEvent::SendPass {
+            } => vec![GameFeEvent::Deal {
+                north: *north,
+                east: *east,
+                south: *south,
+                west: *west,
+            }],
+            GameBeEvent::SendPass { from, cards } => vec![GameFeEvent::SendPass {
                 from: *from,
                 cards: *cards,
             }],
-            GameDbEvent::RecvPass { to, cards } => vec![GameFeEvent::RecvPass {
+            GameBeEvent::RecvPass { to, cards } => vec![GameFeEvent::RecvPass {
                 to: *to,
                 cards: *cards,
             }],
-            GameDbEvent::Charge { seat, cards } => {
-                let mut events = vec![];
-                if self.rules.blind() {
-                    events.push(GameFeEvent::BlindCharge {
-                        seat: *seat,
-                        count: cards.len(),
-                    });
-                } else {
-                    events.push(GameFeEvent::Charge {
-                        seat: *seat,
-                        cards: *cards,
-                    });
-                }
-                if self.charges.all_done_charging() {
-                    if self.rules.blind() {
-                        for seat in &Seat::VALUES {
-                            events.push(GameFeEvent::RevealCharge {
-                                seat: *seat,
-                                cards: self.charges.charged & self.post_pass_hand[seat.idx()],
-                            });
-                        }
-                    }
-                    if self.state == GameState::Playing {
-                        events.push(GameFeEvent::StartTrick {
-                            leader: self.owner(Card::TwoClubs),
-                            trick_number: self.hand.trick_number,
-                        });
-                    } else if self.state == GameState::Passing {
-                        events.push(GameFeEvent::StartPassing);
-                    }
-                }
-                events
-            }
-            GameDbEvent::Play { seat, card } => {
-                let trick_number = if self.hand.current_trick.is_empty() {
-                    self.hand.trick_number - 1
-                } else {
-                    self.hand.trick_number
-                };
-                let mut events = vec![GameFeEvent::Play {
+            GameBeEvent::Charge { seat, cards } => {
+                let mut events = vec![GameFeEvent::Charge {
                     seat: *seat,
-                    card: *card,
-                    trick_number,
+                    cards: *cards,
                 }];
-                if self.hand.current_trick.is_empty() && self.hand.played != Cards::ALL {
-                    events.push(GameFeEvent::StartTrick {
-                        leader: self.hand.next_player,
-                        trick_number: self.hand.trick_number,
+                if cards.is_empty()
+                    && self.state.rules.blind()
+                    && self.state.done_charging[seat.left().idx()]
+                    && self.state.done_charging[seat.across().idx()]
+                    && self.state.done_charging[seat.right().idx()]
+                {
+                    events.push(GameFeEvent::RevealCharges {
+                        north: self.state.charged[0],
+                        east: self.state.charged[1],
+                        south: self.state.charged[2],
+                        west: self.state.charged[3],
                     });
                 }
                 events
             }
+            GameBeEvent::Play { seat, card } => vec![GameFeEvent::Play {
+                seat: *seat,
+                card: *card,
+            }],
         }
     }
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum GameState {
-    KeeperCharging,
-    Passing,
-    Charging,
-    Playing,
-    Complete,
-}
-
 #[serde(tag = "type", rename_all = "snake_case")]
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
-pub enum GameDbEvent {
+pub enum GameBeEvent {
     Sit {
         north: Player,
         east: Player,
@@ -678,9 +551,7 @@ pub enum GameFeEvent {
         east: Cards,
         south: Cards,
         west: Cards,
-        pass: PassDirection,
     },
-    StartPassing,
     SendPass {
         from: Seat,
         cards: Cards,
@@ -688,12 +559,6 @@ pub enum GameFeEvent {
     RecvPass {
         to: Seat,
         cards: Cards,
-    },
-    StartFirstKeeperCharging {
-        seat: Option<Seat>,
-    },
-    StartCharging {
-        seat: Option<Seat>,
     },
     BlindCharge {
         seat: Seat,
@@ -703,18 +568,15 @@ pub enum GameFeEvent {
         seat: Seat,
         cards: Cards,
     },
-    RevealCharge {
-        seat: Seat,
-        cards: Cards,
-    },
-    StartTrick {
-        leader: Seat,
-        trick_number: usize,
+    RevealCharges {
+        north: Cards,
+        east: Cards,
+        south: Cards,
+        west: Cards,
     },
     Play {
         seat: Seat,
         card: Card,
-        trick_number: usize,
     },
 }
 
@@ -727,23 +589,23 @@ impl Event for GameFeEvent {
     }
 }
 
-impl ToSql for GameDbEvent {
+impl ToSql for GameBeEvent {
     fn to_sql(&self) -> Result<ToSqlOutput<'_>, rusqlite::Error> {
         let json = serde_json::to_string(self).unwrap();
         Ok(ToSqlOutput::Owned(Value::Text(json)))
     }
 }
 
-impl FromSql for GameDbEvent {
+impl FromSql for GameBeEvent {
     fn column_result(value: ValueRef<'_>) -> Result<Self, FromSqlError> {
         value.as_str().map(|s| serde_json::from_str(s).unwrap())
     }
 }
 
-fn deal() -> GameDbEvent {
+fn deal() -> GameBeEvent {
     let mut deck = Cards::ALL.into_iter().collect::<Vec<_>>();
     deck.shuffle(&mut rand::thread_rng());
-    GameDbEvent::Deal {
+    GameBeEvent::Deal {
         north: deck[0..13].iter().cloned().collect(),
         east: deck[13..26].iter().cloned().collect(),
         south: deck[26..39].iter().cloned().collect(),
@@ -751,7 +613,7 @@ fn deal() -> GameDbEvent {
     }
 }
 
-fn seat(players: &[Name; 4], name: &Name) -> Option<Seat> {
+fn seat(players: &[String; 4], name: &str) -> Option<Seat> {
     players
         .iter()
         .position(|p| p == name)
@@ -761,8 +623,8 @@ fn seat(players: &[Name; 4], name: &Name) -> Option<Seat> {
 pub fn persist_events(
     tx: &Transaction,
     id: GameId,
-    mut event_id: EventId,
-    events: &[GameDbEvent],
+    event_id: usize,
+    events: &[GameBeEvent],
 ) -> Result<(), CardsError> {
     let mut stmt =
         tx.prepare("INSERT INTO event (game_id, event_id, timestamp, event) VALUES (?, ?, ?, ?)")?;
@@ -770,6 +632,7 @@ pub fn persist_events(
         .duration_since(SystemTime::UNIX_EPOCH)
         .unwrap()
         .as_millis() as i64;
+    let mut event_id = event_id as isize;
     for event in events {
         stmt.execute::<&[&dyn ToSql]>(&[&id, &event_id, &timestamp, &event])?;
         event_id += 1;
@@ -787,56 +650,49 @@ fn hydrate_events(tx: &Transaction, id: GameId, game: &mut Game) -> Result<(), C
     Ok(())
 }
 
-fn send_event(seat: Option<Seat>, tx: &UnboundedSender<GameFeEvent>, event: &GameFeEvent) -> bool {
+fn send_event(
+    seat: Option<Seat>,
+    tx: &UnboundedSender<GameFeEvent>,
+    rules: ChargingRules,
+    event: &GameFeEvent,
+) -> bool {
     let event = match event {
         GameFeEvent::Ping
         | GameFeEvent::Play { .. }
         | GameFeEvent::Sit { .. }
-        | GameFeEvent::Charge { .. }
         | GameFeEvent::BlindCharge { .. }
-        | GameFeEvent::RevealCharge { .. }
-        | GameFeEvent::StartPassing
-        | GameFeEvent::StartFirstKeeperCharging { .. }
-        | GameFeEvent::StartCharging { .. }
-        | GameFeEvent::StartTrick { .. } => event.clone(),
+        | GameFeEvent::RevealCharges { .. } => event.clone(),
         GameFeEvent::Deal {
             north,
             east,
             south,
             west,
-            pass,
         } => match seat {
-            None => event.clone(),
-            Some(seat) => match seat {
-                Seat::North => GameFeEvent::Deal {
-                    north: *north,
-                    east: Cards::NONE,
-                    south: Cards::NONE,
-                    west: Cards::NONE,
-                    pass: *pass,
-                },
-                Seat::East => GameFeEvent::Deal {
-                    north: Cards::NONE,
-                    east: *east,
-                    south: Cards::NONE,
-                    west: Cards::NONE,
-                    pass: *pass,
-                },
-                Seat::South => GameFeEvent::Deal {
-                    north: Cards::NONE,
-                    east: Cards::NONE,
-                    south: *south,
-                    west: Cards::NONE,
-                    pass: *pass,
-                },
-                Seat::West => GameFeEvent::Deal {
-                    north: Cards::NONE,
-                    east: Cards::NONE,
-                    south: Cards::NONE,
-                    west: *west,
-                    pass: *pass,
-                },
+            Some(Seat::North) => GameFeEvent::Deal {
+                north: *north,
+                east: Cards::NONE,
+                south: Cards::NONE,
+                west: Cards::NONE,
             },
+            Some(Seat::East) => GameFeEvent::Deal {
+                north: Cards::NONE,
+                east: *east,
+                south: Cards::NONE,
+                west: Cards::NONE,
+            },
+            Some(Seat::South) => GameFeEvent::Deal {
+                north: Cards::NONE,
+                east: Cards::NONE,
+                south: *south,
+                west: Cards::NONE,
+            },
+            Some(Seat::West) => GameFeEvent::Deal {
+                north: Cards::NONE,
+                east: Cards::NONE,
+                south: Cards::NONE,
+                west: *west,
+            },
+            None => event.clone(),
         },
         GameFeEvent::SendPass { from, cards: _ } => match seat {
             Some(seat) if seat != *from => GameFeEvent::SendPass {
@@ -849,6 +705,13 @@ fn send_event(seat: Option<Seat>, tx: &UnboundedSender<GameFeEvent>, event: &Gam
             Some(seat) if seat != *to => GameFeEvent::RecvPass {
                 to: *to,
                 cards: Cards::NONE,
+            },
+            _ => event.clone(),
+        },
+        GameFeEvent::Charge { seat: s, cards } => match seat {
+            Some(seat) if *s != seat && rules.blind() => GameFeEvent::BlindCharge {
+                seat: *s,
+                count: cards.len(),
             },
             _ => event.clone(),
         },

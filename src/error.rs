@@ -1,5 +1,5 @@
-use crate::types::Name;
-use crate::{cards::Cards, game::GameState, types::GameId};
+use crate::cards::GamePhase;
+use crate::{cards::Cards, types::GameId};
 use rusqlite::ErrorCode;
 use serde::Serialize;
 use std::convert::Infallible;
@@ -18,14 +18,14 @@ pub enum CardsError {
     GameHasStarted(GameId),
     #[error("hearts cannot be lead if hearts are not broken")]
     HeartsNotBroken,
-    #[error("cannot perform action, currently {0:?}")]
-    IllegalAction(GameState),
+    #[error("cannot perform action, current phase is {0:?}")]
+    IllegalAction(GamePhase),
     #[error("{0} is not a valid name for a human player")]
-    IllegalName(Name),
+    IllegalName(String),
     #[error("{0} is not a legal pass, passes must have 3 cards")]
     IllegalPassSize(Cards),
     #[error("{0} is not a member of the game")]
-    IllegalPlayer(Name),
+    IllegalPlayer(String),
     #[error("charged cards cannot be played on the first trick of their suit")]
     NoChargeOnFirstTrickOfSuit,
     #[error("points cannot be played on the first trick")]
@@ -33,9 +33,9 @@ pub enum CardsError {
     #[error("your hand does not contain {0}")]
     NotYourCards(Cards),
     #[error("player {0} makes the next charge or play")]
-    NotYourTurn(Name),
-    #[error("api endpoints require a \"player\" cookie identifying the caller")]
-    MissingPlayerCookie,
+    NotYourTurn(String),
+    #[error("api endpoints require a \"name\" cookie identifying the caller")]
+    MissingNameCookie,
     #[error("on the first trick if you have nothing but points, you must play the jack of diamonds if you have it")]
     MustPlayJackOfDiamonds,
     #[error("on the first trick if you have nothing but positive points, you must play the queen of spades if you have it")]

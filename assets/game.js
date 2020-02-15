@@ -1,3 +1,5 @@
+var trick = [];
+var trick_number = 0;
 
 function getName() {
     return document.cookie.replace(/(?:(?:^|.*;\s*)name\s*\=\s*([^;]*).*$)|^.*$/, '$1');
@@ -29,11 +31,14 @@ function onEvent(event) {
         case 'charge':
             onCharge(data.seat, data.cards);
             break;
-        case 'reveal_charge':
-            onCharge(data.seat, data.cards);
+        case 'reveal_charges':
+            onCharge("north", data.north);
+            onCharge("east", data.east);
+            onCharge("south", data.south);
+            onCharge("west", data.west);
             break;
         case 'play':
-            onPlay(data.seat, data.card, data.trick_number);
+            onPlay(data.seat, data.card);
             break;
         default:
             console.log('Unknown lobby event: %o', data);
@@ -97,7 +102,8 @@ function onCharge(seat, cards) {
     events.appendChild(p);
 }
 
-function onPlay(seat, card, trick_number) {
+function onPlay(seat, card) {
+    trick.push(card);
     let p = document.createElement('p');
     p.className = 'trick-' + trick_number;
     p.append(seat + " played " + card + " on trick " + trick_number);
@@ -111,6 +117,21 @@ function onPlay(seat, card, trick_number) {
     while (expired.length > 0) {
         expired[0].remove();
     }
+    if (isTrickComplete()) {
+        trick_number += 1;
+        trick = [];
+    }
+}
+
+function isTrickComplete() {
+    if (trick.length == 8) {
+        return true;
+    }
+    if (trick.length != 4) {
+        return false;
+    }
+    let lead_suit = trick[0].substring(1);
+    return !trick.includes("9" + lead_suit);
 }
 
 function createCardElement(card) {

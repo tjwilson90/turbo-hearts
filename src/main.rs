@@ -1,4 +1,3 @@
-use crate::types::Name;
 use crate::{
     cards::{Card, Cards},
     db::Database,
@@ -36,7 +35,7 @@ async fn ping_event_streams(server: Server) {
     }
 }
 
-async fn subscribe_lobby(server: Server, name: Name) -> Result<impl Reply, Infallible> {
+async fn subscribe_lobby(server: Server, name: String) -> Result<impl Reply, Infallible> {
     let rx = server.subscribe_lobby(name).await;
     Ok(sse::reply(as_stream(rx)))
 }
@@ -46,9 +45,13 @@ struct NewGame {
     rules: ChargingRules,
 }
 
-async fn new_game(server: Server, name: Name, request: NewGame) -> Result<impl Reply, Infallible> {
+async fn new_game(
+    server: Server,
+    name: String,
+    request: NewGame,
+) -> Result<impl Reply, Infallible> {
     let NewGame { rules } = request;
-    let id = server.new_game(name, rules).await;
+    let id = server.new_game(&name, rules).await;
     Ok(warp::reply::json(&id))
 }
 
@@ -58,7 +61,11 @@ struct JoinGame {
     rules: ChargingRules,
 }
 
-async fn join_game(server: Server, name: Name, request: JoinGame) -> Result<impl Reply, Rejection> {
+async fn join_game(
+    server: Server,
+    name: String,
+    request: JoinGame,
+) -> Result<impl Reply, Rejection> {
     let JoinGame { id, rules } = request;
     let players = server.join_game(id, Player::Human { name }, rules).await?;
     Ok(warp::reply::json(&players))
@@ -71,7 +78,7 @@ struct LeaveGame {
 
 async fn leave_game(
     server: Server,
-    name: Name,
+    name: String,
     request: LeaveGame,
 ) -> Result<impl Reply, Infallible> {
     let LeaveGame { id } = request;
@@ -104,7 +111,7 @@ async fn add_bot(server: Server, request: AddBot) -> Result<impl Reply, Rejectio
 #[derive(Debug, Deserialize)]
 struct RemoveBot {
     id: GameId,
-    name: Name,
+    name: String,
 }
 
 async fn remove_bot(server: Server, request: RemoveBot) -> Result<impl Reply, Infallible> {
@@ -113,7 +120,7 @@ async fn remove_bot(server: Server, request: RemoveBot) -> Result<impl Reply, In
     Ok(warp::reply())
 }
 
-async fn subscribe_game(id: GameId, server: Server, name: Name) -> Result<impl Reply, Rejection> {
+async fn subscribe_game(id: GameId, server: Server, name: String) -> Result<impl Reply, Rejection> {
     let rx = server.subscribe_game(id, name).await?;
     Ok(sse::reply(as_stream(rx)))
 }
@@ -126,11 +133,11 @@ struct PassCards {
 
 async fn pass_cards(
     server: Server,
-    name: Name,
+    name: String,
     request: PassCards,
 ) -> Result<impl Reply, Rejection> {
     let PassCards { id, cards } = request;
-    server.pass_cards(id, name, cards).await?;
+    server.pass_cards(id, &name, cards).await?;
     Ok(warp::reply())
 }
 
@@ -142,11 +149,11 @@ struct ChargeCards {
 
 async fn charge_cards(
     server: Server,
-    name: Name,
+    name: String,
     request: ChargeCards,
 ) -> Result<impl Reply, Rejection> {
     let ChargeCards { id, cards } = request;
-    server.charge_cards(id, name, cards).await?;
+    server.charge_cards(id, &name, cards).await?;
     Ok(warp::reply())
 }
 
@@ -156,9 +163,13 @@ struct PlayCard {
     card: Card,
 }
 
-async fn play_card(server: Server, name: Name, request: PlayCard) -> Result<impl Reply, Rejection> {
+async fn play_card(
+    server: Server,
+    name: String,
+    request: PlayCard,
+) -> Result<impl Reply, Rejection> {
     let PlayCard { id, card } = request;
-    server.play_card(id, name, card).await?;
+    server.play_card(id, &name, card).await?;
     Ok(warp::reply())
 }
 
@@ -177,11 +188,11 @@ where
     })
 }
 
-async fn name_cookie(name: Option<String>) -> Result<Name, Rejection> {
+async fn name_cookie(name: Option<String>) -> Result<String, Rejection> {
     match name {
         Some(name) if name.ends_with("(bot)") => Err(CardsError::IllegalName(name))?,
         Some(name) => Ok(name),
-        None => Err(CardsError::MissingPlayerCookie)?,
+        None => Err(CardsError::MissingNameCookie)?,
     }
 }
 
@@ -270,7 +281,8 @@ async fn main() -> Result<(), CardsError> {
         .or(lobby_html)
         .or(game_html)
         .or(assets)
-        .recover(error::handle_rejection);
+        .recover(error::handle_rejection)
+        .with(warp::cors().allow_any_origin());
     warp::serve(app).run(([127, 0, 0, 1], 7380)).await;
     Ok(())
 }

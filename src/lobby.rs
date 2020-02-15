@@ -1,4 +1,4 @@
-use crate::types::{Name, Participant};
+use crate::types::Participant;
 use crate::{
     error::CardsError,
     hacks::{unbounded_channel, Mutex, UnboundedReceiver, UnboundedSender},
@@ -16,7 +16,7 @@ pub struct Lobby {
 }
 
 struct Inner {
-    subscribers: HashMap<Name, UnboundedSender<LobbyEvent>>,
+    subscribers: HashMap<String, UnboundedSender<LobbyEvent>>,
     games: HashMap<GameId, HashSet<Participant>>,
 }
 
@@ -25,14 +25,14 @@ struct Inner {
 pub enum LobbyEvent {
     Ping,
     JoinLobby {
-        name: Name,
+        name: String,
     },
     NewGame {
         id: GameId,
-        name: Name,
+        name: String,
     },
     LobbyState {
-        subscribers: HashSet<Name>,
+        subscribers: HashSet<String>,
         games: HashMap<GameId, Vec<Player>>,
     },
     JoinGame {
@@ -41,13 +41,13 @@ pub enum LobbyEvent {
     },
     LeaveGame {
         id: GameId,
-        name: Name,
+        name: String,
     },
     FinishGame {
         id: GameId,
     },
     LeaveLobby {
-        name: Name,
+        name: String,
     },
 }
 
@@ -75,7 +75,7 @@ impl Lobby {
         inner.broadcast(LobbyEvent::Ping);
     }
 
-    pub async fn subscribe(&self, name: Name) -> UnboundedReceiver<LobbyEvent> {
+    pub async fn subscribe(&self, name: String) -> UnboundedReceiver<LobbyEvent> {
         let (tx, rx) = unbounded_channel();
         let mut inner = self.inner.lock().await;
         if inner.subscribers.remove(&name).is_none() {
@@ -103,7 +103,7 @@ impl Lobby {
         rx
     }
 
-    pub async fn new_game(&self, name: Name, rules: ChargingRules) -> GameId {
+    pub async fn new_game(&self, name: String, rules: ChargingRules) -> GameId {
         let id = GameId::new();
         let mut inner = self.inner.lock().await;
         let mut game = HashSet::new();
@@ -139,7 +139,7 @@ impl Lobby {
         }
     }
 
-    pub async fn leave_game(&self, id: GameId, name: Name) {
+    pub async fn leave_game(&self, id: GameId, name: String) {
         let mut inner = self.inner.lock().await;
         let games = &mut inner.games;
         if let Entry::Occupied(mut entry) = games.entry(id) {

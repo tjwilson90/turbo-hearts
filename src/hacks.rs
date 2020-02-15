@@ -61,7 +61,7 @@ impl<T> UnboundedReceiver<T> {
         }
     }
 
-    pub fn map<U, F>(self, f: F) -> impl Stream<Item = U>
+    pub fn map<F, U>(self, f: F) -> impl Stream<Item = U>
     where
         F: FnMut(T) -> U,
         Self: Sized,
