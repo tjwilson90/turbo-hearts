@@ -60,7 +60,7 @@ struct TestRunner {
 impl TestRunner {
     fn new() -> Self {
         let _ = env_logger::builder()
-            .filter_level(LevelFilter::Warn)
+            .filter_level(LevelFilter::Info)
             .is_test(true)
             .try_init();
         let temp_dir = tempfile::tempdir().unwrap();
