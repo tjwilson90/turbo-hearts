@@ -67,7 +67,11 @@ impl Games {
         if game.events.is_empty() {
             Err(CardsError::UnknownGame(id))
         } else {
-            f(&mut game)
+            let result = f(&mut game);
+            if game.state.is_complete() {
+                game.subscribers.clear();
+            }
+            result
         }
     }
 
@@ -106,14 +110,10 @@ impl Games {
         let (tx, rx) = unbounded_channel();
         self.with_game(id, |game| {
             let seat = game.seat(&name);
-            let mut copy = Game::new();
             for event in &game.events {
-                copy.apply(&event);
-                send_event(seat, &tx, copy.state.rules, &event);
+                send_event(seat, &tx, game.state.rules, &event);
             }
-            if !game.state.is_complete() {
-                game.subscribers.insert(name.to_string(), tx);
-            }
+            game.subscribers.insert(name.to_string(), tx);
             Ok(())
         })
         .await?;
@@ -309,7 +309,7 @@ impl Game {
                 self.post_pass_hand[to.idx()] |= *cards;
             }
             GameFeEvent::Charge { .. } | GameFeEvent::RevealCharges { .. } => {
-                if self.state.phase.playing() {
+                if self.state.is_playing() {
                     self.state.next_player = Some(self.owner(Card::TwoClubs));
                 }
             }
@@ -322,7 +322,7 @@ impl Game {
         if self.state.is_complete() {
             return Err(CardsError::GameComplete(id));
         }
-        if !self.state.phase.passing() {
+        if !self.state.is_passing() {
             return Err(CardsError::IllegalAction(self.state.phase));
         }
         if !self.pre_pass_hand[seat.idx()].contains_all(cards) {
@@ -344,7 +344,7 @@ impl Game {
         if self.state.is_complete() {
             return Err(CardsError::GameComplete(id));
         }
-        if !self.state.phase.charging() {
+        if !self.state.is_charging() {
             return Err(CardsError::IllegalAction(self.state.phase));
         }
         let hand_cards = self.post_pass_hand[seat.idx()];
@@ -371,7 +371,7 @@ impl Game {
         if self.state.is_complete() {
             return Err(CardsError::GameComplete(id));
         }
-        if !self.state.phase.playing() {
+        if !self.state.is_playing() {
             return Err(CardsError::IllegalAction(self.state.phase));
         }
         let mut plays = self.post_pass_hand[seat.idx()] - self.state.played;
