@@ -59,13 +59,7 @@ export class SendPassEvent implements Event {
     for (const card of cards.cardsToMove) {
       this.tweens.push(
         new TWEEN.Tween(card.sprite.position)
-          .to(
-            {
-              x: cardDests[i].x,
-              y: cardDests[i].y
-            },
-            1000
-          )
+          .to(cardDests[i], FAST_ANIMATION_DURATION)
           .delay(delay)
           .easing(TWEEN.Easing.Quadratic.Out)
           .start()
@@ -95,13 +89,7 @@ export class SendPassEvent implements Event {
     for (const card of cards.cardsToKeep) {
       this.tweens.push(
         new TWEEN.Tween(card.sprite.position)
-          .to(
-            {
-              x: keepDests[i].x,
-              y: keepDests[i].y
-            },
-            1000
-          )
+          .to(keepDests[i], 1000)
           .delay(delay)
           .easing(TWEEN.Easing.Quadratic.Out)
           .start()
@@ -117,7 +105,7 @@ export class SendPassEvent implements Event {
       this.event.from
     );
     if (this.event.cards.length === 0) {
-      // pass hidden cards
+      // TODO pass hidden cards
       return { cardsToMove: [], cardsToKeep: [] };
     } else {
       const set = new Set(this.event.cards);
