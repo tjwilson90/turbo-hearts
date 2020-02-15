@@ -594,38 +594,7 @@ impl GamePhase {
         }
     }
 
-    pub fn passing(&self) -> bool {
-        match self {
-            GamePhase::PassLeft
-            | GamePhase::PassRight
-            | GamePhase::PassAcross
-            | GamePhase::PassKeeper => true,
-            _ => false,
-        }
-    }
-
-    pub fn charging(&self) -> bool {
-        match self {
-            GamePhase::ChargeLeft
-            | GamePhase::ChargeRight
-            | GamePhase::ChargeAcross
-            | GamePhase::ChargeKeeper1
-            | GamePhase::ChargeKeeper2 => true,
-            _ => false,
-        }
-    }
-
-    pub fn playing(&self) -> bool {
-        match self {
-            GamePhase::PlayLeft
-            | GamePhase::PlayRight
-            | GamePhase::PlayAcross
-            | GamePhase::PlayKeeper => true,
-            _ => false,
-        }
-    }
-
-    pub fn first_charger(&self, rules: ChargingRules) -> Option<Seat> {
+    fn first_charger(&self, rules: ChargingRules) -> Option<Seat> {
         if rules.free() {
             return None;
         }
@@ -703,7 +672,31 @@ impl GameState {
         self.phase == GamePhase::Complete
     }
 
-    pub fn charged(&self) -> Cards {
+    pub fn is_passing(&self) -> bool {
+        use GamePhase::*;
+        match self.phase {
+            PassLeft | PassRight | PassAcross | PassKeeper => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_charging(&self) -> bool {
+        use GamePhase::*;
+        match self.phase {
+            ChargeLeft | ChargeRight | ChargeAcross | ChargeKeeper1 | ChargeKeeper2 => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_playing(&self) -> bool {
+        use GamePhase::*;
+        match self.phase {
+            PlayLeft | PlayRight | PlayAcross | PlayKeeper => true,
+            _ => false,
+        }
+    }
+
+    fn charged_cards(&self) -> Cards {
         self.charged[0] | self.charged[1] | self.charged[2] | self.charged[3]
     }
 
@@ -814,7 +807,7 @@ impl GameState {
             self.done_charging[seat.idx()] = true;
             if self.done_charging.iter().all(|b| *b) {
                 self.phase = self.phase.next(self.charge_count != 0);
-                if self.phase.playing() {
+                if self.is_playing() {
                     self.played = Cards::NONE;
                     self.led_suits = Cards::NONE;
                     self.trick_number = 0;
@@ -870,7 +863,7 @@ impl GameState {
                     && plays.len() > 1
                 {
                     // you cannot play charged cards from the suit
-                    plays -= self.charged();
+                    plays -= self.charged_cards();
                 }
             }
 
@@ -885,7 +878,7 @@ impl GameState {
                 plays -= Cards::HEARTS;
             }
 
-            let unled_charges = self.charged() - self.led_suits;
+            let unled_charges = self.charged_cards() - self.led_suits;
             // if you have cards other than charged cards from unled suits
             if !unled_charges.contains_all(plays) {
                 // you must lead one of them

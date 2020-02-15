@@ -148,7 +148,7 @@ impl Bot {
             }
         }
 
-        if self.state.game.phase.charging() {
+        if self.state.game.is_charging() {
             if self.state.game.can_charge(self.state.seat)
                 && !self.state.game.done_charging[self.state.seat.idx()]
             {
@@ -156,13 +156,13 @@ impl Bot {
             } else {
                 None
             }
-        } else if self.state.game.phase.passing() {
+        } else if self.state.game.is_passing() {
             if !self.state.game.sent_pass[self.state.seat.idx()] {
                 Some(Action::Pass(self.algorithm.pass(&self.state)))
             } else {
                 None
             }
-        } else if self.state.game.phase.playing() {
+        } else if self.state.game.is_playing() {
             if (self.state.post_pass_hand - self.state.game.played).contains(Card::TwoClubs)
                 || Some(self.state.seat) == self.state.game.next_player
             {

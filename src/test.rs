@@ -10,6 +10,7 @@ use crate::{
 use log::LevelFilter;
 use r2d2_sqlite::SqliteConnectionManager;
 use std::future::Future;
+use tempfile::TempDir;
 
 macro_rules! s {
     ($string:ident) => {
@@ -50,27 +51,43 @@ macro_rules! matches {
     }
 }
 
-async fn run<F, T>(task: T) -> F::Output
-where
-    T: FnOnce(Database) -> F + Send + 'static,
-    F: Future + Send + 'static,
-    F::Output: Send + 'static,
-{
-    let _ = env_logger::builder()
-        .filter_level(LevelFilter::Info)
-        .is_test(true)
-        .try_init();
-    let result = tokio::spawn(async move {
-        let dir = tempfile::tempdir().unwrap();
-        let mut path = dir.path().to_owned();
+struct TestRunner {
+    _temp_dir: TempDir,
+    db: Database,
+    server: Server,
+}
+
+impl TestRunner {
+    fn new() -> Self {
+        let _ = env_logger::builder()
+            .filter_level(LevelFilter::Warn)
+            .is_test(true)
+            .try_init();
+        let temp_dir = tempfile::tempdir().unwrap();
+        let mut path = temp_dir.path().to_owned();
         path.push("test.db");
         let db = Database::new(SqliteConnectionManager::file(path)).unwrap();
-        task(db).await
-    })
-    .await;
-    match result {
-        Ok(v) => v,
-        Err(e) => std::panic::resume_unwind(e.into_panic()),
+        let server = Server::new(db.clone()).unwrap();
+        Self {
+            _temp_dir: temp_dir,
+            db,
+            server,
+        }
+    }
+
+    async fn run<F, T>(&self, task: T) -> F::Output
+    where
+        T: FnOnce(Database, Server) -> F + Send + 'static,
+        F: Future + Send + 'static,
+        F::Output: Send + 'static,
+    {
+        let db = self.db.clone();
+        let server = self.server.clone();
+        let result = tokio::spawn(async move { task(db, server).await }).await;
+        match result {
+            Ok(v) => v,
+            Err(e) => std::panic::resume_unwind(e.into_panic()),
+        }
     }
 }
 
@@ -138,8 +155,7 @@ fn test_cards_parse() {
 
 #[tokio::test(threaded_scheduler)]
 async fn test_join_unknown_game() -> Result<(), CardsError> {
-    async fn test(db: Database) -> Result<(), CardsError> {
-        let server = Server::new(db)?;
+    async fn test(_: Database, server: Server) -> Result<(), CardsError> {
         let id = GameId::new();
         let resp = server
             .join_game(id, h!(twilson), ChargingRules::Classic)
@@ -147,14 +163,12 @@ async fn test_join_unknown_game() -> Result<(), CardsError> {
         assert!(matches!(resp, Err(CardsError::UnknownGame(game)) if game == id));
         Ok(())
     }
-    run(test).await
+    TestRunner::new().run(test).await
 }
 
 #[tokio::test(threaded_scheduler)]
 async fn test_lobby() -> Result<(), CardsError> {
-    async fn test(db: Database) -> Result<(), CardsError> {
-        let server = Server::new(db)?;
-
+    async fn test(_: Database, server: Server) -> Result<(), CardsError> {
         let mut twilson = server.subscribe_lobby(s!(twilson)).await;
         assert_eq!(
             twilson.recv().await,
@@ -227,13 +241,12 @@ async fn test_lobby() -> Result<(), CardsError> {
         );
         Ok(())
     }
-    run(test).await
+    TestRunner::new().run(test).await
 }
 
 #[tokio::test(threaded_scheduler)]
 async fn test_new_game() -> Result<(), CardsError> {
-    async fn test(db: Database) -> Result<(), CardsError> {
-        let server = Server::new(db)?;
+    async fn test(_: Database, server: Server) -> Result<(), CardsError> {
         let id = server.new_game("twilson", ChargingRules::Classic).await;
         server
             .join_game(id, h!(tslatcher), ChargingRules::Classic)
@@ -261,12 +274,12 @@ async fn test_new_game() -> Result<(), CardsError> {
         }
         Ok(())
     }
-    run(test).await
+    TestRunner::new().run(test).await
 }
 
 #[tokio::test(threaded_scheduler)]
 async fn test_pass() -> Result<(), CardsError> {
-    async fn test(db: Database) -> Result<(), CardsError> {
+    async fn test(db: Database, server: Server) -> Result<(), CardsError> {
         let id = GameId::new();
         db.run_with_retry(|tx| {
             persist_events(
@@ -291,7 +304,6 @@ async fn test_pass() -> Result<(), CardsError> {
             )?;
             Ok(())
         })?;
-        let server = Server::new(db)?;
 
         assert!(matches!(
             server.pass_cards(id, "twilson", c!(A73S)).await,
@@ -322,13 +334,12 @@ async fn test_pass() -> Result<(), CardsError> {
 
         Ok(())
     }
-    run(test).await
+    TestRunner::new().run(test).await
 }
 
 #[tokio::test(threaded_scheduler)]
 async fn test_random_bot_game() -> Result<(), CardsError> {
-    async fn test(db: Database) -> Result<(), CardsError> {
-        let server = Server::new(db)?;
+    async fn test(_: Database, server: Server) -> Result<(), CardsError> {
         let id = server.new_game("fake", ChargingRules::Classic).await;
         server
             .join_game(
@@ -376,13 +387,14 @@ async fn test_random_bot_game() -> Result<(), CardsError> {
         while let Some(event) = rx.recv().await {
             if let GameFeEvent::Play { .. } = event {
                 plays += 1;
-                if plays == 208 {
-                    break;
-                }
             }
         }
         assert_eq!(plays, 208);
         Ok(())
     }
-    run(test).await
+    let runner = TestRunner::new();
+    for _ in 0..30 {
+        runner.run(test).await?;
+    }
+    Ok(())
 }
