@@ -594,6 +594,34 @@ impl GamePhase {
         }
     }
 
+    pub fn is_complete(&self) -> bool {
+        *self == GamePhase::Complete
+    }
+
+    pub fn is_passing(&self) -> bool {
+        use GamePhase::*;
+        match self {
+            PassLeft | PassRight | PassAcross | PassKeeper => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_charging(&self) -> bool {
+        use GamePhase::*;
+        match self {
+            ChargeLeft | ChargeRight | ChargeAcross | ChargeKeeper1 | ChargeKeeper2 => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_playing(&self) -> bool {
+        use GamePhase::*;
+        match self {
+            PlayLeft | PlayRight | PlayAcross | PlayKeeper => true,
+            _ => false,
+        }
+    }
+
     fn first_charger(&self, rules: ChargingRules) -> Option<Seat> {
         if rules.free() {
             return None;
@@ -664,34 +692,6 @@ impl GameState {
         }
     }
 
-    pub fn is_complete(&self) -> bool {
-        self.phase == GamePhase::Complete
-    }
-
-    pub fn is_passing(&self) -> bool {
-        use GamePhase::*;
-        match self.phase {
-            PassLeft | PassRight | PassAcross | PassKeeper => true,
-            _ => false,
-        }
-    }
-
-    pub fn is_charging(&self) -> bool {
-        use GamePhase::*;
-        match self.phase {
-            ChargeLeft | ChargeRight | ChargeAcross | ChargeKeeper1 | ChargeKeeper2 => true,
-            _ => false,
-        }
-    }
-
-    pub fn is_playing(&self) -> bool {
-        use GamePhase::*;
-        match self.phase {
-            PlayLeft | PlayRight | PlayAcross | PlayKeeper => true,
-            _ => false,
-        }
-    }
-
     fn charged_cards(&self) -> Cards {
         self.charged[0] | self.charged[1] | self.charged[2] | self.charged[3]
     }
@@ -705,7 +705,7 @@ impl GameState {
 
     pub fn apply(&mut self, event: &GameFeEvent) {
         match event {
-            GameFeEvent::Ping => {}
+            GameFeEvent::Ping | GameFeEvent::StartTrick { .. } | GameFeEvent::EndTrick { .. } => {}
             GameFeEvent::Sit {
                 north,
                 east,
@@ -773,7 +773,7 @@ impl GameState {
                             .current_trick
                             .contains(&self.current_trick[0].suit().nine()))
                 {
-                    let mut seat = *seat;
+                    let mut seat = seat.left();
                     let mut winning_seat = seat;
                     let mut winning_card = self.current_trick[0];
                     for card in &self.current_trick[1..] {
@@ -801,7 +801,7 @@ impl GameState {
             self.done_charging[seat.idx()] = true;
             if self.done_charging.iter().all(|b| *b) {
                 self.phase = self.phase.next(self.charge_count != 0);
-                if self.is_playing() {
+                if self.phase.is_playing() {
                     self.played = Cards::NONE;
                     self.led_suits = Cards::NONE;
                     self.current_trick.clear();

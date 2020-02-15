@@ -95,7 +95,6 @@ impl Bot {
         info!("{} handling event {:?}", self.state.name, event);
         self.state.game.apply(&event);
         match event {
-            GameFeEvent::Ping => {}
             GameFeEvent::Sit {
                 north,
                 east,
@@ -146,9 +145,10 @@ impl Bot {
             GameFeEvent::Play { seat, card } => {
                 self.algorithm.on_play(&self.state, seat, card);
             }
+            _ => {}
         }
 
-        if self.state.game.is_charging() {
+        if self.state.game.phase.is_charging() {
             if self.state.game.can_charge(self.state.seat)
                 && !self.state.game.done_charging[self.state.seat.idx()]
             {
@@ -156,13 +156,13 @@ impl Bot {
             } else {
                 None
             }
-        } else if self.state.game.is_passing() {
+        } else if self.state.game.phase.is_passing() {
             if !self.state.game.sent_pass[self.state.seat.idx()] {
                 Some(Action::Pass(self.algorithm.pass(&self.state)))
             } else {
                 None
             }
-        } else if self.state.game.is_playing() {
+        } else if self.state.game.phase.is_playing() {
             if (self.state.post_pass_hand - self.state.game.played).contains(Card::TwoClubs)
                 || Some(self.state.seat) == self.state.game.next_player
             {
