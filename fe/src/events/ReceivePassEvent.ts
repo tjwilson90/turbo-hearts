@@ -1,10 +1,10 @@
 import TWEEN from "@tweenjs/tween.js";
 import { TurboHearts } from "../game/TurboHearts";
 import { Event, ReceivePassData, SpriteCard } from "../types";
-import { getHandAccessor } from "./handAccessors";
 import { groupCards } from "./groupCards";
 import { getHandPosition } from "./handPositions";
 import { FAST_ANIMATION_DURATION, FAST_ANIMATION_DELAY } from "../const";
+import { getPlayerAccessor } from "./playerAccessors";
 
 const limboSources: {
   [pass: string]: {
@@ -16,42 +16,51 @@ const limboSources: {
 limboSources["Left"] = {};
 limboSources["Left"]["north"] = {};
 limboSources["Left"]["north"]["north"] = (th: TurboHearts) =>
-  th.rightLimboCards;
+  th.rightPlayer.limboCards;
 limboSources["Left"]["north"]["east"] = (th: TurboHearts) =>
-  th.bottomLimboCards;
-limboSources["Left"]["north"]["south"] = (th: TurboHearts) => th.leftLimboCards;
-limboSources["Left"]["north"]["west"] = (th: TurboHearts) => th.topLimboCards;
+  th.bottomPlayer.limboCards;
+limboSources["Left"]["north"]["south"] = (th: TurboHearts) =>
+  th.leftPlayer.limboCards;
+limboSources["Left"]["north"]["west"] = (th: TurboHearts) =>
+  th.topPlayer.limboCards;
 limboSources["Left"]["east"] = {};
-limboSources["Left"]["east"]["north"] = (th: TurboHearts) => th.topLimboCards;
-limboSources["Left"]["east"]["east"] = (th: TurboHearts) => th.rightLimboCards;
+limboSources["Left"]["east"]["north"] = (th: TurboHearts) =>
+  th.topPlayer.limboCards;
+limboSources["Left"]["east"]["east"] = (th: TurboHearts) =>
+  th.rightPlayer.limboCards;
 limboSources["Left"]["east"]["south"] = (th: TurboHearts) =>
-  th.bottomLimboCards;
-limboSources["Left"]["east"]["west"] = (th: TurboHearts) => th.leftLimboCards;
+  th.bottomPlayer.limboCards;
+limboSources["Left"]["east"]["west"] = (th: TurboHearts) =>
+  th.leftPlayer.limboCards;
 limboSources["Left"]["south"] = {};
-limboSources["Left"]["south"]["north"] = (th: TurboHearts) => th.leftLimboCards;
-limboSources["Left"]["south"]["east"] = (th: TurboHearts) => th.topLimboCards;
+limboSources["Left"]["south"]["north"] = (th: TurboHearts) =>
+  th.leftPlayer.limboCards;
+limboSources["Left"]["south"]["east"] = (th: TurboHearts) =>
+  th.topPlayer.limboCards;
 limboSources["Left"]["south"]["south"] = (th: TurboHearts) =>
-  th.rightLimboCards;
+  th.rightPlayer.limboCards;
 limboSources["Left"]["south"]["west"] = (th: TurboHearts) =>
-  th.bottomLimboCards;
+  th.bottomPlayer.limboCards;
 limboSources["Left"]["west"] = {};
 limboSources["Left"]["west"]["north"] = (th: TurboHearts) =>
-  th.bottomLimboCards;
-limboSources["Left"]["west"]["east"] = (th: TurboHearts) => th.leftLimboCards;
-limboSources["Left"]["west"]["south"] = (th: TurboHearts) => th.topLimboCards;
-limboSources["Left"]["west"]["west"] = (th: TurboHearts) => th.rightLimboCards;
+  th.bottomPlayer.limboCards;
+limboSources["Left"]["west"]["east"] = (th: TurboHearts) =>
+  th.leftPlayer.limboCards;
+limboSources["Left"]["west"]["south"] = (th: TurboHearts) =>
+  th.topPlayer.limboCards;
+limboSources["Left"]["west"]["west"] = (th: TurboHearts) =>
+  th.rightPlayer.limboCards;
 
 export class ReceivePassEvent implements Event {
   private tweens: TWEEN.Tween[] = [];
   constructor(private th: TurboHearts, private event: ReceivePassData) {}
 
   public begin() {
-    const handAccessor = getHandAccessor(
-      this.th,
+    const player = getPlayerAccessor(
       this.th.bottomSeat,
       this.event.to
-    );
-    const cards = handAccessor.getCards();
+    )(this.th);
+    const cards = player.cards;
     this.updateCards(cards);
 
     const handPosition = getHandPosition(this.th.bottomSeat, this.event.to);

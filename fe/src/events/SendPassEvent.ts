@@ -10,8 +10,9 @@ import {
 import { TurboHearts } from "../game/TurboHearts";
 import { Event, PointWithRotation, SendPassData } from "../types";
 import { groupCards } from "./groupCards";
-import { getHandAccessor } from "./handAccessors";
+import { getPlayerAccessor } from "./playerAccessors";
 import { getHandPosition } from "./handPositions";
+import { removeAll, pushAll } from "../util/array";
 
 const passDestinations: {
   [pass: string]: {
@@ -99,21 +100,20 @@ export class SendPassEvent implements Event {
   }
 
   private updateCards() {
-    const handAccessor = getHandAccessor(
-      this.th,
+    const player = getPlayerAccessor(
       this.th.bottomSeat,
       this.event.from
-    );
+    )(this.th);
     if (this.event.cards.length === 0) {
       // TODO pass hidden cards
       return { cardsToMove: [], cardsToKeep: [] };
     } else {
       const set = new Set(this.event.cards);
-      const hand = handAccessor.getCards();
-      const cardsToMove = hand.filter(c => set.has(c.card));
-      const cardsToKeep = hand.filter(c => !set.has(c.card));
-      handAccessor.setCards(cardsToKeep);
-      handAccessor.setLimboCards(cardsToMove);
+      // const hand = handAccessor.getCards();
+      const cardsToMove = player.cards.filter(c => set.has(c.card));
+      const cardsToKeep = player.cards.filter(c => !set.has(c.card));
+      removeAll(player.cards, cardsToMove);
+      pushAll(player.limboCards, cardsToMove);
       return { cardsToMove, cardsToKeep };
     }
   }

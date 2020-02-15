@@ -79,10 +79,10 @@ export const TEST_EVENTS = [
   { type: "recv_pass", to: "east", cards: ["2H", "8D", "QC"] },
   { type: "send_pass", from: "south", cards: ["2H", "8H", "KH"] },
   { type: "recv_pass", to: "south", cards: ["2C", "8C", "KC"] },
-  { type: "recv_pass", to: "west", cards: ["7D", "5D", "3D"] }
-  //   { type: "charge", seat: "north", cards: ["QS"] },
-  //   { type: "charge", seat: "east", cards: ["AH"] },
-  //   { type: "charge", seat: "west", cards: ["JD"] },
-  //   { type: "charge", seat: "north", cards: [] },
-  //   { type: "charge", seat: "east", cards: [] }
+  { type: "recv_pass", to: "west", cards: ["7D", "5D", "3D"] },
+  { type: "charge", seat: "north", cards: ["TC"] },
+  { type: "charge", seat: "east", cards: ["JD"] },
+  { type: "charge", seat: "west", cards: ["QS"] },
+  { type: "charge", seat: "north", cards: [] },
+  { type: "charge", seat: "east", cards: [] }
 ];

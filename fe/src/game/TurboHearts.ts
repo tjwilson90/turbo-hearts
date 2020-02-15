@@ -3,6 +3,12 @@ import TWEEN from "@tweenjs/tween.js";
 import * as PIXI from "pixi.js";
 import { TABLE_SIZE } from "../const";
 
+export interface Player {
+  cards: SpriteCard[];
+  limboCards: SpriteCard[];
+  chargedCards: SpriteCard[];
+}
+
 export class TurboHearts {
   public app: PIXI.Application;
 
@@ -10,14 +16,10 @@ export class TurboHearts {
 
   public bottomSeat: Seat = "east";
 
-  public topCards: SpriteCard[];
-  public rightCards: SpriteCard[];
-  public bottomCards: SpriteCard[];
-  public leftCards: SpriteCard[];
-  public topLimboCards: SpriteCard[];
-  public rightLimboCards: SpriteCard[];
-  public bottomLimboCards: SpriteCard[];
-  public leftLimboCards: SpriteCard[];
+  public topPlayer: Player;
+  public rightPlayer: Player;
+  public bottomPlayer: Player;
+  public leftPlayer: Player;
 
   private eventQueue: Event[] = [];
   private currentEvent: Event | undefined = undefined;

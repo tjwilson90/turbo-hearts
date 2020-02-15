@@ -11,7 +11,7 @@ import {
   TABLE_CENTER_Y,
   TOP
 } from "../const";
-import { TurboHearts } from "../game/TurboHearts";
+import { TurboHearts, Player } from "../game/TurboHearts";
 import {
   Card,
   DealEventData,
@@ -64,7 +64,7 @@ export class DealEvent implements Event {
     this.th.pass = event.pass;
   }
 
-  private createSpriteCards(hand: Card[], center: PointWithRotation) {
+  private createSpriteCards(hand: Card[], center: PointWithRotation): Player {
     const cards: SpriteCard[] = [];
     if (hand.length === 0) {
       for (let i = 0; i < 13; i++) {
@@ -122,23 +122,23 @@ export class DealEvent implements Event {
       this.th.app.stage.addChild(card.sprite);
       delay += interval;
     }
-    return cards;
+    return { cards, limboCards: [], chargedCards: [] };
   }
 
   public begin() {
-    this.th.topCards = this.createSpriteCards(
+    this.th.topPlayer = this.createSpriteCards(
       getCardsForPosition(this.th.bottomSeat, "top", this.event),
       TOP
     );
-    this.th.rightCards = this.createSpriteCards(
+    this.th.rightPlayer = this.createSpriteCards(
       getCardsForPosition(this.th.bottomSeat, "right", this.event),
       RIGHT
     );
-    this.th.bottomCards = this.createSpriteCards(
+    this.th.bottomPlayer = this.createSpriteCards(
       getCardsForPosition(this.th.bottomSeat, "bottom", this.event),
       BOTTOM
     );
-    this.th.leftCards = this.createSpriteCards(
+    this.th.leftPlayer = this.createSpriteCards(
       getCardsForPosition(this.th.bottomSeat, "left", this.event),
       LEFT
     );
