@@ -20,7 +20,7 @@ impl Random {
 impl Algorithm for Random {
     fn pass(&mut self, state: &BotState) -> Cards {
         let mut hand = state.pre_pass_hand.into_iter().collect::<Vec<_>>();
-        hand.shuffle(&mut rand::thread_rng());
+        hand.partial_shuffle(&mut rand::thread_rng(), 3);
         hand.into_iter().take(3).collect()
     }
 

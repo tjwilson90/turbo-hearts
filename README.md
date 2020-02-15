@@ -29,7 +29,6 @@ lobby event stream.
 Whenever a client subscribes to the lobby, a `join_lobby` message is sent to every other subscriber
 in the lobby.
 
-Response:
 ```json
 {
   "type": "join_lobby",
@@ -42,7 +41,6 @@ Response:
 Whenever a client subscribes to the lobby, a `lobby_state` message is sent to that subscriber
 containing the list of all active subscribers, as well as all incomplete games.
 
-Response:
 ```json
 {
   "type": "lobby_state",
@@ -58,7 +56,6 @@ Response:
 Whenever a new game is created, a `new_game` message is sent to all active subscribers containg the
 id of the game and the name of the player who created the game.
 
-Response:
 ```json
 {
   "type": "new_game",
@@ -72,7 +69,6 @@ Response:
 Whenever a player joins an existing game, a `join_game` message is sent to all active subscribers
 containing the id of the game and the name of the player who joined the game.
 
-Response:
 ```json
 {
   "type": "join_game",
@@ -86,7 +82,6 @@ Response:
 Whenever a player leaves an existing game, a `leave_game` message is sent to all active subscribers
 containing the id of the game and the name of the player who left.
 
-Response:
 ```json
 {
   "type": "leave_game",
@@ -99,7 +94,6 @@ Response:
 
 When the last play is made in a game a `finish_game` event is sent to all subscribers.
 
-Response:
 ```json
 {
   "type": "finish_game",
@@ -112,7 +106,6 @@ Response:
 Whenever a player disconnects from the lobby every stream, a `leave_lobby` message is sent to all
 other active subscribers.
 
-Response:
 ```json
 {
   "type": "leave_lobby",
@@ -223,7 +216,6 @@ seat.
 When a new hand starts, a `deal` event is sent indicating which cards were dealt to which players.
 Players in the game will receive a redacted event containing only their cards.
 
-Response:
 ```json
 {
   "type": "deal",
@@ -240,7 +232,6 @@ When a player makes a pass, a `send_pass` event is sent indicating who sent the 
 were passed. Players in the game other than the sender will receive a redacted event without the
 actual cards passed.
 
-Response:
 ```json
 {
   "type": "send_pass",
@@ -255,7 +246,6 @@ When a player receives a pass, a `recv_pass` event is sent indicating who receiv
 what cards they received. Players in the game other than the receiver will receive a redacted event
 without the actual cards passed.
 
-Response:
 ```json
 {
   "type": "recv_pass",
@@ -270,7 +260,6 @@ When a charge is made (including an empty charge), a `charge` event is sent indi
 charge and what cards they charged. If the charging rules use blind charges, players in the game
 other than the charger will receive a `blind_charge` event instead.
 
-Response:
 ```json
 {
   "type": "charge",
@@ -285,7 +274,6 @@ When a blind variant of the charging rules has been chosen and a charge is made 
 charge), a `blind_charge` event will be sent to other players in the game (the charger will receive
 a `charge` event) indicating who made the charge and how many cards they charged.
 
-Response:
 ```json
 {
   "type": "blind_charge",
@@ -299,7 +287,6 @@ Response:
 When a blind variant of the charging rules has been chosen and a round of charging completes, a
 `reveal_charges` event will be sent indicating what charges were made.
 
-Response:
 ```json
 {
   "type": "reveal_charges",
@@ -312,15 +299,41 @@ Response:
 
 #### Play
 
-When a play is made,a `play` event will be sent indicating who made the play, and what card they
+When a play is made, a `play` event will be sent indicating who made the play, and what card they
 played.
 
-Response:
 ```json
 {
   "type": "play",
   "seat": "west",
   "card": "8D"
+}
+```
+
+#### Start Trick
+
+When a new trick starts, a `start_trick` event will be sent indicating which player makes the lead.
+This event is sent for convenience; the information is imparts can be inferred from other events.
+
+Response:
+```json
+{
+  "type": "start_trick",
+  "leader": "north"
+}
+```
+
+#### End Trick
+
+When a trick is completed, an `end_trick` event will be sent indicating which player makes won the
+trick. This event is sent for convenience; the information is imparts can be inferred from other
+events.
+
+Response:
+```json
+{
+  "type": "end_trick",
+  "winner": "west"
 }
 ```
 
