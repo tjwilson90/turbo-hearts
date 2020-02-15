@@ -2,7 +2,7 @@ use crate::{
     bot::random::Random,
     cards::{Card, Cards, GameState},
     error::CardsError,
-    game::GameFeEvent,
+    game::GameEvent,
     server::Server,
     types::{GameId, Seat},
 };
@@ -91,11 +91,11 @@ impl Bot {
         Ok(())
     }
 
-    fn handle(&mut self, event: GameFeEvent) -> Option<Action> {
+    fn handle(&mut self, event: GameEvent) -> Option<Action> {
         info!("{} handling event {:?}", self.state.name, event);
         self.state.game.apply(&event);
         match event {
-            GameFeEvent::Sit {
+            GameEvent::Sit {
                 north,
                 east,
                 south,
@@ -115,7 +115,7 @@ impl Bot {
                 };
                 self.algorithm.on_sit(&self.state);
             }
-            GameFeEvent::Deal {
+            GameEvent::Deal {
                 north,
                 east,
                 south,
@@ -125,24 +125,24 @@ impl Bot {
                 self.state.post_pass_hand = self.state.pre_pass_hand;
                 self.algorithm.on_deal(&self.state);
             }
-            GameFeEvent::SendPass { from, cards } => {
+            GameEvent::SendPass { from, cards } => {
                 self.state.post_pass_hand -= cards;
                 self.algorithm.on_send_pass(&self.state, from, cards);
             }
-            GameFeEvent::RecvPass { to, cards } => {
+            GameEvent::RecvPass { to, cards } => {
                 self.state.post_pass_hand |= cards;
                 self.algorithm.on_recv_pass(&self.state, to, cards);
             }
-            GameFeEvent::BlindCharge { seat, count } => {
+            GameEvent::BlindCharge { seat, count } => {
                 self.algorithm.on_blind_charge(&self.state, seat, count);
             }
-            GameFeEvent::Charge { seat, cards } => {
+            GameEvent::Charge { seat, cards } => {
                 self.algorithm.on_charge(&self.state, seat, cards);
             }
-            GameFeEvent::RevealCharges { .. } => {
+            GameEvent::RevealCharges { .. } => {
                 self.algorithm.on_reveal_charges(&self.state);
             }
-            GameFeEvent::Play { seat, card } => {
+            GameEvent::Play { seat, card } => {
                 self.algorithm.on_play(&self.state, seat, card);
             }
             _ => {}

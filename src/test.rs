@@ -2,7 +2,7 @@ use crate::{
     cards::{Card, Cards, GamePhase},
     db::Database,
     error::CardsError,
-    game::{persist_events, GameBeEvent, GameFeEvent},
+    game::{persist_events, GameEvent},
     lobby::LobbyEvent,
     server::Server,
     types::{ChargingRules, GameId, Player},
@@ -260,7 +260,7 @@ async fn test_new_game() -> Result<(), CardsError> {
 
         let mut twilson = server.subscribe_game(id, s!(twilson)).await?;
         match twilson.recv().await {
-            Some(GameFeEvent::Sit {
+            Some(GameEvent::Sit {
                 north,
                 east,
                 south,
@@ -287,14 +287,14 @@ async fn test_pass() -> Result<(), CardsError> {
                 id,
                 0,
                 &[
-                    GameBeEvent::Sit {
+                    GameEvent::Sit {
                         north: h!(twilson),
                         east: h!(dcervelli),
                         south: h!(tslatcher),
                         west: h!(carrino),
                         rules: ChargingRules::Classic,
                     },
-                    GameBeEvent::Deal {
+                    GameEvent::Deal {
                         north: c!(A764S A96H AJD K863C),
                         east: c!(JT953S QT4H K93D ATC),
                         south: c!(2S 875H T542D QJ752C),
@@ -385,7 +385,7 @@ async fn test_random_bot_game() -> Result<(), CardsError> {
         let mut rx = server.subscribe_game(id, s!(foo)).await?;
         let mut plays = 0;
         while let Some(event) = rx.recv().await {
-            if let GameFeEvent::Play { .. } = event {
+            if let GameEvent::Play { .. } = event {
                 plays += 1;
             }
         }
