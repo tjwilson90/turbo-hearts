@@ -566,6 +566,15 @@ impl FromIterator<Card> for Cards {
 }
 
 #[repr(u8)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub enum PassDirection {
+    Left,
+    Right,
+    Across,
+    Keeper,
+}
+
+#[repr(u8)]
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum GamePhase {
     PassLeft,
