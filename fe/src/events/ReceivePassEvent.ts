@@ -15,61 +15,37 @@ const limboSources: {
 } = {};
 limboSources["Left"] = {};
 limboSources["Left"]["north"] = {};
-limboSources["Left"]["north"]["north"] = (th: TurboHearts) =>
-  th.rightPlayer.limboCards;
-limboSources["Left"]["north"]["east"] = (th: TurboHearts) =>
-  th.bottomPlayer.limboCards;
-limboSources["Left"]["north"]["south"] = (th: TurboHearts) =>
-  th.leftPlayer.limboCards;
-limboSources["Left"]["north"]["west"] = (th: TurboHearts) =>
-  th.topPlayer.limboCards;
+limboSources["Left"]["north"]["north"] = (th: TurboHearts) => th.rightPlayer.limboCards;
+limboSources["Left"]["north"]["east"] = (th: TurboHearts) => th.bottomPlayer.limboCards;
+limboSources["Left"]["north"]["south"] = (th: TurboHearts) => th.leftPlayer.limboCards;
+limboSources["Left"]["north"]["west"] = (th: TurboHearts) => th.topPlayer.limboCards;
 limboSources["Left"]["east"] = {};
-limboSources["Left"]["east"]["north"] = (th: TurboHearts) =>
-  th.topPlayer.limboCards;
-limboSources["Left"]["east"]["east"] = (th: TurboHearts) =>
-  th.rightPlayer.limboCards;
-limboSources["Left"]["east"]["south"] = (th: TurboHearts) =>
-  th.bottomPlayer.limboCards;
-limboSources["Left"]["east"]["west"] = (th: TurboHearts) =>
-  th.leftPlayer.limboCards;
+limboSources["Left"]["east"]["north"] = (th: TurboHearts) => th.topPlayer.limboCards;
+limboSources["Left"]["east"]["east"] = (th: TurboHearts) => th.rightPlayer.limboCards;
+limboSources["Left"]["east"]["south"] = (th: TurboHearts) => th.bottomPlayer.limboCards;
+limboSources["Left"]["east"]["west"] = (th: TurboHearts) => th.leftPlayer.limboCards;
 limboSources["Left"]["south"] = {};
-limboSources["Left"]["south"]["north"] = (th: TurboHearts) =>
-  th.leftPlayer.limboCards;
-limboSources["Left"]["south"]["east"] = (th: TurboHearts) =>
-  th.topPlayer.limboCards;
-limboSources["Left"]["south"]["south"] = (th: TurboHearts) =>
-  th.rightPlayer.limboCards;
-limboSources["Left"]["south"]["west"] = (th: TurboHearts) =>
-  th.bottomPlayer.limboCards;
+limboSources["Left"]["south"]["north"] = (th: TurboHearts) => th.leftPlayer.limboCards;
+limboSources["Left"]["south"]["east"] = (th: TurboHearts) => th.topPlayer.limboCards;
+limboSources["Left"]["south"]["south"] = (th: TurboHearts) => th.rightPlayer.limboCards;
+limboSources["Left"]["south"]["west"] = (th: TurboHearts) => th.bottomPlayer.limboCards;
 limboSources["Left"]["west"] = {};
-limboSources["Left"]["west"]["north"] = (th: TurboHearts) =>
-  th.bottomPlayer.limboCards;
-limboSources["Left"]["west"]["east"] = (th: TurboHearts) =>
-  th.leftPlayer.limboCards;
-limboSources["Left"]["west"]["south"] = (th: TurboHearts) =>
-  th.topPlayer.limboCards;
-limboSources["Left"]["west"]["west"] = (th: TurboHearts) =>
-  th.rightPlayer.limboCards;
+limboSources["Left"]["west"]["north"] = (th: TurboHearts) => th.bottomPlayer.limboCards;
+limboSources["Left"]["west"]["east"] = (th: TurboHearts) => th.leftPlayer.limboCards;
+limboSources["Left"]["west"]["south"] = (th: TurboHearts) => th.topPlayer.limboCards;
+limboSources["Left"]["west"]["west"] = (th: TurboHearts) => th.rightPlayer.limboCards;
 
 export class ReceivePassEvent implements Event {
   private tweens: TWEEN.Tween[] = [];
   constructor(private th: TurboHearts, private event: ReceivePassData) {}
 
   public begin() {
-    const player = getPlayerAccessor(
-      this.th.bottomSeat,
-      this.event.to
-    )(this.th);
+    const player = getPlayerAccessor(this.th.bottomSeat, this.event.to)(this.th);
     const cards = player.cards;
     this.updateCards(cards);
 
     const handPosition = getHandPosition(this.th.bottomSeat, this.event.to);
-    const cardDests = groupCards(
-      cards,
-      handPosition.x,
-      handPosition.y,
-      handPosition.rotation
-    );
+    const cardDests = groupCards(cards, handPosition.x, handPosition.y, handPosition.rotation);
     let delay = 0;
     let i = 0;
     for (const card of cards) {
@@ -97,9 +73,7 @@ export class ReceivePassEvent implements Event {
   }
 
   private updateCards(hand: SpriteCard[]) {
-    const limboSource = limboSources[this.th.pass][this.th.bottomSeat][
-      this.event.to
-    ](this.th);
+    const limboSource = limboSources[this.th.pass][this.th.bottomSeat][this.event.to](this.th);
     while (limboSource.length > 0) {
       // Note: this is mutating both hand and limbo arrays
       hand.push(limboSource.pop());

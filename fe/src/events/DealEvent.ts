@@ -12,15 +12,7 @@ import {
   TOP
 } from "../const";
 import { TurboHearts, Player } from "../game/TurboHearts";
-import {
-  Card,
-  DealEventData,
-  Event,
-  PointWithRotation,
-  SpriteCard,
-  Position,
-  Seat
-} from "../types";
+import { Card, DealEventData, Event, PointWithRotation, SpriteCard, Position, Seat } from "../types";
 import { groupCards } from "./groupCards";
 
 const handAccessors: {
@@ -49,11 +41,7 @@ handAccessors["west"]["right"] = event => event.south;
 handAccessors["west"]["bottom"] = event => event.west;
 handAccessors["west"]["left"] = event => event.north;
 
-function getCardsForPosition(
-  bottomSeat: Seat,
-  position: Position,
-  event: DealEventData
-) {
+function getCardsForPosition(bottomSeat: Seat, position: Position, event: DealEventData) {
   return handAccessors[bottomSeat][position](event);
 }
 
@@ -105,9 +93,7 @@ export class DealEvent implements Event {
           .onComplete(() => {
             if (card.card !== "BACK") {
               card.hidden = false;
-              card.sprite.texture = this.th.app.loader.resources[
-                card.card
-              ].texture;
+              card.sprite.texture = this.th.app.loader.resources[card.card].texture;
             }
           })
           .start()
@@ -126,22 +112,13 @@ export class DealEvent implements Event {
   }
 
   public begin() {
-    this.th.topPlayer = this.createSpriteCards(
-      getCardsForPosition(this.th.bottomSeat, "top", this.event),
-      TOP
-    );
-    this.th.rightPlayer = this.createSpriteCards(
-      getCardsForPosition(this.th.bottomSeat, "right", this.event),
-      RIGHT
-    );
+    this.th.topPlayer = this.createSpriteCards(getCardsForPosition(this.th.bottomSeat, "top", this.event), TOP);
+    this.th.rightPlayer = this.createSpriteCards(getCardsForPosition(this.th.bottomSeat, "right", this.event), RIGHT);
     this.th.bottomPlayer = this.createSpriteCards(
       getCardsForPosition(this.th.bottomSeat, "bottom", this.event),
       BOTTOM
     );
-    this.th.leftPlayer = this.createSpriteCards(
-      getCardsForPosition(this.th.bottomSeat, "left", this.event),
-      LEFT
-    );
+    this.th.leftPlayer = this.createSpriteCards(getCardsForPosition(this.th.bottomSeat, "left", this.event), LEFT);
   }
 
   public isFinished() {

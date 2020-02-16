@@ -55,11 +55,7 @@ export interface SpriteCard {
   hidden: boolean;
 }
 
-export type EventData =
-  | DealEventData
-  | SendPassData
-  | ReceivePassData
-  | ChargeEventData;
+export type EventData = DealEventData | SendPassData | ReceivePassData | ChargeEventData;
 
 export type Card =
   | "BACK"

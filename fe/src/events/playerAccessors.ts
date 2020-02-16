@@ -6,10 +6,8 @@ interface PlayerAccessor {
 }
 
 const TOP_PLAYER_ACCESSOR: PlayerAccessor = (th: TurboHearts) => th.topPlayer;
-const RIGHT_PLAYER_ACCESSOR: PlayerAccessor = (th: TurboHearts) =>
-  th.rightPlayer;
-const BOTTOM_PLAYER_ACCESSOR: PlayerAccessor = (th: TurboHearts) =>
-  th.bottomPlayer;
+const RIGHT_PLAYER_ACCESSOR: PlayerAccessor = (th: TurboHearts) => th.rightPlayer;
+const BOTTOM_PLAYER_ACCESSOR: PlayerAccessor = (th: TurboHearts) => th.bottomPlayer;
 const LEFT_PLAYER_ACCESSOR: PlayerAccessor = (th: TurboHearts) => th.leftPlayer;
 
 const playerAccessors: {

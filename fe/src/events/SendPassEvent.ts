@@ -52,12 +52,7 @@ export class SendPassEvent implements Event {
     let delay = 0;
     let i = 0;
 
-    const cardDests = groupCards(
-      cards.cardsToMove,
-      passDestination.x,
-      passDestination.y,
-      passDestination.rotation
-    );
+    const cardDests = groupCards(cards.cardsToMove, passDestination.x, passDestination.y, passDestination.rotation);
     for (const card of cards.cardsToMove) {
       this.tweens.push(
         new TWEEN.Tween(card.sprite.position)
@@ -77,16 +72,8 @@ export class SendPassEvent implements Event {
       delay += FAST_ANIMATION_DELAY;
       i++;
     }
-    const handDestination = getHandPosition(
-      this.th.bottomSeat,
-      this.event.from
-    );
-    const keepDests = groupCards(
-      cards.cardsToKeep,
-      handDestination.x,
-      handDestination.y,
-      handDestination.rotation
-    );
+    const handDestination = getHandPosition(this.th.bottomSeat, this.event.from);
+    const keepDests = groupCards(cards.cardsToKeep, handDestination.x, handDestination.y, handDestination.rotation);
     i = 0;
     for (const card of cards.cardsToKeep) {
       this.tweens.push(
@@ -100,10 +87,7 @@ export class SendPassEvent implements Event {
   }
 
   private updateCards() {
-    const player = getPlayerAccessor(
-      this.th.bottomSeat,
-      this.event.from
-    )(this.th);
+    const player = getPlayerAccessor(this.th.bottomSeat, this.event.from)(this.th);
     if (this.event.cards.length === 0) {
       // TODO pass hidden cards
       return { cardsToMove: [], cardsToKeep: [] };
