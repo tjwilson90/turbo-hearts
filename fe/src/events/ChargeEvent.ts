@@ -1,9 +1,5 @@
 import TWEEN from "@tweenjs/tween.js";
-import {
-  CHARGE_OVERLAP,
-  FAST_ANIMATION_DELAY,
-  FAST_ANIMATION_DURATION
-} from "../const";
+import { CHARGE_OVERLAP, FAST_ANIMATION_DELAY, FAST_ANIMATION_DURATION } from "../const";
 import { TurboHearts } from "../game/TurboHearts";
 import { ChargeEventData, Event } from "../types";
 import { pushAll, removeAll } from "../util/array";
@@ -17,22 +13,14 @@ export class ChargeEvent implements Event {
   constructor(private th: TurboHearts, private event: ChargeEventData) {}
 
   public begin() {
-    const player = getPlayerAccessor(
-      this.th.bottomSeat,
-      this.event.seat
-    )(this.th);
+    const player = getPlayerAccessor(this.th.bottomSeat, this.event.seat)(this.th);
 
     const chargeCards = spriteCardsOf(player.cards, this.event.cards);
     removeAll(player.cards, chargeCards);
     pushAll(player.chargedCards, chargeCards);
 
     const handPosition = getHandPosition(this.th.bottomSeat, this.event.seat);
-    const cardDests = groupCards(
-      player.cards,
-      handPosition.x,
-      handPosition.y,
-      handPosition.rotation
-    );
+    const cardDests = groupCards(player.cards, handPosition.x, handPosition.y, handPosition.rotation);
     let delay = 0;
     let i = 0;
     for (const card of player.cards) {
