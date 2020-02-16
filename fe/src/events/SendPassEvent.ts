@@ -1,19 +1,11 @@
 import TWEEN from "@tweenjs/tween.js";
-import {
-  BOTTOM_LEFT,
-  BOTTOM_RIGHT,
-  TOP_LEFT,
-  TOP_RIGHT,
-  FAST_ANIMATION_DELAY,
-  FAST_ANIMATION_DURATION
-} from "../const";
+import { BOTTOM_LEFT, BOTTOM_RIGHT, TOP_LEFT, TOP_RIGHT } from "../const";
 import { TurboHearts } from "../game/TurboHearts";
 import { Event, PointWithRotation, SendPassEventData } from "../types";
-import { groupCards } from "./groupCards";
-import { getPlayerAccessor } from "./playerAccessors";
-import { getHandPosition } from "./handPositions";
-import { removeAll, pushAll } from "../util/array";
+import { pushAll, removeAll } from "../util/array";
+import { animateCards, animateHand } from "./animations/animations";
 import { spriteCardsOf, spriteCardsOfNot } from "./helpers";
+import { getPlayerAccessor } from "./playerAccessors";
 
 const passDestinations: {
   [pass: string]: {
@@ -49,41 +41,10 @@ export class SendPassEvent implements Event {
   public begin() {
     const passDestination = this.getPassDestination();
     const cards = this.updateCards();
-    let delay = 0;
-    let i = 0;
-
-    const cardDests = groupCards(cards.cardsToMove, passDestination.x, passDestination.y, passDestination.rotation);
-    for (const card of cards.cardsToMove) {
-      this.tweens.push(
-        new TWEEN.Tween(card.sprite.position)
-          .to(cardDests[i], FAST_ANIMATION_DURATION)
-          .delay(delay)
-          .easing(TWEEN.Easing.Quadratic.Out)
-          .start()
-      );
-      this.tweens.push(
-        new TWEEN.Tween(card.sprite)
-          .to({ rotation: passDestination.rotation }, FAST_ANIMATION_DURATION)
-          .delay(delay)
-          .easing(TWEEN.Easing.Quadratic.Out)
-          .start()
-      );
-
-      delay += FAST_ANIMATION_DELAY;
-      i++;
-    }
-    const handDestination = getHandPosition(this.th.bottomSeat, this.event.from);
-    const keepDests = groupCards(cards.cardsToKeep, handDestination.x, handDestination.y, handDestination.rotation);
-    i = 0;
-    for (const card of cards.cardsToKeep) {
-      this.tweens.push(
-        new TWEEN.Tween(card.sprite.position)
-          .to(keepDests[i], FAST_ANIMATION_DURATION)
-          .easing(TWEEN.Easing.Quadratic.Out)
-          .start()
-      );
-      i++;
-    }
+    this.tweens.push(
+      ...animateCards(cards.cardsToMove, passDestination.x, passDestination.y, passDestination.rotation)
+    );
+    this.tweens.push(...animateHand(this.th, this.event.from));
   }
 
   private updateCards() {

@@ -5,6 +5,7 @@ import { groupCards } from "./groupCards";
 import { getHandPosition } from "./handPositions";
 import { FAST_ANIMATION_DURATION, FAST_ANIMATION_DELAY } from "../const";
 import { getPlayerAccessor } from "./playerAccessors";
+import { animateHand } from "./animations/animations";
 
 const limboSources: {
   [pass: string]: {
@@ -43,31 +44,12 @@ export class ReceivePassEvent implements Event {
     const player = getPlayerAccessor(this.th.bottomSeat, this.event.to)(this.th);
     const cards = player.cards;
     this.updateCards(cards);
-
-    const handPosition = getHandPosition(this.th.bottomSeat, this.event.to);
-    const cardDests = groupCards(cards, handPosition.x, handPosition.y, handPosition.rotation);
-    let delay = 0;
     let i = 0;
     for (const card of cards) {
-      card.sprite.zIndex = i;
-      this.tweens.push(
-        new TWEEN.Tween(card.sprite.position)
-          .to(cardDests[i], FAST_ANIMATION_DURATION)
-          .delay(delay)
-          .easing(TWEEN.Easing.Quadratic.Out)
-          .start()
-      );
-      this.tweens.push(
-        new TWEEN.Tween(card.sprite)
-          .to({ rotation: handPosition.rotation }, FAST_ANIMATION_DURATION)
-          .delay(delay)
-          .easing(TWEEN.Easing.Quadratic.Out)
-          .start()
-      );
-
-      delay += FAST_ANIMATION_DELAY;
-      i++;
+      card.sprite.zIndex = i++;
     }
+    this.tweens.push(...animateHand(this.th, this.event.to));
+
     // TODO: this is resulting in jarring card flip
     this.th.app.stage.sortChildren();
   }

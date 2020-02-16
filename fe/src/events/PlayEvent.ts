@@ -1,27 +1,25 @@
 import TWEEN from "@tweenjs/tween.js";
 import { TurboHearts } from "../game/TurboHearts";
-import { ChargeEventData, Event } from "../types";
+import { Event, PlayEventData } from "../types";
 import { pushAll, removeAll } from "../util/array";
-import { animateCharges, animatePlay, animateHand } from "./animations/animations";
+import { animateHand, animatePlay } from "./animations/animations";
 import { spriteCardsOf } from "./helpers";
 import { getPlayerAccessor } from "./playerAccessors";
 
-export class ChargeEvent implements Event {
+export class PlayEvent implements Event {
   private tweens: TWEEN.Tween[] = [];
-  constructor(private th: TurboHearts, private event: ChargeEventData) {}
+  constructor(private th: TurboHearts, private event: PlayEventData) {}
 
   public begin() {
-    if (this.event.cards.length === 0) {
-      return;
-    }
     const player = getPlayerAccessor(this.th.bottomSeat, this.event.seat)(this.th);
+    const cards = spriteCardsOf([...player.cards, ...player.chargedCards], [this.event.card]);
 
-    const chargeCards = spriteCardsOf(player.cards, this.event.cards);
-    removeAll(player.cards, chargeCards);
-    pushAll(player.chargedCards, chargeCards);
+    pushAll(player.playCards, cards);
+    removeAll(player.cards, cards);
+    removeAll(player.chargedCards, cards);
 
     this.tweens.push(...animateHand(this.th, this.event.seat));
-    this.tweens.push(...animateCharges(this.th, this.event.seat));
+    this.tweens.push(...animatePlay(this.th, this.event.seat));
   }
 
   public isFinished() {

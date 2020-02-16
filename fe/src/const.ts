@@ -24,11 +24,15 @@ export const TOP_Y = CARD_DISPLAY_HEIGHT * TABLE_CARD_UNDERLAP;
 export const TOP_ROTATION = Math.PI;
 export const TOP_CHARGE_X = TOP_X;
 export const TOP_CHARGE_Y = CHARGE_OFFSET;
+export const TOP_PLAY_X = TOP_X;
+export const TOP_PLAY_Y = CHARGE_OFFSET + CARD_DISPLAY_HEIGHT;
 export const TOP = {
   x: TOP_X,
   y: TOP_Y,
   chargeX: TOP_CHARGE_X,
   chargeY: TOP_CHARGE_Y,
+  playX: TOP_PLAY_X,
+  playY: TOP_PLAY_Y,
   rotation: TOP_ROTATION
 };
 
@@ -37,11 +41,15 @@ export const RIGHT_Y = TABLE_CENTER_Y;
 export const RIGHT_ROTATION = -Math.PI / 2;
 export const RIGHT_CHARGE_X = TABLE_SIZE - CHARGE_OFFSET;
 export const RIGHT_CHARGE_Y = TABLE_CENTER_Y;
+export const RIGHT_PLAY_X = TABLE_SIZE - (CHARGE_OFFSET + CARD_DISPLAY_HEIGHT);
+export const RIGHT_PLAY_Y = TABLE_CENTER_Y;
 export const RIGHT = {
   x: RIGHT_X,
   y: RIGHT_Y,
   chargeX: RIGHT_CHARGE_X,
   chargeY: RIGHT_CHARGE_Y,
+  playX: RIGHT_PLAY_X,
+  playY: RIGHT_PLAY_Y,
   rotation: RIGHT_ROTATION
 };
 
@@ -50,11 +58,15 @@ export const BOTTOM_Y = TABLE_SIZE - CARD_DISPLAY_HEIGHT * TABLE_CARD_UNDERLAP;
 export const BOTTOM_ROTATION = 0;
 export const BOTTOM_CHARGE_X = TABLE_CENTER_X;
 export const BOTTOM_CHARGE_Y = TABLE_SIZE - CHARGE_OFFSET;
+export const BOTTOM_PLAY_X = TABLE_CENTER_X;
+export const BOTTOM_PLAY_Y = TABLE_SIZE - (CHARGE_OFFSET + CARD_DISPLAY_HEIGHT);
 export const BOTTOM = {
   x: BOTTOM_X,
   y: BOTTOM_Y,
   chargeX: BOTTOM_CHARGE_X,
   chargeY: BOTTOM_CHARGE_Y,
+  playX: BOTTOM_PLAY_X,
+  playY: BOTTOM_PLAY_Y,
   rotation: BOTTOM_ROTATION
 };
 
@@ -63,11 +75,15 @@ export const LEFT_Y = TABLE_CENTER_Y;
 export const LEFT_ROTATION = Math.PI / 2;
 export const LEFT_CHARGE_X = CHARGE_OFFSET;
 export const LEFT_CHARGE_Y = TABLE_CENTER_Y;
+export const LEFT_PLAY_X = CHARGE_OFFSET + CARD_DISPLAY_HEIGHT;
+export const LEFT_PLAY_Y = TABLE_CENTER_Y;
 export const LEFT = {
   x: LEFT_X,
   y: LEFT_Y,
   chargeX: LEFT_CHARGE_X,
   chargeY: LEFT_CHARGE_Y,
+  playX: LEFT_PLAY_X,
+  playY: LEFT_PLAY_Y,
   rotation: LEFT_ROTATION
 };
 

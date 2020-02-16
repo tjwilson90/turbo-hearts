@@ -11,10 +11,9 @@ import {
   TABLE_CENTER_Y,
   TOP
 } from "../const";
-import { TurboHearts, Player } from "../game/TurboHearts";
-import { Card, DealEventData, Event, PointWithRotation, SpriteCard, Position, Seat } from "../types";
+import { TurboHearts } from "../game/TurboHearts";
+import { Card, DealEventData, Event, PointWithRotation, Position, Seat, SpriteCard } from "../types";
 import { groupCards } from "./groupCards";
-import { getPlayerAccessor } from "./playerAccessors";
 
 const handAccessors: {
   [bottomSeat: string]: {
