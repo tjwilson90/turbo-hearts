@@ -1,5 +1,5 @@
 use crate::{
-    cards::{Card, Cards, GamePhase, GameState, Suit},
+    cards::{Card, Cards, GamePhase, GameState, PassDirection, Suit},
     db::Database,
     error::CardsError,
     hacks::{unbounded_channel, Mutex, UnboundedReceiver, UnboundedSender},
@@ -95,7 +95,7 @@ impl Games {
                         west: participants[3].player.clone(),
                         rules: participants[0].rules,
                     },
-                    GameEvent::deal(),
+                    GameEvent::deal(PassDirection::Left),
                 ],
             )
         })?;
@@ -208,10 +208,15 @@ impl Games {
             Some(seat) => {
                 game.verify_play(id, seat, card)?;
                 let mut events = vec![GameEvent::Play { seat, card }];
-                if game.state.played | card == Cards::ALL
-                    && game.state.phase != GamePhase::PlayKeeper
-                {
-                    events.push(GameEvent::deal());
+                if game.state.played | card == Cards::ALL {
+                    match game.state.phase {
+                        GamePhase::PlayLeft => events.push(GameEvent::deal(PassDirection::Right)),
+                        GamePhase::PlayRight => events.push(GameEvent::deal(PassDirection::Across)),
+                        GamePhase::PlayAcross => {
+                            events.push(GameEvent::deal(PassDirection::Keeper))
+                        }
+                        _ => {}
+                    };
                 }
                 self.db.run_with_retry(|tx| {
                     persist_events(&tx, id, game.events.len(), &events)?;
@@ -287,6 +292,7 @@ impl Game {
                 east,
                 south,
                 west,
+                ..
             } => {
                 self.pre_pass_hand[Seat::North.idx()] = *north;
                 self.post_pass_hand[Seat::North.idx()] = *north;
@@ -333,7 +339,7 @@ impl Game {
                             winner: self.state.next_player.unwrap(),
                         },
                     );
-                    if !self.state.phase.is_complete() {
+                    if self.state.phase.is_playing() {
                         self.apply(
                             broadcast,
                             &GameEvent::StartTrick {
@@ -482,6 +488,7 @@ pub enum GameEvent {
         east: Cards,
         south: Cards,
         west: Cards,
+        pass: PassDirection,
     },
     SendPass {
         from: Seat,
@@ -518,7 +525,7 @@ pub enum GameEvent {
 }
 
 impl GameEvent {
-    fn deal() -> Self {
+    fn deal(pass: PassDirection) -> Self {
         let mut deck = Cards::ALL.into_iter().collect::<Vec<_>>();
         deck.shuffle(&mut rand::thread_rng());
         GameEvent::Deal {
@@ -526,6 +533,7 @@ impl GameEvent {
             east: deck[13..26].iter().cloned().collect(),
             south: deck[26..39].iter().cloned().collect(),
             west: deck[39..52].iter().cloned().collect(),
+            pass,
         }
     }
 
@@ -543,30 +551,35 @@ impl GameEvent {
                 east,
                 south,
                 west,
+                pass,
             } => match seat {
                 Some(Seat::North) => GameEvent::Deal {
                     north: *north,
                     east: Cards::NONE,
                     south: Cards::NONE,
                     west: Cards::NONE,
+                    pass: *pass,
                 },
                 Some(Seat::East) => GameEvent::Deal {
                     north: Cards::NONE,
                     east: *east,
                     south: Cards::NONE,
                     west: Cards::NONE,
+                    pass: *pass,
                 },
                 Some(Seat::South) => GameEvent::Deal {
                     north: Cards::NONE,
                     east: Cards::NONE,
                     south: *south,
                     west: Cards::NONE,
+                    pass: *pass,
                 },
                 Some(Seat::West) => GameEvent::Deal {
                     north: Cards::NONE,
                     east: Cards::NONE,
                     south: Cards::NONE,
                     west: *west,
+                    pass: *pass,
                 },
                 None => self.clone(),
             },
