@@ -1,3 +1,5 @@
+import { PlayerCardPositions } from "./types";
+
 export const CARD_SCALE = 0.5;
 export const CARD_NATIVE_WIDTH = 212;
 export const CARD_NATIVE_HEIGHT = 329;
@@ -27,13 +29,16 @@ export const TOP_CHARGE_X = TOP_X;
 export const TOP_CHARGE_Y = CHARGE_OFFSET;
 export const TOP_PLAY_X = TOP_X;
 export const TOP_PLAY_Y = CHARGE_OFFSET + CARD_DISPLAY_HEIGHT + CARD_MARGIN;
-export const TOP = {
+export const TOP: PlayerCardPositions = {
   x: TOP_X,
   y: TOP_Y,
   chargeX: TOP_CHARGE_X,
   chargeY: TOP_CHARGE_Y,
   playX: TOP_PLAY_X,
   playY: TOP_PLAY_Y,
+  pileX: TOP_X,
+  pileY: TOP_Y + CARD_DISPLAY_HEIGHT / 2,
+  pileRotation: Math.PI / 2,
   rotation: TOP_ROTATION
 };
 
@@ -44,13 +49,16 @@ export const RIGHT_CHARGE_X = TABLE_SIZE - CHARGE_OFFSET;
 export const RIGHT_CHARGE_Y = TABLE_CENTER_Y;
 export const RIGHT_PLAY_X = TABLE_SIZE - (CHARGE_OFFSET + CARD_DISPLAY_HEIGHT + CARD_MARGIN);
 export const RIGHT_PLAY_Y = TABLE_CENTER_Y;
-export const RIGHT = {
+export const RIGHT: PlayerCardPositions = {
   x: RIGHT_X,
   y: RIGHT_Y,
   chargeX: RIGHT_CHARGE_X,
   chargeY: RIGHT_CHARGE_Y,
   playX: RIGHT_PLAY_X,
   playY: RIGHT_PLAY_Y,
+  pileX: RIGHT_X - CARD_DISPLAY_HEIGHT / 2,
+  pileY: RIGHT_Y,
+  pileRotation: 0,
   rotation: RIGHT_ROTATION
 };
 
@@ -61,13 +69,16 @@ export const BOTTOM_CHARGE_X = TABLE_CENTER_X;
 export const BOTTOM_CHARGE_Y = TABLE_SIZE - CHARGE_OFFSET;
 export const BOTTOM_PLAY_X = TABLE_CENTER_X;
 export const BOTTOM_PLAY_Y = TABLE_SIZE - (CHARGE_OFFSET + CARD_DISPLAY_HEIGHT + CARD_MARGIN);
-export const BOTTOM = {
+export const BOTTOM: PlayerCardPositions = {
   x: BOTTOM_X,
   y: BOTTOM_Y,
   chargeX: BOTTOM_CHARGE_X,
   chargeY: BOTTOM_CHARGE_Y,
   playX: BOTTOM_PLAY_X,
   playY: BOTTOM_PLAY_Y,
+  pileX: BOTTOM_X,
+  pileY: BOTTOM_Y - CARD_DISPLAY_HEIGHT / 2,
+  pileRotation: Math.PI / 2,
   rotation: BOTTOM_ROTATION
 };
 
@@ -78,13 +89,16 @@ export const LEFT_CHARGE_X = CHARGE_OFFSET;
 export const LEFT_CHARGE_Y = TABLE_CENTER_Y;
 export const LEFT_PLAY_X = CHARGE_OFFSET + CARD_DISPLAY_HEIGHT + CARD_MARGIN;
 export const LEFT_PLAY_Y = TABLE_CENTER_Y;
-export const LEFT = {
+export const LEFT: PlayerCardPositions = {
   x: LEFT_X,
   y: LEFT_Y,
   chargeX: LEFT_CHARGE_X,
   chargeY: LEFT_CHARGE_Y,
   playX: LEFT_PLAY_X,
   playY: LEFT_PLAY_Y,
+  pileX: LEFT_X + CARD_DISPLAY_HEIGHT / 2,
+  pileY: LEFT_Y,
+  pileRotation: 0,
   rotation: LEFT_ROTATION
 };
 

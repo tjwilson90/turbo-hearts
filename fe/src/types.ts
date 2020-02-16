@@ -80,6 +80,9 @@ export interface PlayerCardPositions extends PointWithRotation {
   chargeY: number;
   playX: number;
   playY: number;
+  pileX: number;
+  pileY: number;
+  pileRotation: number;
 }
 
 export interface SpriteCard {
