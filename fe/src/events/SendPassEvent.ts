@@ -52,8 +52,9 @@ export class SendPassEvent implements Event {
   private updateCards() {
     const player = getPlayerAccessor(this.th.bottomSeat, this.event.from)(this.th);
     if (this.event.cards.length === 0) {
-      // TODO pass hidden cards
-      return { cardsToMove: [], cardsToKeep: [] };
+      const cardsToMove = player.cards.splice(0, 3);
+      pushAll(player.limboCards, cardsToMove);
+      return { cardsToMove, cardsToKeep: player.cards };
     } else {
       const cardsToMove = spriteCardsOf(player.cards, this.event.cards);
       const cardsToKeep = spriteCardsOfNot(player.cards, this.event.cards);

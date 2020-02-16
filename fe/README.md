@@ -8,7 +8,6 @@ Started from this boilerplate: https://github.com/mwieth/Webpack-4-boilerplate-T
 
 # TODO
 
-- Face down cards
 - Right pass
 - Across pass
 - Keep pass
@@ -18,7 +17,10 @@ Started from this boilerplate: https://github.com/mwieth/Webpack-4-boilerplate-T
 - Tune animation speeds
 - Pass arrow indicators
 - Flip animation
+- Dealing under
+- Sort charged cards?
 
+- X Face down cards
 - X Manage hidden state with animator
 - X Deal z-indexing
 - X Multi-charge offset
