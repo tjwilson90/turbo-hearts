@@ -14,6 +14,7 @@ import {
 import { TurboHearts } from "../game/TurboHearts";
 import { Card, DealEventData, Event, PointWithRotation, Position, Seat, SpriteCard } from "../types";
 import { groupCards } from "./groupCards";
+import { sortSpriteCards } from "../game/sortCards";
 
 const handAccessors: {
   [bottomSeat: string]: {
@@ -80,6 +81,7 @@ export class DealEvent implements Event {
     let delay = 0;
     const duration = ANIMATION_DURATION;
     const interval = ANIMATION_DELAY;
+    sortSpriteCards(cards);
     const dests = groupCards(cards, center.x, center.y, center.rotation);
     for (let i = 0; i < cards.length; i++) {
       const card = cards[i];

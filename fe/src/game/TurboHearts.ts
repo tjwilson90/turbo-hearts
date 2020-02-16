@@ -35,6 +35,8 @@ export class TurboHearts {
   public bottomPlayer: Player = emptyPlayer();
   public leftPlayer: Player = emptyPlayer();
 
+  public playIndex = 0;
+
   private eventQueue: Event[] = [];
   private currentEvent: Event | undefined = undefined;
 

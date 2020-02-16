@@ -27,6 +27,11 @@ export function animateCards(cards: SpriteCard[], x: number, y: number, rotation
         })
         .start();
       started++;
+      const totalRotation = rotation - card.sprite.rotation;
+      // Prevent overly spinny cards
+      if (Math.abs(totalRotation) > Math.PI) {
+        card.sprite.rotation += 2 * Math.PI * Math.sign(totalRotation);
+      }
       new TWEEN.Tween(card.sprite)
         .to({ rotation }, FAST_ANIMATION_DURATION)
         .easing(TWEEN.Easing.Quadratic.Out)

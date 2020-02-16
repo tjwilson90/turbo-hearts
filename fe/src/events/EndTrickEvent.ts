@@ -1,10 +1,8 @@
-import TWEEN from "@tweenjs/tween.js";
 import { TurboHearts } from "../game/TurboHearts";
 import { EndTrickEventData, Event, Seat } from "../types";
 import { getPlayerAccessor } from "./playerAccessors";
 
 export class EndTrickEvent implements Event {
-  private tweens: TWEEN.Tween[] = [];
   constructor(private th: TurboHearts, private event: EndTrickEventData) {}
 
   public begin() {
@@ -15,6 +13,7 @@ export class EndTrickEvent implements Event {
       });
       player.playCards = [];
     });
+    this.th.playIndex = 0;
   }
 
   public isFinished() {

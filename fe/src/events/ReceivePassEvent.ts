@@ -2,6 +2,7 @@ import { TurboHearts } from "../game/TurboHearts";
 import { Event, ReceivePassEventData, SpriteCard } from "../types";
 import { animateHand } from "./animations/animations";
 import { getPlayerAccessor } from "./playerAccessors";
+import { sortSpriteCards } from "../game/sortCards";
 
 const limboSources: {
   [pass: string]: {
@@ -58,6 +59,7 @@ export class ReceivePassEvent implements Event {
       // Note: this is mutating both hand and limbo arrays
       hand.push(limboSource.pop());
     }
+    sortSpriteCards(hand);
   }
 
   public isFinished() {
