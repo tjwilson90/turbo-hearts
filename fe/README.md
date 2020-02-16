@@ -17,9 +17,9 @@ Started from this boilerplate: https://github.com/mwieth/Webpack-4-boilerplate-T
 - Across pass
 - Keep pass
 - Pass arrow indicators
-- Multi-charge offset
 - Flip animation
 - Manage hidden state with animator
+- X Multi-charge offset
 - X End trick to pile
 - X Sort cards when receiving pass
 - X z-indexing on play (especially 9s)

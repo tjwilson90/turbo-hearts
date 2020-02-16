@@ -1,5 +1,5 @@
 import TWEEN from "@tweenjs/tween.js";
-import { FAST_ANIMATION_DURATION, CARD_OVERLAP } from "../../const";
+import { FAST_ANIMATION_DURATION, CARD_OVERLAP, CHARGE_OVERLAP } from "../../const";
 import { TurboHearts } from "../../game/TurboHearts";
 import { Seat, SpriteCard } from "../../types";
 import { groupCards } from "../groupCards";
@@ -63,7 +63,13 @@ export function animatePlay(th: TurboHearts, seat: Seat) {
 export function animateCharges(th: TurboHearts, seat: Seat) {
   const player = getPlayerAccessor(th.bottomSeat, seat)(th);
   const handPosition = getHandPosition(th.bottomSeat, seat);
-  return animateCards(player.chargedCards, handPosition.chargeX, handPosition.chargeY, handPosition.rotation);
+  return animateCards(
+    player.chargedCards,
+    handPosition.chargeX,
+    handPosition.chargeY,
+    handPosition.rotation,
+    CHARGE_OVERLAP
+  );
 }
 
 export function animatePile(th: TurboHearts, seat: Seat) {
