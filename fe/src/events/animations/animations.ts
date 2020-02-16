@@ -1,5 +1,5 @@
 import TWEEN from "@tweenjs/tween.js";
-import { FAST_ANIMATION_DELAY, FAST_ANIMATION_DURATION } from "../../const";
+import { FAST_ANIMATION_DURATION } from "../../const";
 import { TurboHearts } from "../../game/TurboHearts";
 import { Seat, SpriteCard } from "../../types";
 import { groupCards } from "../groupCards";
@@ -8,29 +8,39 @@ import { getPlayerAccessor } from "../playerAccessors";
 
 export function animateCards(cards: SpriteCard[], x: number, y: number, rotation: number) {
   const cardDests = groupCards(cards, x, y, rotation);
-  let delay = 0;
-  let i = 0;
-  const tweens = [];
-  for (const card of cards) {
-    tweens.push(
+  return new Promise(resolve => {
+    let finished = 0;
+    let started = 0;
+    let i = 0;
+    if (cards.length === 0) {
+      resolve();
+    }
+    for (const card of cards) {
       new TWEEN.Tween(card.sprite.position)
         .to(cardDests[i], FAST_ANIMATION_DURATION)
-        .delay(delay)
         .easing(TWEEN.Easing.Quadratic.Out)
-        .start()
-    );
-    tweens.push(
+        .onComplete(() => {
+          finished++;
+          if (finished === started) {
+            resolve();
+          }
+        })
+        .start();
+      started++;
       new TWEEN.Tween(card.sprite)
         .to({ rotation }, FAST_ANIMATION_DURATION)
-        .delay(delay)
         .easing(TWEEN.Easing.Quadratic.Out)
-        .start()
-    );
-
-    delay += FAST_ANIMATION_DELAY;
-    i++;
-  }
-  return tweens;
+        .onComplete(() => {
+          finished++;
+          if (finished === started) {
+            resolve();
+          }
+        })
+        .start();
+      started++;
+      i++;
+    }
+  });
 }
 
 export function animateHand(th: TurboHearts, seat: Seat) {

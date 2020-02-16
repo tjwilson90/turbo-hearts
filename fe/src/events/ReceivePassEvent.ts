@@ -1,11 +1,7 @@
-import TWEEN from "@tweenjs/tween.js";
 import { TurboHearts } from "../game/TurboHearts";
 import { Event, ReceivePassEventData, SpriteCard } from "../types";
-import { groupCards } from "./groupCards";
-import { getHandPosition } from "./handPositions";
-import { FAST_ANIMATION_DURATION, FAST_ANIMATION_DELAY } from "../const";
-import { getPlayerAccessor } from "./playerAccessors";
 import { animateHand } from "./animations/animations";
+import { getPlayerAccessor } from "./playerAccessors";
 
 const limboSources: {
   [pass: string]: {
@@ -37,7 +33,8 @@ limboSources["Left"]["west"]["south"] = (th: TurboHearts) => th.topPlayer.limboC
 limboSources["Left"]["west"]["west"] = (th: TurboHearts) => th.rightPlayer.limboCards;
 
 export class ReceivePassEvent implements Event {
-  private tweens: TWEEN.Tween[] = [];
+  private finished = false;
+
   constructor(private th: TurboHearts, private event: ReceivePassEventData) {}
 
   public begin() {
@@ -48,10 +45,11 @@ export class ReceivePassEvent implements Event {
     for (const card of cards) {
       card.sprite.zIndex = i++;
     }
-    this.tweens.push(...animateHand(this.th, this.event.to));
-
-    // TODO: this is resulting in jarring card flip
-    this.th.app.stage.sortChildren();
+    animateHand(this.th, this.event.to).then(() => {
+      // TODO: this is resulting in jarring card flip
+      this.th.app.stage.sortChildren();
+      this.finished = true;
+    });
   }
 
   private updateCards(hand: SpriteCard[]) {
@@ -63,11 +61,6 @@ export class ReceivePassEvent implements Event {
   }
 
   public isFinished() {
-    for (const tween of this.tweens) {
-      if (tween.isPlaying()) {
-        return false;
-      }
-    }
-    return true;
+    return this.finished;
   }
 }

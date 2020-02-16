@@ -1,4 +1,3 @@
-import TWEEN from "@tweenjs/tween.js";
 import { TurboHearts } from "../game/TurboHearts";
 import { Event, PlayEventData } from "../types";
 import { pushAll, removeAll } from "../util/array";
@@ -7,7 +6,8 @@ import { spriteCardsOf } from "./helpers";
 import { getPlayerAccessor } from "./playerAccessors";
 
 export class PlayEvent implements Event {
-  private tweens: TWEEN.Tween[] = [];
+  private finished = false;
+
   constructor(private th: TurboHearts, private event: PlayEventData) {}
 
   public begin() {
@@ -18,16 +18,12 @@ export class PlayEvent implements Event {
     removeAll(player.cards, cards);
     removeAll(player.chargedCards, cards);
 
-    this.tweens.push(...animateHand(this.th, this.event.seat));
-    this.tweens.push(...animatePlay(this.th, this.event.seat));
+    Promise.all([animateHand(this.th, this.event.seat), animatePlay(this.th, this.event.seat)]).then(() => {
+      this.finished = true;
+    });
   }
 
   public isFinished() {
-    for (const tween of this.tweens) {
-      if (tween.isPlaying()) {
-        return false;
-      }
-    }
-    return true;
+    return this.finished;
   }
 }

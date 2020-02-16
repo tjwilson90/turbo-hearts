@@ -84,7 +84,6 @@ export class DealEvent implements Event {
     for (let i = 0; i < cards.length; i++) {
       const card = cards[i];
       const dest = dests[i];
-
       this.tweens.push(
         new TWEEN.Tween(card.sprite.position)
           .to({ x: dest.x, y: dest.y }, duration)

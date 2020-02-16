@@ -1,4 +1,3 @@
-import TWEEN from "@tweenjs/tween.js";
 import { BOTTOM_LEFT, BOTTOM_RIGHT, TOP_LEFT, TOP_RIGHT } from "../const";
 import { TurboHearts } from "../game/TurboHearts";
 import { Event, PointWithRotation, SendPassEventData } from "../types";
@@ -35,16 +34,19 @@ passDestinations["Left"]["west"]["south"] = BOTTOM_RIGHT;
 passDestinations["Left"]["west"]["west"] = BOTTOM_LEFT;
 
 export class SendPassEvent implements Event {
-  private tweens: TWEEN.Tween[] = [];
+  private finished = false;
+
   constructor(private th: TurboHearts, private event: SendPassEventData) {}
 
   public begin() {
     const passDestination = this.getPassDestination();
     const cards = this.updateCards();
-    this.tweens.push(
-      ...animateCards(cards.cardsToMove, passDestination.x, passDestination.y, passDestination.rotation)
-    );
-    this.tweens.push(...animateHand(this.th, this.event.from));
+    Promise.all([
+      animateCards(cards.cardsToMove, passDestination.x, passDestination.y, passDestination.rotation),
+      animateHand(this.th, this.event.from)
+    ]).then(() => {
+      this.finished = true;
+    });
   }
 
   private updateCards() {
@@ -66,11 +68,6 @@ export class SendPassEvent implements Event {
   }
 
   public isFinished() {
-    for (const tween of this.tweens) {
-      if (tween.isPlaying()) {
-        return false;
-      }
-    }
-    return true;
+    return this.finished;
   }
 }
