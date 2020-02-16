@@ -566,6 +566,7 @@ impl FromIterator<Card> for Cards {
 }
 
 #[repr(u8)]
+#[serde(rename_all = "snake_case")]
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub enum PassDirection {
     Left,
