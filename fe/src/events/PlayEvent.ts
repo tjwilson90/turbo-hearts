@@ -12,7 +12,13 @@ export class PlayEvent implements Event {
 
   public begin() {
     const player = getPlayerAccessor(this.th.bottomSeat, this.event.seat)(this.th);
-    const cards = spriteCardsOf([...player.cards, ...player.chargedCards], [this.event.card]);
+    let cards = spriteCardsOf([...player.cards, ...player.chargedCards], [this.event.card]);
+    if (cards.length !== 1) {
+      cards = player.cards.splice(0, 1);
+      cards[0].card = this.event.card;
+      cards[0].hidden = false;
+      cards[0].sprite.texture = this.th.app.loader.resources[this.event.card].texture;
+    }
     cards[0].sprite.zIndex = this.th.playIndex++ + 100;
 
     pushAll(player.playCards, cards);

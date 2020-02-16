@@ -18,8 +18,19 @@ export class ChargeEvent implements Event {
     const player = getPlayerAccessor(this.th.bottomSeat, this.event.seat)(this.th);
 
     const chargeCards = spriteCardsOf(player.cards, this.event.cards);
-    removeAll(player.cards, chargeCards);
-    pushAll(player.chargedCards, chargeCards);
+    if (chargeCards.length !== this.event.cards.length) {
+      // Pull from unknown hand
+      const charged = player.cards.splice(0, this.event.cards.length);
+      for (let i = 0; i < charged.length; i++) {
+        charged[i].card = this.event.cards[i];
+        charged[i].hidden = false;
+      }
+      pushAll(player.chargedCards, charged);
+    } else {
+      // Pull from known hand
+      removeAll(player.cards, chargeCards);
+      pushAll(player.chargedCards, chargeCards);
+    }
 
     Promise.all([animateHand(this.th, this.event.seat), animateCharges(this.th, this.event.seat)]).then(() => {
       this.finished = true;

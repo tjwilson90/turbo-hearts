@@ -30,7 +30,7 @@ export class TurboHearts {
 
   public pass: Pass | undefined;
 
-  public bottomSeat: Seat = "north";
+  public bottomSeat: Seat = "west";
 
   public topPlayer: Player = emptyPlayer();
   public rightPlayer: Player = emptyPlayer();

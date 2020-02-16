@@ -10,6 +10,7 @@ import { FULL_GAME } from "./fullGame";
 import { TurboHearts } from "./game/TurboHearts";
 import "./styles/style.scss";
 import { EventData } from "./types";
+import { HIDDEN_GAME } from "./hiddenGame";
 
 function toEvent(th: TurboHearts, event: EventData) {
   switch (event.type) {
@@ -36,7 +37,7 @@ function toEvent(th: TurboHearts, event: EventData) {
 
 document.addEventListener("DOMContentLoaded", event => {
   const th = new TurboHearts(document.getElementById("turbo-hearts") as HTMLCanvasElement);
-  for (const event of FULL_GAME) {
+  for (const event of HIDDEN_GAME) {
     const realEvent = toEvent(th, event as EventData);
     if (realEvent !== undefined) {
       th.pushEvent(realEvent);

@@ -42,7 +42,7 @@ export class ReceivePassEvent implements Event {
     const player = getPlayerAccessor(this.th.bottomSeat, this.event.to)(this.th);
     const cards = player.cards;
     this.updateCards(cards);
-    let i = 0;
+    let i = 100;
     for (const card of cards) {
       card.sprite.zIndex = i++;
     }
@@ -55,9 +55,21 @@ export class ReceivePassEvent implements Event {
 
   private updateCards(hand: SpriteCard[]) {
     const limboSource = limboSources[this.th.pass][this.th.bottomSeat][this.event.to](this.th);
+    const received = [...this.event.cards];
     while (limboSource.length > 0) {
       // Note: this is mutating both hand and limbo arrays
-      hand.push(limboSource.pop());
+      const fromLimbo = limboSource.pop();
+      if (fromLimbo.card === "BACK" && received.length > 0) {
+        fromLimbo.card = received.pop();
+        fromLimbo.sprite.texture = this.th.app.loader.resources[fromLimbo.card].texture;
+        fromLimbo.hidden = false;
+      } else if (fromLimbo.card !== "BACK" && received.length === 0) {
+        // Passing known cards into another hand
+        fromLimbo.card = "BACK";
+        fromLimbo.sprite.texture = this.th.app.loader.resources["BACK"].texture;
+        fromLimbo.hidden = true;
+      }
+      hand.push(fromLimbo);
     }
     sortSpriteCards(hand);
   }
