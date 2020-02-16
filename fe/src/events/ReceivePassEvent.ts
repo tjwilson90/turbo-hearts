@@ -1,6 +1,6 @@
 import TWEEN from "@tweenjs/tween.js";
 import { TurboHearts } from "../game/TurboHearts";
-import { Event, ReceivePassData, SpriteCard } from "../types";
+import { Event, ReceivePassEventData, SpriteCard } from "../types";
 import { groupCards } from "./groupCards";
 import { getHandPosition } from "./handPositions";
 import { FAST_ANIMATION_DURATION, FAST_ANIMATION_DELAY } from "../const";
@@ -37,7 +37,7 @@ limboSources["Left"]["west"]["west"] = (th: TurboHearts) => th.rightPlayer.limbo
 
 export class ReceivePassEvent implements Event {
   private tweens: TWEEN.Tween[] = [];
-  constructor(private th: TurboHearts, private event: ReceivePassData) {}
+  constructor(private th: TurboHearts, private event: ReceivePassEventData) {}
 
   public begin() {
     const player = getPlayerAccessor(this.th.bottomSeat, this.event.to)(this.th);

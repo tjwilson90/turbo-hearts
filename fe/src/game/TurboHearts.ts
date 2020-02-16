@@ -4,9 +4,21 @@ import * as PIXI from "pixi.js";
 import { TABLE_SIZE } from "../const";
 
 export interface Player {
+  type: "bot" | "human";
+  name: string;
   cards: SpriteCard[];
   limboCards: SpriteCard[];
   chargedCards: SpriteCard[];
+}
+
+function emptyPlayer(): Player {
+  return {
+    type: "bot",
+    name: "empty",
+    cards: [],
+    limboCards: [],
+    chargedCards: []
+  };
 }
 
 export class TurboHearts {
@@ -14,12 +26,12 @@ export class TurboHearts {
 
   public pass: Pass | undefined;
 
-  public bottomSeat: Seat = "east";
+  public bottomSeat: Seat = "north";
 
-  public topPlayer: Player;
-  public rightPlayer: Player;
-  public bottomPlayer: Player;
-  public leftPlayer: Player;
+  public topPlayer: Player = emptyPlayer();
+  public rightPlayer: Player = emptyPlayer();
+  public bottomPlayer: Player = emptyPlayer();
+  public leftPlayer: Player = emptyPlayer();
 
   private eventQueue: Event[] = [];
   private currentEvent: Event | undefined = undefined;

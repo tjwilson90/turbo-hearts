@@ -15,7 +15,7 @@ export const ANIMATION_DELAY = 80;
 export const FAST_ANIMATION_DURATION = ANIMATION_DURATION / 2;
 export const FAST_ANIMATION_DELAY = ANIMATION_DELAY / 2;
 
-export const TABLE_CARD_UNDERLAP = 0.2;
+export const TABLE_CARD_UNDERLAP = 0.15;
 export const CHARGE_OFFSET = CARD_DISPLAY_HEIGHT * (1 + TABLE_CARD_UNDERLAP) + 10;
 export const CHARGE_OVERLAP = CARD_DISPLAY_WIDTH + 10;
 
@@ -61,8 +61,8 @@ export const BOTTOM = {
 export const LEFT_X = CARD_DISPLAY_HEIGHT * TABLE_CARD_UNDERLAP;
 export const LEFT_Y = TABLE_CENTER_Y;
 export const LEFT_ROTATION = Math.PI / 2;
-export const LEFT_CHARGE_X = TABLE_CENTER_Y;
-export const LEFT_CHARGE_Y = CHARGE_OFFSET;
+export const LEFT_CHARGE_X = CHARGE_OFFSET;
+export const LEFT_CHARGE_Y = TABLE_CENTER_Y;
 export const LEFT = {
   x: LEFT_X,
   y: LEFT_Y,
@@ -71,7 +71,7 @@ export const LEFT = {
   rotation: LEFT_ROTATION
 };
 
-const CORNER_OFFSET = CARD_DISPLAY_HEIGHT * (4 * TABLE_CARD_UNDERLAP);
+const CORNER_OFFSET = CARD_DISPLAY_HEIGHT * (6 * TABLE_CARD_UNDERLAP);
 export const TOP_RIGHT_X = TABLE_SIZE - CORNER_OFFSET;
 export const TOP_RIGHT_Y = CORNER_OFFSET;
 export const TOP_RIGHT_ROTATION = TOP_ROTATION + Math.PI / 4;

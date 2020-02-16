@@ -14,6 +14,7 @@ import {
 import { TurboHearts, Player } from "../game/TurboHearts";
 import { Card, DealEventData, Event, PointWithRotation, SpriteCard, Position, Seat } from "../types";
 import { groupCards } from "./groupCards";
+import { getPlayerAccessor } from "./playerAccessors";
 
 const handAccessors: {
   [bottomSeat: string]: {
@@ -52,7 +53,7 @@ export class DealEvent implements Event {
     this.th.pass = event.pass;
   }
 
-  private createSpriteCards(hand: Card[], center: PointWithRotation): Player {
+  private createSpriteCards(hand: Card[], center: PointWithRotation) {
     const cards: SpriteCard[] = [];
     if (hand.length === 0) {
       for (let i = 0; i < 13; i++) {
@@ -108,17 +109,23 @@ export class DealEvent implements Event {
       this.th.app.stage.addChild(card.sprite);
       delay += interval;
     }
-    return { cards, limboCards: [], chargedCards: [] };
+    return cards;
   }
 
   public begin() {
-    this.th.topPlayer = this.createSpriteCards(getCardsForPosition(this.th.bottomSeat, "top", this.event), TOP);
-    this.th.rightPlayer = this.createSpriteCards(getCardsForPosition(this.th.bottomSeat, "right", this.event), RIGHT);
-    this.th.bottomPlayer = this.createSpriteCards(
+    this.th.topPlayer.cards = this.createSpriteCards(getCardsForPosition(this.th.bottomSeat, "top", this.event), TOP);
+    this.th.rightPlayer.cards = this.createSpriteCards(
+      getCardsForPosition(this.th.bottomSeat, "right", this.event),
+      RIGHT
+    );
+    this.th.bottomPlayer.cards = this.createSpriteCards(
       getCardsForPosition(this.th.bottomSeat, "bottom", this.event),
       BOTTOM
     );
-    this.th.leftPlayer = this.createSpriteCards(getCardsForPosition(this.th.bottomSeat, "left", this.event), LEFT);
+    this.th.leftPlayer.cards = this.createSpriteCards(
+      getCardsForPosition(this.th.bottomSeat, "left", this.event),
+      LEFT
+    );
   }
 
   public isFinished() {
