@@ -75,7 +75,6 @@ export class TurboHearts {
       if (!this.currentEvent.isFinished()) {
         return;
       } else {
-        console.log("finished");
         this.currentEvent = undefined;
       }
     }
@@ -83,6 +82,7 @@ export class TurboHearts {
       return;
     }
     this.currentEvent = this.eventQueue.shift();
+    console.log(this.currentEvent);
     this.currentEvent.begin();
   };
 }
