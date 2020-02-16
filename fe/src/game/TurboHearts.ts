@@ -9,6 +9,7 @@ export interface Player {
   cards: SpriteCard[];
   limboCards: SpriteCard[];
   chargedCards: SpriteCard[];
+  playCards: SpriteCard[];
 }
 
 function emptyPlayer(): Player {
@@ -17,7 +18,8 @@ function emptyPlayer(): Player {
     name: "empty",
     cards: [],
     limboCards: [],
-    chargedCards: []
+    chargedCards: [],
+    playCards: []
   };
 }
 
