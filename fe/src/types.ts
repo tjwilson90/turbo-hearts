@@ -1,4 +1,22 @@
+export type Rules = "classic";
 export type Pass = "Left" | "Right" | "Across" | "Keep";
+export type Seat = "north" | "east" | "south" | "west";
+export type Position = "top" | "right" | "bottom" | "left";
+
+interface SitPlayer {
+  name: string;
+  type: "bot" | "human";
+  algorithm?: string;
+}
+
+export interface SitEventData {
+  type: "sit";
+  north: SitPlayer;
+  east: SitPlayer;
+  south: SitPlayer;
+  west: SitPlayer;
+  rules: Rules;
+}
 
 export interface DealEventData {
   type: "deal";
@@ -9,16 +27,13 @@ export interface DealEventData {
   pass: Pass;
 }
 
-export type Seat = "north" | "east" | "south" | "west";
-export type Position = "top" | "right" | "bottom" | "left";
-
-export interface SendPassData {
+export interface SendPassEventData {
   type: "send_pass";
   from: Seat;
   cards: Card[];
 }
 
-export interface ReceivePassData {
+export interface ReceivePassEventData {
   type: "recv_pass";
   to: Seat;
   cards: Card[];
@@ -28,6 +43,22 @@ export interface ChargeEventData {
   type: "charge";
   seat: Seat;
   cards: Card[];
+}
+
+export interface StartTrickEventData {
+  type: "start_trick";
+  leader: Seat;
+}
+
+export interface PlayEventData {
+  type: "play";
+  seat: Seat;
+  card: Card;
+}
+
+export interface EndTrickEventData {
+  type: "end_trick";
+  winner: Seat;
 }
 
 export interface Event {
@@ -55,7 +86,15 @@ export interface SpriteCard {
   hidden: boolean;
 }
 
-export type EventData = DealEventData | SendPassData | ReceivePassData | ChargeEventData;
+export type EventData =
+  | SitEventData
+  | DealEventData
+  | SendPassEventData
+  | ReceivePassEventData
+  | ChargeEventData
+  | StartTrickEventData
+  | PlayEventData
+  | EndTrickEventData;
 
 export type Card =
   | "BACK"

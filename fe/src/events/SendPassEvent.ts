@@ -8,7 +8,7 @@ import {
   FAST_ANIMATION_DURATION
 } from "../const";
 import { TurboHearts } from "../game/TurboHearts";
-import { Event, PointWithRotation, SendPassData } from "../types";
+import { Event, PointWithRotation, SendPassEventData } from "../types";
 import { groupCards } from "./groupCards";
 import { getPlayerAccessor } from "./playerAccessors";
 import { getHandPosition } from "./handPositions";
@@ -44,7 +44,7 @@ passDestinations["Left"]["west"]["west"] = BOTTOM_LEFT;
 
 export class SendPassEvent implements Event {
   private tweens: TWEEN.Tween[] = [];
-  constructor(private th: TurboHearts, private event: SendPassData) {}
+  constructor(private th: TurboHearts, private event: SendPassEventData) {}
 
   public begin() {
     const passDestination = this.getPassDestination();

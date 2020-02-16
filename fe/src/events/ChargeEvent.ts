@@ -13,6 +13,9 @@ export class ChargeEvent implements Event {
   constructor(private th: TurboHearts, private event: ChargeEventData) {}
 
   public begin() {
+    if (this.event.cards.length === 0) {
+      return;
+    }
     const player = getPlayerAccessor(this.th.bottomSeat, this.event.seat)(this.th);
 
     const chargeCards = spriteCardsOf(player.cards, this.event.cards);
