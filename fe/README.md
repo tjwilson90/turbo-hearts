@@ -8,17 +8,19 @@ Started from this boilerplate: https://github.com/mwieth/Webpack-4-boilerplate-T
 
 # TODO
 
-- Deal z-indexing
-- Names
-- Play indicator
-- Tune animation speeds
 - Face down cards
 - Right pass
 - Across pass
 - Keep pass
+
+- Names
+- Play indicator
+- Tune animation speeds
 - Pass arrow indicators
 - Flip animation
-- Manage hidden state with animator
+
+- X Manage hidden state with animator
+- X Deal z-indexing
 - X Multi-charge offset
 - X End trick to pile
 - X Sort cards when receiving pass

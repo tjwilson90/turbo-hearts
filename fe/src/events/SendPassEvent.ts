@@ -42,7 +42,7 @@ export class SendPassEvent implements Event {
     const passDestination = this.getPassDestination();
     const cards = this.updateCards();
     Promise.all([
-      animateCards(cards.cardsToMove, passDestination.x, passDestination.y, passDestination.rotation),
+      animateCards(this.th, cards.cardsToMove, passDestination.x, passDestination.y, passDestination.rotation),
       animateHand(this.th, this.event.from)
     ]).then(() => {
       this.finished = true;
