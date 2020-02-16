@@ -120,6 +120,7 @@ impl Bot {
                 east,
                 south,
                 west,
+                ..
             } => {
                 self.state.pre_pass_hand = north | east | south | west;
                 self.state.post_pass_hand = self.state.pre_pass_hand;

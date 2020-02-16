@@ -1,5 +1,5 @@
 use crate::{
-    cards::{Card, Cards, GamePhase},
+    cards::{Card, Cards, GamePhase, PassDirection},
     db::Database,
     error::CardsError,
     game::{persist_events, GameEvent},
@@ -299,6 +299,7 @@ async fn test_pass() -> Result<(), CardsError> {
                         east: c!(JT953S QT4H K93D ATC),
                         south: c!(2S 875H T542D QJ752C),
                         west: c!(KQ8S KJ32H Q876D 94C),
+                        pass: PassDirection::Left,
                     },
                 ],
             )?;
