@@ -222,7 +222,8 @@ Players in the game will receive a redacted event containing only their cards.
   "north": ["AS", "JS", "3S", "2S", "4H", "QC", "TC", "5C", "KD", "QD", "JD", "9D", "7D"],
   "east": ["QS", "TS", "6S", "5S", "4S", "AH", "JH", "TH", "9H", "8H", "2C", "AD", "3D"],
   "south": ["7S", "KH", "QH", "6H", "5H", "AC", "9C", "7C", "6C", "3C", "TD", "4D", "2D"],
-  "west": ["KS", "9S", "8S", "7H", "3H", "2H", "KC", "JC", "8C", "4C", "8D", "6D", "5D"]
+  "west": ["KS", "9S", "8S", "7H", "3H", "2H", "KC", "JC", "8C", "4C", "8D", "6D", "5D"],
+  "pass": "across"
 }
 ```
 
