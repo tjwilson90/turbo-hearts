@@ -110,8 +110,13 @@ impl Games {
         let (tx, rx) = unbounded_channel();
         self.with_game(id, |game| {
             let seat = game.seat(&name);
+            let mut copy = Game::new();
             for event in &game.events {
-                tx.send(event.redact(game.state.rules, seat)).unwrap();
+                copy.apply(event, |g, e| {
+                    if let Some(event) = e.redact(seat, g.state.rules, g.state.next_player) {
+                        tx.send(event).unwrap();
+                    }
+                });
             }
             game.subscribers.insert(name.to_string(), tx);
             Ok(())
@@ -173,7 +178,7 @@ impl Games {
                 self.db
                     .run_with_retry(|tx| persist_events(&tx, id, game.events.len(), &events))?;
                 for event in events {
-                    game.apply(true, &event);
+                    game.apply(&event, |g, e| g.broadcast(e));
                 }
                 Ok(())
             }
@@ -195,7 +200,7 @@ impl Games {
                 self.db.run_with_retry(|tx| {
                     persist_events(&tx, id, game.events.len(), &[event.clone()])
                 })?;
-                game.apply(true, &event);
+                game.apply(&event, |g, e| g.broadcast(e));
                 Ok(())
             }
             None => Err(CardsError::IllegalPlayer(name.to_string())),
@@ -228,7 +233,7 @@ impl Games {
                     Ok(())
                 })?;
                 for event in events {
-                    game.apply(true, &event);
+                    game.apply(&event, |g, e| g.broadcast(e));
                 }
                 Ok(game.state.phase == GamePhase::Complete)
             }
@@ -270,9 +275,12 @@ impl Game {
     fn broadcast(&mut self, event: &GameEvent) {
         let players = &self.state.players;
         let rules = self.state.rules;
+        let next_player = self.state.next_player;
         self.subscribers.retain(|name, tx| {
             let seat = seat(&players, name);
-            tx.send(event.redact(rules, seat)).is_ok()
+            event
+                .redact(seat, rules, next_player)
+                .map_or(true, |e| tx.send(e).is_ok())
         });
     }
 
@@ -280,10 +288,11 @@ impl Game {
         seat(&self.state.players, name)
     }
 
-    fn apply(&mut self, broadcast: bool, event: &GameEvent) {
-        if broadcast {
-            self.broadcast(&event);
-        }
+    fn apply<F>(&mut self, event: &GameEvent, broadcast: F)
+    where
+        F: Fn(&mut Game, &GameEvent),
+    {
+        broadcast(&mut *self, &event);
         self.state.apply(&event);
         self.events.push(event.clone());
         match &event {
@@ -313,40 +322,38 @@ impl Game {
                 if self.state.phase.is_playing() {
                     self.state.next_player = Some(self.owner(Card::TwoClubs));
                     if self.state.rules.blind() {
-                        self.apply(
-                            broadcast,
-                            &GameEvent::RevealCharges {
-                                north: self.state.charged[0],
-                                east: self.state.charged[1],
-                                south: self.state.charged[2],
-                                west: self.state.charged[3],
-                            },
-                        );
+                        let reveal = GameEvent::RevealCharges {
+                            north: self.state.charged[0],
+                            east: self.state.charged[1],
+                            south: self.state.charged[2],
+                            west: self.state.charged[3],
+                        };
+                        broadcast(&mut *self, &reveal);
+                        self.state.apply(&reveal);
                     }
-                    self.apply(
-                        broadcast,
-                        &GameEvent::StartTrick {
-                            leader: self.state.next_player.unwrap(),
-                        },
-                    );
+                    let leader = self.state.next_player.unwrap();
+                    broadcast(&mut *self, &GameEvent::StartTrick { leader });
+                    let legal_plays = self
+                        .state
+                        .legal_plays(self.post_pass_hand[leader.idx()] - self.state.played);
+                    broadcast(&mut *self, &GameEvent::YourPlay { legal_plays });
                 }
             }
             GameEvent::Play { .. } => {
                 if self.state.current_trick.is_empty() {
-                    self.apply(
-                        broadcast,
-                        &GameEvent::EndTrick {
-                            winner: self.state.next_player.unwrap(),
-                        },
-                    );
+                    let winner = self.state.next_player.unwrap();
+                    broadcast(&mut *self, &GameEvent::EndTrick { winner });
                     if self.state.phase.is_playing() {
-                        self.apply(
-                            broadcast,
-                            &GameEvent::StartTrick {
-                                leader: self.state.next_player.unwrap(),
-                            },
-                        )
+                        let leader = self.state.next_player.unwrap();
+                        broadcast(&mut *self, &GameEvent::StartTrick { leader });
                     }
+                }
+                if self.state.phase.is_playing() {
+                    let leader = self.state.next_player.unwrap();
+                    let legal_plays = self
+                        .state
+                        .legal_plays(self.post_pass_hand[leader.idx()] - self.state.played);
+                    broadcast(&mut *self, &GameEvent::YourPlay { legal_plays });
                 }
             }
             _ => {}
@@ -516,6 +523,9 @@ pub enum GameEvent {
         seat: Seat,
         card: Card,
     },
+    YourPlay {
+        legal_plays: Cards,
+    },
     StartTrick {
         leader: Seat,
     },
@@ -537,7 +547,12 @@ impl GameEvent {
         }
     }
 
-    fn redact(&self, rules: ChargingRules, seat: Option<Seat>) -> GameEvent {
+    fn redact(
+        &self,
+        seat: Option<Seat>,
+        rules: ChargingRules,
+        next_player: Option<Seat>,
+    ) -> Option<GameEvent> {
         match self {
             GameEvent::Ping
             | GameEvent::Play { .. }
@@ -545,14 +560,14 @@ impl GameEvent {
             | GameEvent::BlindCharge { .. }
             | GameEvent::RevealCharges { .. }
             | GameEvent::StartTrick { .. }
-            | GameEvent::EndTrick { .. } => self.clone(),
+            | GameEvent::EndTrick { .. } => Some(self.clone()),
             GameEvent::Deal {
                 north,
                 east,
                 south,
                 west,
                 pass,
-            } => match seat {
+            } => Some(match seat {
                 Some(Seat::North) => GameEvent::Deal {
                     north: *north,
                     east: Cards::NONE,
@@ -582,27 +597,31 @@ impl GameEvent {
                     pass: *pass,
                 },
                 None => self.clone(),
-            },
-            GameEvent::SendPass { from, cards: _ } => match seat {
+            }),
+            GameEvent::SendPass { from, cards: _ } => Some(match seat {
                 Some(seat) if seat != *from => GameEvent::SendPass {
                     from: *from,
                     cards: Cards::NONE,
                 },
                 _ => self.clone(),
-            },
-            GameEvent::RecvPass { to, cards: _ } => match seat {
+            }),
+            GameEvent::RecvPass { to, cards: _ } => Some(match seat {
                 Some(seat) if seat != *to => GameEvent::RecvPass {
                     to: *to,
                     cards: Cards::NONE,
                 },
                 _ => self.clone(),
-            },
-            GameEvent::Charge { seat: s, cards } => match seat {
+            }),
+            GameEvent::Charge { seat: s, cards } => Some(match seat {
                 Some(seat) if *s != seat && rules.blind() => GameEvent::BlindCharge {
                     seat: *s,
                     count: cards.len(),
                 },
                 _ => self.clone(),
+            }),
+            GameEvent::YourPlay { .. } => match seat {
+                Some(s) if s == next_player.unwrap() => Some(self.clone()),
+                _ => None,
             },
         }
     }
@@ -663,7 +682,7 @@ fn hydrate_events(tx: &Transaction, id: GameId, game: &mut Game) -> Result<(), C
     let mut rows = stmt.query::<&[&dyn ToSql]>(&[&id, &(game.events.len() as i64)])?;
     while let Some(row) = rows.next()? {
         let event = serde_json::from_str(&row.get::<_, String>(0)?)?;
-        game.apply(false, &event);
+        game.apply(&event, |_, _| {});
     }
     Ok(())
 }

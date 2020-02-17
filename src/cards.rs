@@ -715,7 +715,6 @@ impl GameState {
 
     pub fn apply(&mut self, event: &GameEvent) {
         match event {
-            GameEvent::Ping | GameEvent::StartTrick { .. } | GameEvent::EndTrick { .. } => {}
             GameEvent::Sit {
                 north,
                 east,
@@ -800,6 +799,7 @@ impl GameState {
                     }
                 }
             }
+            _ => {}
         }
     }
 
