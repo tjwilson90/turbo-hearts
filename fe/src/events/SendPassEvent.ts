@@ -1,4 +1,13 @@
-import { BOTTOM_LEFT, BOTTOM_RIGHT, TOP_LEFT, TOP_RIGHT } from "../const";
+import {
+  LIMBO_BOTTOM_LEFT,
+  LIMBO_TOP_LEFT,
+  LIMBO_TOP_RIGHT,
+  LIMBO_BOTTOM_RIGHT,
+  LIMBO_TOP,
+  LIMBO_RIGHT,
+  LIMBO_BOTTOM,
+  LIMBO_LEFT
+} from "../const";
 import { TurboHearts } from "../game/TurboHearts";
 import { Event, PointWithRotation, SendPassEventData } from "../types";
 import { pushAll, removeAll } from "../util/array";
@@ -11,27 +20,71 @@ const passDestinations: {
     [bottomSeat: string]: { [passFrom: string]: PointWithRotation };
   };
 } = {};
-passDestinations["Left"] = {};
-passDestinations["Left"]["north"] = {};
-passDestinations["Left"]["north"]["north"] = BOTTOM_LEFT;
-passDestinations["Left"]["north"]["east"] = TOP_LEFT;
-passDestinations["Left"]["north"]["south"] = TOP_RIGHT;
-passDestinations["Left"]["north"]["west"] = BOTTOM_RIGHT;
-passDestinations["Left"]["east"] = {};
-passDestinations["Left"]["east"]["north"] = BOTTOM_RIGHT;
-passDestinations["Left"]["east"]["east"] = BOTTOM_LEFT;
-passDestinations["Left"]["east"]["south"] = TOP_LEFT;
-passDestinations["Left"]["east"]["west"] = TOP_RIGHT;
-passDestinations["Left"]["south"] = {};
-passDestinations["Left"]["south"]["north"] = TOP_RIGHT;
-passDestinations["Left"]["south"]["east"] = BOTTOM_RIGHT;
-passDestinations["Left"]["south"]["south"] = BOTTOM_LEFT;
-passDestinations["Left"]["south"]["west"] = TOP_LEFT;
-passDestinations["Left"]["west"] = {};
-passDestinations["Left"]["west"]["north"] = TOP_LEFT;
-passDestinations["Left"]["west"]["east"] = TOP_RIGHT;
-passDestinations["Left"]["west"]["south"] = BOTTOM_RIGHT;
-passDestinations["Left"]["west"]["west"] = BOTTOM_LEFT;
+passDestinations["left"] = {};
+passDestinations["left"]["north"] = {};
+passDestinations["left"]["north"]["north"] = LIMBO_BOTTOM_LEFT;
+passDestinations["left"]["north"]["east"] = LIMBO_TOP_LEFT;
+passDestinations["left"]["north"]["south"] = LIMBO_TOP_RIGHT;
+passDestinations["left"]["north"]["west"] = LIMBO_BOTTOM_RIGHT;
+passDestinations["left"]["east"] = {};
+passDestinations["left"]["east"]["north"] = LIMBO_BOTTOM_RIGHT;
+passDestinations["left"]["east"]["east"] = LIMBO_BOTTOM_LEFT;
+passDestinations["left"]["east"]["south"] = LIMBO_TOP_LEFT;
+passDestinations["left"]["east"]["west"] = LIMBO_TOP_RIGHT;
+passDestinations["left"]["south"] = {};
+passDestinations["left"]["south"]["north"] = LIMBO_TOP_RIGHT;
+passDestinations["left"]["south"]["east"] = LIMBO_BOTTOM_RIGHT;
+passDestinations["left"]["south"]["south"] = LIMBO_BOTTOM_LEFT;
+passDestinations["left"]["south"]["west"] = LIMBO_TOP_LEFT;
+passDestinations["left"]["west"] = {};
+passDestinations["left"]["west"]["north"] = LIMBO_TOP_LEFT;
+passDestinations["left"]["west"]["east"] = LIMBO_TOP_RIGHT;
+passDestinations["left"]["west"]["south"] = LIMBO_BOTTOM_RIGHT;
+passDestinations["left"]["west"]["west"] = LIMBO_BOTTOM_LEFT;
+
+passDestinations["right"] = {};
+passDestinations["right"]["north"] = {};
+passDestinations["right"]["north"]["north"] = LIMBO_BOTTOM_RIGHT;
+passDestinations["right"]["north"]["east"] = LIMBO_TOP_RIGHT;
+passDestinations["right"]["north"]["south"] = LIMBO_TOP_LEFT;
+passDestinations["right"]["north"]["west"] = LIMBO_BOTTOM_LEFT;
+passDestinations["right"]["east"] = {};
+passDestinations["right"]["east"]["north"] = LIMBO_BOTTOM_LEFT;
+passDestinations["right"]["east"]["east"] = LIMBO_BOTTOM_RIGHT;
+passDestinations["right"]["east"]["south"] = LIMBO_TOP_RIGHT;
+passDestinations["right"]["east"]["west"] = LIMBO_TOP_LEFT;
+passDestinations["right"]["south"] = {};
+passDestinations["right"]["south"]["north"] = LIMBO_TOP_LEFT;
+passDestinations["right"]["south"]["east"] = LIMBO_BOTTOM_LEFT;
+passDestinations["right"]["south"]["south"] = LIMBO_BOTTOM_RIGHT;
+passDestinations["right"]["south"]["west"] = LIMBO_TOP_RIGHT;
+passDestinations["right"]["west"] = {};
+passDestinations["right"]["west"]["north"] = LIMBO_TOP_RIGHT;
+passDestinations["right"]["west"]["east"] = LIMBO_TOP_LEFT;
+passDestinations["right"]["west"]["south"] = LIMBO_BOTTOM_LEFT;
+passDestinations["right"]["west"]["west"] = LIMBO_BOTTOM_RIGHT;
+
+passDestinations["across"] = {};
+passDestinations["across"]["north"] = {};
+passDestinations["across"]["north"]["north"] = LIMBO_TOP;
+passDestinations["across"]["north"]["east"] = LIMBO_RIGHT;
+passDestinations["across"]["north"]["south"] = LIMBO_BOTTOM;
+passDestinations["across"]["north"]["west"] = LIMBO_LEFT;
+passDestinations["across"]["east"] = {};
+passDestinations["across"]["east"]["north"] = LIMBO_LEFT;
+passDestinations["across"]["east"]["east"] = LIMBO_TOP;
+passDestinations["across"]["east"]["south"] = LIMBO_RIGHT;
+passDestinations["across"]["east"]["west"] = LIMBO_BOTTOM;
+passDestinations["across"]["south"] = {};
+passDestinations["across"]["south"]["north"] = LIMBO_BOTTOM;
+passDestinations["across"]["south"]["east"] = LIMBO_LEFT;
+passDestinations["across"]["south"]["south"] = LIMBO_TOP;
+passDestinations["across"]["south"]["west"] = LIMBO_RIGHT;
+passDestinations["across"]["west"] = {};
+passDestinations["across"]["west"]["north"] = LIMBO_RIGHT;
+passDestinations["across"]["west"]["east"] = LIMBO_BOTTOM;
+passDestinations["across"]["west"]["south"] = LIMBO_LEFT;
+passDestinations["across"]["west"]["west"] = LIMBO_TOP;
 
 export class SendPassEvent implements Event {
   private finished = false;

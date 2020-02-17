@@ -13,7 +13,7 @@ export const TEST_EVENTS = [
     east: ["2D", "3D", "4D", "5D", "6D", "7D", "8D", "9D", "TD", "JD", "QD", "KD", "AD"],
     south: ["2H", "3H", "4H", "5H", "6H", "7H", "8H", "9H", "TH", "JH", "QH", "KH", "3C"],
     west: ["2S", "3S", "4S", "5S", "6S", "7S", "8S", "9S", "TS", "JS", "QS", "KS", "AS"],
-    pass: "Left"
+    pass: "left"
   },
   { type: "start_passing" },
   { type: "send_pass", from: "north", cards: ["2C", "8C", "KC"] },

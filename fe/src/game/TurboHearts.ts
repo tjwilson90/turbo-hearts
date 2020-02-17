@@ -28,7 +28,7 @@ function emptyPlayer(): Player {
 export class TurboHearts {
   public app: PIXI.Application;
 
-  public pass: Pass | undefined;
+  public pass: Pass = "left";
 
   public bottomSeat: Seat = "west";
 
@@ -55,6 +55,16 @@ export class TurboHearts {
     this.canvas.style.width = TABLE_SIZE + "px";
     this.canvas.style.height = TABLE_SIZE + "px";
     this.loadCards();
+  }
+
+  public resetForDeal() {
+    this.pass = "left";
+    this.topPlayer = emptyPlayer();
+    this.rightPlayer = emptyPlayer();
+    this.bottomPlayer = emptyPlayer();
+    this.leftPlayer = emptyPlayer();
+    this.playIndex = 0;
+    this.app.stage.removeChildren();
   }
 
   private loadCards() {

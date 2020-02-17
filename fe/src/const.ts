@@ -106,7 +106,7 @@ const CORNER_OFFSET = CARD_DISPLAY_HEIGHT;
 export const TOP_RIGHT_X = TABLE_SIZE - CORNER_OFFSET;
 export const TOP_RIGHT_Y = CORNER_OFFSET;
 export const TOP_RIGHT_ROTATION = TOP_ROTATION + Math.PI / 4;
-export const TOP_RIGHT = {
+export const LIMBO_TOP_RIGHT = {
   x: TOP_RIGHT_X,
   y: TOP_RIGHT_Y,
   rotation: TOP_RIGHT_ROTATION
@@ -115,7 +115,7 @@ export const TOP_RIGHT = {
 export const BOTTOM_RIGHT_X = TABLE_SIZE - CORNER_OFFSET;
 export const BOTTOM_RIGHT_Y = TABLE_SIZE - CORNER_OFFSET;
 export const BOTTOM_RIGHT_ROTATION = RIGHT_ROTATION + Math.PI / 4;
-export const BOTTOM_RIGHT = {
+export const LIMBO_BOTTOM_RIGHT = {
   x: BOTTOM_RIGHT_X,
   y: BOTTOM_RIGHT_Y,
   rotation: BOTTOM_RIGHT_ROTATION
@@ -124,7 +124,7 @@ export const BOTTOM_RIGHT = {
 export const BOTTOM_LEFT_X = CORNER_OFFSET;
 export const BOTTOM_LEFT_Y = TABLE_SIZE - CORNER_OFFSET;
 export const BOTTOM_LEFT_ROTATION = BOTTOM_ROTATION + Math.PI / 4;
-export const BOTTOM_LEFT = {
+export const LIMBO_BOTTOM_LEFT = {
   x: BOTTOM_LEFT_X,
   y: BOTTOM_LEFT_Y,
   rotation: BOTTOM_LEFT_ROTATION
@@ -133,8 +133,32 @@ export const BOTTOM_LEFT = {
 export const TOP_LEFT_X = CORNER_OFFSET;
 export const TOP_LEFT_Y = CORNER_OFFSET;
 export const TOP_LEFT_ROTATION = LEFT_ROTATION + Math.PI / 4;
-export const TOP_LEFT = {
+export const LIMBO_TOP_LEFT = {
   x: TOP_LEFT_X,
   y: TOP_LEFT_Y,
   rotation: TOP_LEFT_ROTATION
+};
+
+export const LIMBO_TOP = {
+  x: TOP_X,
+  y: TOP_Y + CARD_DISPLAY_HEIGHT + CARD_MARGIN,
+  rotation: TOP_ROTATION
+};
+
+export const LIMBO_RIGHT = {
+  x: RIGHT_X - (CARD_DISPLAY_HEIGHT + CARD_MARGIN),
+  y: RIGHT_Y,
+  rotation: RIGHT_ROTATION
+};
+
+export const LIMBO_BOTTOM = {
+  x: BOTTOM_X,
+  y: BOTTOM_Y - (CARD_DISPLAY_HEIGHT + CARD_MARGIN),
+  rotation: BOTTOM_ROTATION
+};
+
+export const LIMBO_LEFT = {
+  x: LEFT_X + CARD_DISPLAY_HEIGHT + CARD_MARGIN,
+  y: LEFT_Y,
+  rotation: LEFT_ROTATION
 };

@@ -8,8 +8,6 @@ Started from this boilerplate: https://github.com/mwieth/Webpack-4-boilerplate-T
 
 # TODO
 
-- Right pass
-- Across pass
 - Keep pass
 
 - Names
@@ -20,6 +18,9 @@ Started from this boilerplate: https://github.com/mwieth/Webpack-4-boilerplate-T
 - Dealing under
 - Sort charged cards?
 
+- X Across pass
+- X Re-deal
+- X Right pass
 - X Face down cards
 - X Manage hidden state with animator
 - X Deal z-indexing
