@@ -1,5 +1,5 @@
 export type Rules = "classic";
-export type Pass = "Left" | "Right" | "Across" | "Keep";
+export type Pass = "left" | "right" | "across" | "keeper";
 export type Seat = "north" | "east" | "south" | "west";
 export type Position = "top" | "right" | "bottom" | "left";
 

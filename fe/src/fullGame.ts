@@ -15,7 +15,7 @@ export const FULL_GAME: EventData[] = [
     east: ["TS", "7S", "4S", "KH", "6H", "5H", "4H", "5D", "QC", "JC", "8C", "7C", "5C"],
     south: ["AS", "6S", "2S", "QH", "AD", "QD", "JD", "TD", "8D", "4D", "KC", "9C", "4C"],
     west: ["KS", "QS", "9S", "8S", "3S", "9H", "2H", "KD", "9D", "7D", "3D", "AC", "2C"],
-    pass: "Left"
+    pass: "left"
   },
   { type: "send_pass", from: "south", cards: ["AS", "6S", "2S"] },
   { type: "send_pass", from: "west", cards: ["KS", "9S", "3D"] },

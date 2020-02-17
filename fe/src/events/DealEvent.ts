@@ -38,9 +38,7 @@ function getCardsForPosition(bottomSeat: Seat, position: Position, event: DealEv
 export class DealEvent implements Event {
   private finished = false;
 
-  constructor(private th: TurboHearts, private event: DealEventData) {
-    this.th.pass = event.pass;
-  }
+  constructor(private th: TurboHearts, private event: DealEventData) {}
 
   private createSpriteCards(hand: Card[], seat: Seat, center: PointWithRotation) {
     const cards: SpriteCard[] = [];
@@ -75,6 +73,8 @@ export class DealEvent implements Event {
   }
 
   public begin() {
+    this.th.resetForDeal();
+    this.th.pass = this.event.pass;
     const top = getCardsForPosition(this.th.bottomSeat, "top", this.event);
     const right = getCardsForPosition(this.th.bottomSeat, "right", this.event);
     const bottom = getCardsForPosition(this.th.bottomSeat, "bottom", this.event);
