@@ -35,6 +35,6 @@ export class YourPlayEvent implements Event {
   };
 
   public isFinished() {
-    return true;
+    return this.finished;
   }
 }

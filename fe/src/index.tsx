@@ -10,6 +10,7 @@ import { TurboHearts } from "./game/TurboHearts";
 import "./styles/style.scss";
 import { EventData, Card } from "./types";
 import { YourPlayEvent } from "./events/YourPlayEvent";
+import { StartPassingEvent } from "./events/StartPassingEvent";
 
 function toEvent(th: TurboHearts, event: EventData) {
   switch (event.type) {
@@ -17,6 +18,8 @@ function toEvent(th: TurboHearts, event: EventData) {
       return new SitEvent(th, event);
     case "deal":
       return new DealEvent(th, event);
+    case "start_passing":
+      return new StartPassingEvent(th, event);
     case "send_pass":
       return new SendPassEvent(th, event);
     case "recv_pass":
@@ -52,10 +55,21 @@ function playCard(card: Card) {
   });
 }
 
+function passCards(cards: Card[]) {
+  return fetch(`${SERVER}/game/pass`, {
+    credentials: "include",
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ id: GAME_ID, cards })
+  });
+}
+
 (window as any).playCard = playCard;
 
 document.addEventListener("DOMContentLoaded", event => {
-  const th = new TurboHearts(document.getElementById("turbo-hearts") as HTMLCanvasElement, playCard);
+  const th = new TurboHearts(document.getElementById("turbo-hearts") as HTMLCanvasElement, passCards, playCard);
   const eventSource = new EventSource(`${SERVER}/game/subscribe/${GAME_ID}`, {
     withCredentials: true
   });

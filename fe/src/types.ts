@@ -27,6 +27,10 @@ export interface DealEventData {
   pass: Pass;
 }
 
+export interface StartPassingEventData {
+  type: "start_passing";
+}
+
 export interface SendPassEventData {
   type: "send_pass";
   from: Seat;
@@ -103,6 +107,7 @@ export interface SpriteCard {
 export type EventData =
   | SitEventData
   | DealEventData
+  | StartPassingEventData
   | SendPassEventData
   | ReceivePassEventData
   | ChargeEventData
