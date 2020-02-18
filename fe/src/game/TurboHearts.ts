@@ -1,4 +1,4 @@
-import { Pass, SpriteCard, CARDS, Event, Seat } from "../types";
+import { Pass, SpriteCard, CARDS, Event, Seat, Card } from "../types";
 import TWEEN from "@tweenjs/tween.js";
 import * as PIXI from "pixi.js";
 import { TABLE_SIZE } from "../const";
@@ -30,19 +30,20 @@ export class TurboHearts {
 
   public pass: Pass = "left";
 
-  public bottomSeat: Seat = "west";
+  public bottomSeat: Seat = "north";
 
   public topPlayer: Player = emptyPlayer();
   public rightPlayer: Player = emptyPlayer();
   public bottomPlayer: Player = emptyPlayer();
   public leftPlayer: Player = emptyPlayer();
 
+  public trickNumber = 0;
   public playIndex = 0;
 
-  private eventQueue: Event[] = [];
+  private events: Event[] = [];
   private currentEvent: Event | undefined = undefined;
 
-  constructor(private canvas: HTMLCanvasElement) {
+  constructor(private canvas: HTMLCanvasElement, public playCard: (card: Card) => Promise<unknown>) {
     const dpr = window.devicePixelRatio;
     this.app = new PIXI.Application({
       view: this.canvas,
@@ -63,6 +64,7 @@ export class TurboHearts {
     this.rightPlayer = emptyPlayer();
     this.bottomPlayer = emptyPlayer();
     this.leftPlayer = emptyPlayer();
+    this.trickNumber = 0;
     this.playIndex = 0;
     this.app.stage.removeChildren();
   }
@@ -76,8 +78,10 @@ export class TurboHearts {
     });
   }
 
+  public activateCards(legalPlays: Card[]) {}
+
   public pushEvent(event: Event) {
-    this.eventQueue.push(event);
+    this.events.push(event);
   }
 
   /**
@@ -92,11 +96,13 @@ export class TurboHearts {
         this.currentEvent = undefined;
       }
     }
-    if (this.eventQueue.length === 0) {
+    if (this.events.length === 0) {
       return;
     }
-    this.currentEvent = this.eventQueue.shift();
-    console.log(this.currentEvent);
-    this.currentEvent.begin();
+    this.currentEvent = this.events.shift();
+    if (this.currentEvent.type !== "your_play" || this.events.length === 0) {
+      console.log(this.currentEvent);
+      this.currentEvent.begin();
+    }
   };
 }

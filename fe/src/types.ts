@@ -50,6 +50,11 @@ export interface StartTrickEventData {
   leader: Seat;
 }
 
+export interface YourPlayEventData {
+  type: "your_play";
+  legalPlays: Card[];
+}
+
 export interface PlayEventData {
   type: "play";
   seat: Seat;
@@ -62,8 +67,12 @@ export interface EndTrickEventData {
 }
 
 export interface Event {
+  type: EventData["type"];
   begin(): void;
   isFinished(): boolean;
+
+  // updateState(): void;
+  // animate(): Promise<void>;
 }
 
 export interface Point {
@@ -98,6 +107,7 @@ export type EventData =
   | ReceivePassEventData
   | ChargeEventData
   | StartTrickEventData
+  | YourPlayEventData
   | PlayEventData
   | EndTrickEventData;
 

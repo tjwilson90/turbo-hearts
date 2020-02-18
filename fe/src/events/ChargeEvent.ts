@@ -6,6 +6,8 @@ import { spriteCardsOf } from "./helpers";
 import { getPlayerAccessor } from "./playerAccessors";
 
 export class ChargeEvent implements Event {
+  public type = "charge" as const;
+
   private finished = false;
 
   constructor(private th: TurboHearts, private event: ChargeEventData) {}

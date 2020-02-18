@@ -11,12 +11,15 @@ Started from this boilerplate: https://github.com/mwieth/Webpack-4-boilerplate-T
 - Keep pass
 
 - Names
+- Multi rounds of charging
 - Play indicator
 - Tune animation speeds
 - Pass arrow indicators
 - Flip animation
 - Dealing under
 - Sort charged cards?
+- Re-animate multi charged cards after a play
+- Animation when before deal
 
 - X Across pass
 - X Re-deal

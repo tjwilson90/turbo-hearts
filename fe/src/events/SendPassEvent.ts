@@ -87,6 +87,8 @@ passDestinations["across"]["west"]["south"] = LIMBO_LEFT;
 passDestinations["across"]["west"]["west"] = LIMBO_TOP;
 
 export class SendPassEvent implements Event {
+  public type = "send_pass" as const;
+
   private finished = false;
 
   constructor(private th: TurboHearts, private event: SendPassEventData) {}

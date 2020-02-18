@@ -36,6 +36,8 @@ function getCardsForPosition(bottomSeat: Seat, position: Position, event: DealEv
 }
 
 export class DealEvent implements Event {
+  public type = "deal" as const;
+
   private finished = false;
 
   constructor(private th: TurboHearts, private event: DealEventData) {}
@@ -44,19 +46,22 @@ export class DealEvent implements Event {
     const cards: SpriteCard[] = [];
     if (hand.length === 0) {
       for (let i = 0; i < 13; i++) {
-        cards.push({
+        const card: SpriteCard = {
           card: "BACK",
           sprite: new PIXI.Sprite(this.th.app.loader.resources["BACK"].texture),
           hidden: true
-        });
+        };
+        cards.push(card);
       }
     } else {
       for (const card of hand) {
-        cards.push({
+        const spriteCard = {
           card,
           sprite: new PIXI.Sprite(this.th.app.loader.resources["BACK"].texture),
           hidden: true
-        });
+        };
+        spriteCard.sprite.interactive = true;
+        cards.push(spriteCard);
       }
     }
     sortSpriteCards(cards);
