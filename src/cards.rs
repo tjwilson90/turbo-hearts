@@ -98,10 +98,6 @@ impl Suit {
             bits: 0x1fff << (16 * self as u64),
         }
     }
-
-    pub fn nine(self) -> Card {
-        Card::new(Rank::Nine, self)
-    }
 }
 
 impl From<u8> for Suit {
@@ -203,8 +199,16 @@ impl Card {
         Rank::from(self as u8 % 16)
     }
 
+    pub fn with_rank(self, rank: Rank) -> Card {
+        Card::new(rank, self.suit())
+    }
+
     pub fn suit(self) -> Suit {
         Suit::from(self as u8 / 16)
+    }
+
+    pub fn with_suit(self, suit: Suit) -> Card {
+        Card::new(self.rank(), suit)
     }
 }
 
@@ -348,6 +352,10 @@ impl Cards {
 
     pub fn max(self) -> Card {
         Card::from(63 - self.bits.leading_zeros() as u8)
+    }
+
+    pub fn min(self) -> Card {
+        Card::from(self.bits.trailing_zeros() as u8)
     }
 
     pub fn contains(self, other: Card) -> bool {
@@ -780,7 +788,7 @@ impl GameState {
                     || (self.current_trick.len() == 4
                         && !self
                             .current_trick
-                            .contains(&self.current_trick[0].suit().nine()))
+                            .contains(&self.current_trick[0].with_rank(Rank::Nine)))
                 {
                     let mut seat = seat.left();
                     let mut winning_seat = seat;
