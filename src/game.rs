@@ -113,7 +113,12 @@ impl Games {
             let mut copy = Game::new();
             for event in &game.events {
                 copy.apply(event, |g, e| {
-                    if let Some(event) = e.redact(seat, g.state.rules, g.state.next_player) {
+                    if let Some(event) = e.redact(
+                        seat,
+                        g.state.rules,
+                        g.state.next_player,
+                        g.state.next_charger,
+                    ) {
                         tx.send(event).unwrap();
                     }
                 });
@@ -276,10 +281,11 @@ impl Game {
         let players = &self.state.players;
         let rules = self.state.rules;
         let next_player = self.state.next_player;
+        let next_charger = self.state.next_charger;
         self.subscribers.retain(|name, tx| {
             let seat = seat(&players, name);
             event
-                .redact(seat, rules, next_player)
+                .redact(seat, rules, next_player, next_charger)
                 .map_or(true, |e| tx.send(e).is_ok())
         });
     }
@@ -311,14 +317,31 @@ impl Game {
                 self.post_pass_hand[Seat::South.idx()] = *south;
                 self.pre_pass_hand[Seat::West.idx()] = *west;
                 self.post_pass_hand[Seat::West.idx()] = *west;
+                if self.state.phase.is_passing() {
+                    broadcast(&mut *self, &GameEvent::StartPassing);
+                } else {
+                    broadcast(&mut *self, &GameEvent::StartCharging);
+                    if self.state.next_charger.is_some() {
+                        broadcast(&mut *self, &GameEvent::YourCharge);
+                    }
+                }
             }
             GameEvent::SendPass { from, cards } => {
                 self.post_pass_hand[from.idx()] -= *cards;
             }
             GameEvent::RecvPass { to, cards } => {
                 self.post_pass_hand[to.idx()] |= *cards;
+                if self.state.phase.is_charging() {
+                    broadcast(&mut *self, &GameEvent::StartCharging);
+                    if self.state.next_charger.is_some() {
+                        broadcast(&mut *self, &GameEvent::YourCharge);
+                    }
+                }
             }
             GameEvent::Charge { .. } => {
+                if self.state.phase.is_charging() && self.state.next_charger.is_some() {
+                    broadcast(&mut *self, &GameEvent::YourCharge);
+                }
                 if self.state.phase.is_playing() {
                     self.state.next_player = Some(self.owner(Card::TwoClubs));
                     if self.state.rules.blind() {
@@ -497,6 +520,7 @@ pub enum GameEvent {
         west: Cards,
         pass: PassDirection,
     },
+    StartPassing,
     SendPass {
         from: Seat,
         cards: Cards,
@@ -505,6 +529,8 @@ pub enum GameEvent {
         to: Seat,
         cards: Cards,
     },
+    StartCharging,
+    YourCharge,
     BlindCharge {
         seat: Seat,
         count: usize,
@@ -552,11 +578,14 @@ impl GameEvent {
         seat: Option<Seat>,
         rules: ChargingRules,
         next_player: Option<Seat>,
+        next_charger: Option<Seat>,
     ) -> Option<GameEvent> {
         match self {
             GameEvent::Ping
             | GameEvent::Play { .. }
             | GameEvent::Sit { .. }
+            | GameEvent::StartPassing
+            | GameEvent::StartCharging
             | GameEvent::BlindCharge { .. }
             | GameEvent::RevealCharges { .. }
             | GameEvent::StartTrick { .. }
@@ -619,10 +648,20 @@ impl GameEvent {
                 },
                 _ => self.clone(),
             }),
-            GameEvent::YourPlay { .. } => match seat {
-                Some(s) if s == next_player.unwrap() => Some(self.clone()),
-                _ => None,
-            },
+            GameEvent::YourPlay { .. } => {
+                if seat.is_some() && seat == next_player {
+                    Some(self.clone())
+                } else {
+                    None
+                }
+            }
+            GameEvent::YourCharge => {
+                if seat.is_some() && seat == next_charger {
+                    Some(self.clone())
+                } else {
+                    None
+                }
+            }
         }
     }
 }
