@@ -339,7 +339,7 @@ async fn test_pass() -> Result<(), CardsError> {
 }
 
 #[tokio::test(threaded_scheduler)]
-async fn test_random_bot_game() -> Result<(), CardsError> {
+async fn test_bot_game() -> Result<(), CardsError> {
     async fn test(_: Database, server: Server) -> Result<(), CardsError> {
         let id = server.new_game("fake", ChargingRules::Classic).await;
         server
@@ -368,7 +368,7 @@ async fn test_random_bot_game() -> Result<(), CardsError> {
                 id,
                 Player::Bot {
                     name: s!(three),
-                    algorithm: s!(random),
+                    algorithm: s!(duck),
                 },
                 ChargingRules::Bridge,
             )
@@ -378,7 +378,7 @@ async fn test_random_bot_game() -> Result<(), CardsError> {
                 id,
                 Player::Bot {
                     name: s!(four),
-                    algorithm: s!(random),
+                    algorithm: s!(duck),
                 },
                 ChargingRules::Blind,
             )
