@@ -160,7 +160,9 @@ impl Bot {
                 None
             }
         } else if self.state.game.phase.is_passing() {
-            if !self.state.game.sent_pass[self.state.seat.idx()] {
+            if !self.state.pre_pass_hand.is_empty()
+                && !self.state.game.sent_pass[self.state.seat.idx()]
+            {
                 Some(Action::Pass(self.algorithm.pass(&self.state)))
             } else {
                 None
