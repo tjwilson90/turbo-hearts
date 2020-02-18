@@ -43,7 +43,11 @@ export class TurboHearts {
   private events: Event[] = [];
   private currentEvent: Event | undefined = undefined;
 
-  constructor(private canvas: HTMLCanvasElement, public playCard: (card: Card) => Promise<unknown>) {
+  constructor(
+    private canvas: HTMLCanvasElement,
+    public passCards: (card: Card[]) => Promise<unknown>,
+    public playCard: (card: Card) => Promise<unknown>
+  ) {
     const dpr = window.devicePixelRatio;
     this.app = new PIXI.Application({
       view: this.canvas,
@@ -100,9 +104,12 @@ export class TurboHearts {
       return;
     }
     this.currentEvent = this.events.shift();
-    if (this.currentEvent.type !== "your_play" || this.events.length === 0) {
+    const isInput = this.currentEvent.type === "your_play" || this.currentEvent.type === "start_passing";
+    if (!isInput || this.events.length === 0) {
       console.log(this.currentEvent);
       this.currentEvent.begin();
+    } else {
+      this.currentEvent = undefined;
     }
   };
 }
