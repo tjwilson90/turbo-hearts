@@ -8,7 +8,7 @@ use crate::{
 };
 use log::info;
 use rand::Rng;
-use std::sync::mpsc::TryRecvError;
+use tokio::sync::mpsc::error::TryRecvError;
 
 mod random;
 
@@ -64,7 +64,7 @@ impl Bot {
                         action = self.handle(event);
                     }
                     Err(TryRecvError::Empty) => break,
-                    Err(TryRecvError::Disconnected) => return Ok(()),
+                    Err(TryRecvError::Closed) => return Ok(()),
                 }
             }
             match action {
