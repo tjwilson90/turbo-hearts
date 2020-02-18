@@ -1,10 +1,10 @@
-import * as PIXI from "pixi.js";
-import { Event, SitEventData } from "../types";
 import { TurboHearts } from "../game/TurboHearts";
+import { Event, SitEventData } from "../types";
 import { getPlayerAccessor } from "./playerAccessors";
-import { TABLE_CENTER_X, TABLE_SIZE } from "../const";
 
 export class SitEvent implements Event {
+  public type = "sit" as const;
+
   constructor(private th: TurboHearts, private event: SitEventData) {}
 
   public begin() {

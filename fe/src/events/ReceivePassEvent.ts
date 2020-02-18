@@ -78,6 +78,8 @@ limboSources["across"]["west"]["south"] = (th: TurboHearts) => th.leftPlayer.lim
 limboSources["across"]["west"]["west"] = (th: TurboHearts) => th.topPlayer.limboCards;
 
 export class ReceivePassEvent implements Event {
+  public type = "recv_pass" as const;
+
   private finished = false;
 
   constructor(private th: TurboHearts, private event: ReceivePassEventData) {}

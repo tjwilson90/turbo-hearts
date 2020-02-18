@@ -5,6 +5,8 @@ import { pushAll } from "../util/array";
 import { animatePile } from "./animations/animations";
 
 export class EndTrickEvent implements Event {
+  public type = "end_trick" as const;
+
   private finished = false;
 
   constructor(private th: TurboHearts, private event: EndTrickEventData) {}
@@ -28,6 +30,7 @@ export class EndTrickEvent implements Event {
       this.finished = true;
     });
     this.th.playIndex = 0;
+    this.th.trickNumber++;
   }
 
   public isFinished() {

@@ -6,6 +6,8 @@ import { spriteCardsOf } from "./helpers";
 import { getPlayerAccessor } from "./playerAccessors";
 
 export class PlayEvent implements Event {
+  public type = "play" as const;
+
   private finished = false;
 
   constructor(private th: TurboHearts, private event: PlayEventData) {}
