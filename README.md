@@ -229,7 +229,8 @@ Players in the game will receive a redacted event containing only their cards.
 
 #### StartPassing
 
-A `start_passing` event is sent when the passing phase of a hand begins.
+A `start_passing` event is sent when the passing phase of a hand begins. This event is sent for
+convenience; the information it imparts can be inferred from other events.
 
 ```json
 {
@@ -267,7 +268,8 @@ without the actual cards passed.
 
 #### StartCharging
 
-A `start_charging` event is sent when a charging phase of a hand begins.
+A `start_charging` event is sent when a charging phase of a hand begins. This event is sent for
+convenience; the information it imparts can be inferred from other events.
 
 ```json
 {
@@ -279,7 +281,8 @@ A `start_charging` event is sent when a charging phase of a hand begins.
 
 A `your_charge` event is sent to a player when it is their turn to charge. With classic or blind
 rules there is no order to charging and this event is not sent. This event is never sent to
-spectators.
+spectators. This event is sent for convenience; the information it imparts can be inferred from
+other events.
 
 ```json
 {
@@ -347,7 +350,8 @@ played.
 
 A `your_play` event is sent to a player when it is their turn to play. The event contains the set
 of cards in their hand that are legal to play at that moment. This event is never sent to
-spectators.
+spectators. This event is sent for convenience; the information it imparts can be inferred from
+other events.
 
 ```json
 {
@@ -372,7 +376,7 @@ Response:
 #### End Trick
 
 When a trick is completed, an `end_trick` event will be sent indicating which player makes won the
-trick. This event is sent for convenience; the information is imparts can be inferred from other
+trick. This event is sent for convenience; the information it imparts can be inferred from other
 events.
 
 Response:
@@ -380,6 +384,19 @@ Response:
 {
   "type": "end_trick",
   "winner": "west"
+}
+```
+
+#### Game Complete
+
+A `game_complete` event is sent as the last event in a game. Immediately after this event is sent
+all subscribers will be disconnected. Subscribers who receive this event should not attempt to
+reconnect to the game event stream. This event is sent for convenience; the information it imparts
+can be inferred from other events.
+
+```json
+{
+  "type": "game_complete"
 }
 ```
 
