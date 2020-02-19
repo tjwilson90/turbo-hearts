@@ -7,7 +7,8 @@ import {
   FAST_ANIMATION_DURATION,
   LEFT,
   RIGHT,
-  TOP
+  TOP,
+  Z_DEALING_CARDS
 } from "../../const";
 import { TurboHearts } from "../../game/TurboHearts";
 import { Point, Seat, SpriteCard } from "../../types";
@@ -81,7 +82,7 @@ export function animateDeal(th: TurboHearts) {
   let delay = 0;
   let finished = 0;
   let started = 0;
-  let zIndex = 100;
+  let zIndex = Z_DEALING_CARDS;
   function animateDealCard(card: SpriteCard, dest: Point, rotation: number, resolve: () => void) {
     card.sprite.zIndex = zIndex--;
     new TWEEN.Tween(card.sprite.position)

@@ -5,7 +5,19 @@ import { getPlayerAccessor } from "./playerAccessors";
 export class SitEvent implements Event {
   public type = "sit" as const;
 
-  constructor(private th: TurboHearts, private event: SitEventData) {}
+  constructor(private th: TurboHearts, private event: SitEventData) {
+    if (event.north.name === th.userId) {
+      th.bottomSeat = "north";
+    } else if (event.east.name === th.userId) {
+      th.bottomSeat = "east";
+    } else if (event.south.name === th.userId) {
+      th.bottomSeat = "south";
+    } else if (event.west.name === th.userId) {
+      th.bottomSeat = "west";
+    } else {
+      th.bottomSeat = "south";
+    }
+  }
 
   public begin() {
     const north = getPlayerAccessor(this.th.bottomSeat, "north")(this.th);
@@ -20,12 +32,6 @@ export class SitEvent implements Event {
     south.type = this.event.south.type;
     west.name = this.event.west.name;
     west.type = this.event.west.type;
-
-    // const southLabel = new PIXI.Text(south.name);
-    // southLabel.anchor.set(0.5);
-    // southLabel.position.set(TABLE_CENTER_X, TABLE_SIZE - 20);
-    // southLabel.zIndex = 100;
-    // this.th.app.stage.addChild(southLabel);
   }
 
   public isFinished() {

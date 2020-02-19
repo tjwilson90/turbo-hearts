@@ -4,6 +4,7 @@ import { pushAll, removeAll } from "../util/array";
 import { animateHand, animatePlay } from "./animations/animations";
 import { spriteCardsOf } from "./helpers";
 import { getPlayerAccessor } from "./playerAccessors";
+import { Z_PLAYED_CARDS, Z_TRANSIT_CARDS } from "../const";
 
 export class PlayEvent implements Event {
   public type = "play" as const;
@@ -21,13 +22,16 @@ export class PlayEvent implements Event {
       cards[0].hidden = false;
       cards[0].sprite.texture = this.th.app.loader.resources[this.event.card].texture;
     }
-    cards[0].sprite.zIndex = this.th.playIndex++ + 100;
+    cards[0].sprite.zIndex = Z_TRANSIT_CARDS;
+    this.th.app.stage.sortChildren();
 
     pushAll(player.playCards, cards);
     removeAll(player.cards, cards);
     removeAll(player.chargedCards, cards);
 
     Promise.all([animateHand(this.th, this.event.seat), animatePlay(this.th, this.event.seat)]).then(() => {
+      cards[0].sprite.zIndex = this.th.playIndex++ + Z_PLAYED_CARDS;
+      this.th.app.stage.sortChildren();
       this.finished = true;
     });
   }

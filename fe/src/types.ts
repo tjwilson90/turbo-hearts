@@ -43,6 +43,10 @@ export interface ReceivePassEventData {
   cards: Card[];
 }
 
+export interface StartChargingEventData {
+  type: "start_charging";
+}
+
 export interface ChargeEventData {
   type: "charge";
   seat: Seat;
@@ -110,6 +114,7 @@ export type EventData =
   | StartPassingEventData
   | SendPassEventData
   | ReceivePassEventData
+  | StartChargingEventData
   | ChargeEventData
   | StartTrickEventData
   | YourPlayEventData

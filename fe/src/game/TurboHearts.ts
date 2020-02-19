@@ -2,6 +2,9 @@ import { Pass, SpriteCard, CARDS, Event, Seat, Card } from "../types";
 import TWEEN from "@tweenjs/tween.js";
 import * as PIXI from "pixi.js";
 import { TABLE_SIZE } from "../const";
+import { SendPassEvent } from "../events/SendPassEvent";
+import { ChargeEvent } from "../events/ChargeEvent";
+import { PlaySubmitter } from "./PlaySubmitter";
 
 export interface Player {
   type: "bot" | "human";
@@ -25,12 +28,38 @@ function emptyPlayer(): Player {
   };
 }
 
+function isChargeEvent(event: Event): event is ChargeEvent {
+  return event.type === "charge";
+}
+
+function isSendPassEvent(event: Event): event is SendPassEvent {
+  return event.type === "send_pass";
+}
+
+function hasSendPassFrom(events: Event[], seat: Seat) {
+  for (const event of events) {
+    if (isSendPassEvent(event) && event.from === seat) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function hasChargeFrom(events: Event[], seat: Seat) {
+  for (const event of events) {
+    if (isChargeEvent(event) && event.seat === seat) {
+      return true;
+    }
+  }
+  return false;
+}
+
 export class TurboHearts {
   public app: PIXI.Application;
 
   public pass: Pass = "left";
 
-  public bottomSeat: Seat = "north";
+  public bottomSeat: Seat = "south";
 
   public topPlayer: Player = emptyPlayer();
   public rightPlayer: Player = emptyPlayer();
@@ -43,11 +72,7 @@ export class TurboHearts {
   private events: Event[] = [];
   private currentEvent: Event | undefined = undefined;
 
-  constructor(
-    private canvas: HTMLCanvasElement,
-    public passCards: (card: Card[]) => Promise<unknown>,
-    public playCard: (card: Card) => Promise<unknown>
-  ) {
+  constructor(private canvas: HTMLCanvasElement, public userId: string, public submitter: PlaySubmitter) {
     const dpr = window.devicePixelRatio;
     this.app = new PIXI.Application({
       view: this.canvas,
@@ -88,6 +113,18 @@ export class TurboHearts {
     this.events.push(event);
   }
 
+  private hasEventAfterYourPlay() {
+    return this.currentEvent.type === "your_play" && this.events.length > 0;
+  }
+
+  private hasFutureSendPass() {
+    return this.currentEvent.type === "start_passing" && hasSendPassFrom(this.events, this.bottomSeat);
+  }
+
+  private hasFutureCharge() {
+    return this.currentEvent.type === "start_charging" && hasChargeFrom(this.events, this.bottomSeat);
+  }
+
   /**
    * @param delta the number of frames to advance at 60fps
    */
@@ -104,12 +141,11 @@ export class TurboHearts {
       return;
     }
     this.currentEvent = this.events.shift();
-    const isInput = this.currentEvent.type === "your_play" || this.currentEvent.type === "start_passing";
-    if (!isInput || this.events.length === 0) {
-      console.log(this.currentEvent);
-      this.currentEvent.begin();
-    } else {
+    if (this.hasEventAfterYourPlay() || this.hasFutureSendPass() || this.hasFutureCharge()) {
       this.currentEvent = undefined;
+    } else {
+      console.log(this.currentEvent, console.log(this.events.length), this.hasFutureCharge());
+      this.currentEvent.begin();
     }
   };
 }

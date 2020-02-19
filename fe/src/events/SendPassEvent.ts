@@ -9,7 +9,7 @@ import {
   LIMBO_LEFT
 } from "../const";
 import { TurboHearts } from "../game/TurboHearts";
-import { Event, PointWithRotation, SendPassEventData } from "../types";
+import { Event, PointWithRotation, SendPassEventData, Seat } from "../types";
 import { pushAll, removeAll } from "../util/array";
 import { animateCards, animateHand } from "./animations/animations";
 import { spriteCardsOf, spriteCardsOfNot } from "./helpers";
@@ -88,10 +88,13 @@ passDestinations["across"]["west"]["west"] = LIMBO_TOP;
 
 export class SendPassEvent implements Event {
   public type = "send_pass" as const;
+  public from: Seat;
 
   private finished = false;
 
-  constructor(private th: TurboHearts, private event: SendPassEventData) {}
+  constructor(private th: TurboHearts, private event: SendPassEventData) {
+    this.from = event.from;
+  }
 
   public begin() {
     const passDestination = this.getPassDestination();

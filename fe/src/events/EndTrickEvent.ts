@@ -3,6 +3,7 @@ import { EndTrickEventData, Event, Seat, SpriteCard } from "../types";
 import { getPlayerAccessor } from "./playerAccessors";
 import { pushAll } from "../util/array";
 import { animatePile } from "./animations/animations";
+import { Z_PILE_CARDS } from "../const";
 
 export class EndTrickEvent implements Event {
   public type = "end_trick" as const;
@@ -19,7 +20,7 @@ export class EndTrickEvent implements Event {
         pileCards.push(card);
         card.hidden = true;
         card.sprite.texture = this.th.app.loader.resources["BACK"].texture;
-        card.sprite.zIndex = 0;
+        card.sprite.zIndex = Z_PILE_CARDS;
       });
       player.playCards = [];
     });

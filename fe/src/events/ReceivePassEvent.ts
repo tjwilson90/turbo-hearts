@@ -3,6 +3,7 @@ import { Event, ReceivePassEventData, SpriteCard } from "../types";
 import { animateHand } from "./animations/animations";
 import { getPlayerAccessor } from "./playerAccessors";
 import { sortSpriteCards } from "../game/sortCards";
+import { Z_HAND_CARDS } from "../const";
 
 const limboSources: {
   [pass: string]: {
@@ -88,7 +89,7 @@ export class ReceivePassEvent implements Event {
     const player = getPlayerAccessor(this.th.bottomSeat, this.event.to)(this.th);
     const cards = player.cards;
     this.updateCards(cards);
-    let i = 100;
+    let i = Z_HAND_CARDS;
     for (const card of cards) {
       card.sprite.zIndex = i++;
     }

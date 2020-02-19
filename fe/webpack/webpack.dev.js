@@ -19,7 +19,13 @@ module.exports = {
   },
   devtool: "source-map",
   devServer: {
-    open: true
+    open: true,
+    proxy: {
+      "/game": {
+        target: "http://localhost:7380",
+        secure: false
+      }
+    }
   },
   module: {
     rules: [

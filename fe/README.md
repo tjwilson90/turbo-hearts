@@ -8,7 +8,10 @@ Started from this boilerplate: https://github.com/mwieth/Webpack-4-boilerplate-T
 
 # TODO
 
+- Charge bug (uncharged card showing up charged)
 - Keep pass
+- Disconnect after finished
+- Instant replay on reconnect
 
 - Names
 - Multi rounds of charging

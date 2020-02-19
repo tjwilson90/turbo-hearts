@@ -11,7 +11,11 @@ import "./styles/style.scss";
 import { EventData, Card } from "./types";
 import { YourPlayEvent } from "./events/YourPlayEvent";
 import { StartPassingEvent } from "./events/StartPassingEvent";
+import { StartChargingEvent } from "./events/StartChargingEvent";
+import * as cookie from "cookie";
+import { PlaySubmitter } from "./game/PlaySubmitter";
 
+// TODO extract
 function toEvent(th: TurboHearts, event: EventData) {
   switch (event.type) {
     case "sit":
@@ -24,6 +28,8 @@ function toEvent(th: TurboHearts, event: EventData) {
       return new SendPassEvent(th, event);
     case "recv_pass":
       return new ReceivePassEvent(th, event);
+    case "start_charging":
+      return new StartChargingEvent(th, event);
     case "charge":
       return new ChargeEvent(th, event);
     case "start_trick":
@@ -41,49 +47,26 @@ function toEvent(th: TurboHearts, event: EventData) {
   }
 }
 
-const SERVER = "http://localhost:7380";
-const GAME_ID = "99aff84a-8300-42a8-8744-dade0b731c47";
-
-function playCard(card: Card) {
-  return fetch(`${SERVER}/game/play`, {
-    credentials: "include",
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({ id: GAME_ID, card })
-  });
-}
-
-function passCards(cards: Card[]) {
-  return fetch(`${SERVER}/game/pass`, {
-    credentials: "include",
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({ id: GAME_ID, cards })
-  });
-}
-
-(window as any).playCard = playCard;
-
-document.addEventListener("DOMContentLoaded", event => {
-  const th = new TurboHearts(document.getElementById("turbo-hearts") as HTMLCanvasElement, passCards, playCard);
-  const eventSource = new EventSource(`${SERVER}/game/subscribe/${GAME_ID}`, {
+document.addEventListener("DOMContentLoaded", () => {
+  const userId = cookie.parse(document.cookie)["name"];
+  if (userId?.length === 0) {
+    document.body.innerHTML = "Missing user id";
+    return;
+  }
+  const gameId = window.location.hash.substring(1);
+  if (gameId.length !== 36) {
+    document.body.innerHTML = "Missing game id";
+    return;
+  }
+  const submitter = new PlaySubmitter(gameId);
+  const th = new TurboHearts(document.getElementById("turbo-hearts") as HTMLCanvasElement, userId, submitter);
+  const eventSource = new EventSource(`/game/subscribe/${gameId}`, {
     withCredentials: true
   });
   eventSource.addEventListener("message", event => {
-    console.log(event);
     const realEvent = toEvent(th, JSON.parse(event.data) as EventData);
     if (realEvent !== undefined) {
       th.pushEvent(realEvent);
     }
   });
-  // for (const event of HIDDEN_GAME) {
-  //   const realEvent = toEvent(th, event as EventData);
-  //   if (realEvent !== undefined) {
-  //     th.pushEvent(realEvent);
-  //   }
-  // }
 });
