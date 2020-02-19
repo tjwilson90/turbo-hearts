@@ -18,24 +18,22 @@ pub enum CardsError {
     GameComplete(GameId),
     #[error("game {0} has already started")]
     GameHasStarted(GameId),
-    #[error("hearts cannot be lead if hearts are not broken")]
+    #[error("hearts cannot be led if hearts are not broken")]
     HeartsNotBroken,
-    #[error("cannot perform action, current phase is {0:?}")]
-    IllegalAction(GamePhase),
-    #[error("{0} is not a valid name for a human player")]
-    IllegalName(String),
+    #[error("cannot {0}, current phase is {1:?}")]
+    IllegalAction(&'static str, GamePhase),
     #[error("{0} is not a legal pass, passes must have 3 cards")]
     IllegalPassSize(Cards),
-    #[error("{0} is not a member of the game")]
-    IllegalPlayer(String),
+    #[error("{0} is not a valid name for a human player")]
+    InvalidName(String),
     #[error("charged cards cannot be played on the first trick of their suit")]
     NoChargeOnFirstTrickOfSuit,
     #[error("points cannot be played on the first trick")]
     NoPointsOnFirstTrick,
     #[error("your hand does not contain {0}")]
     NotYourCards(Cards),
-    #[error("player {0} makes the next charge or play")]
-    NotYourTurn(String),
+    #[error("player {0} makes the next {1}")]
+    NotYourTurn(String, &'static str),
     #[error("api endpoints require a \"name\" cookie identifying the caller")]
     MissingNameCookie,
     #[error("on the first trick if you have nothing but points, you must play the jack of diamonds if you have it")]
@@ -58,8 +56,10 @@ pub enum CardsError {
     },
     #[error("the cards {0} cannot be charged")]
     Unchargeable(Cards),
-    #[error("unknown game: {0}")]
+    #[error("{0} is not a known game id")]
     UnknownGame(GameId),
+    #[error("{0} is not a member of game {1}")]
+    UnknownPlayer(String, GameId),
 }
 
 impl CardsError {

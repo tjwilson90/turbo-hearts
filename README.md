@@ -227,6 +227,16 @@ Players in the game will receive a redacted event containing only their cards.
 }
 ```
 
+#### StartPassing
+
+A `start_passing` event is sent when the passing phase of a hand begins.
+
+```json
+{
+  "type": "start_passing"
+}
+```
+
 #### SendPass
 
 When a player makes a pass, a `send_pass` event is sent indicating who sent the pass and what cards
@@ -252,6 +262,28 @@ without the actual cards passed.
   "type": "recv_pass",
   "to": "west",
   "cards": ["QH", "AC", "TD"]
+}
+```
+
+#### StartCharging
+
+A `start_charging` event is sent when a charging phase of a hand begins.
+
+```json
+{
+  "type": "start_charging"
+}
+```
+
+#### YourCharge
+
+A `your_charge` event is sent to a player when it is their turn to charge. With classic or blind
+rules there is no order to charging and this event is not sent. This event is never sent to
+spectators.
+
+```json
+{
+  "type": "your_charge"
 }
 ```
 
@@ -308,6 +340,19 @@ played.
   "type": "play",
   "seat": "west",
   "card": "8D"
+}
+```
+
+#### YourPlay
+
+A `your_play` event is sent to a player when it is their turn to play. The event contains the set
+of cards in their hand that are legal to play at that moment. This event is never sent to
+spectators.
+
+```json
+{
+  "type": "your_play",
+  "legal_plays": ["AS", "8S", "4S", "3S"]
 }
 ```
 
