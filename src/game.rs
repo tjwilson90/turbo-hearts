@@ -1,5 +1,5 @@
 use crate::{
-    cards::{Card, Cards, GamePhase, GameState, PassDirection, Suit},
+    cards::{Card, Cards, GamePhase, GameState, PassDirection},
     db::Database,
     error::CardsError,
     types::{ChargingRules, Event, GameId, Participant, Player, Seat},
@@ -380,6 +380,8 @@ impl Game {
                         .state
                         .legal_plays(self.post_pass_hand[leader.idx()] - self.state.played);
                     broadcast(&mut *self, &GameEvent::YourPlay { legal_plays });
+                } else if self.state.phase.is_complete() {
+                    broadcast(&mut *self, &GameEvent::GameComplete);
                 }
             }
             _ => {}
@@ -561,6 +563,7 @@ pub enum GameEvent {
     EndTrick {
         winner: Seat,
     },
+    GameComplete,
 }
 
 impl GameEvent {
@@ -592,7 +595,8 @@ impl GameEvent {
             | GameEvent::BlindCharge { .. }
             | GameEvent::RevealCharges { .. }
             | GameEvent::StartTrick { .. }
-            | GameEvent::EndTrick { .. } => Some(self.clone()),
+            | GameEvent::EndTrick { .. }
+            | GameEvent::GameComplete => Some(self.clone()),
             GameEvent::Deal {
                 north,
                 east,
