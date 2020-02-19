@@ -744,6 +744,9 @@ impl GameState {
                 self.sent_pass = [false, false, false, false];
                 self.received_pass = [false, false, false, false];
                 self.next_player = None;
+                self.played = Cards::NONE;
+                self.led_suits = Cards::NONE;
+                self.current_trick.clear();
             }
             GameEvent::SendPass { from, .. } => {
                 self.sent_pass[from.idx()] = true;
@@ -778,9 +781,6 @@ impl GameState {
             }
             GameEvent::Play { seat, card } => {
                 self.played |= *card;
-                if self.current_trick.is_empty() {
-                    self.led_suits |= card.suit().cards();
-                }
                 self.current_trick.push(*card);
                 self.next_player = Some(seat.left());
                 if self.current_trick.len() == 8
@@ -790,6 +790,7 @@ impl GameState {
                             .current_trick
                             .contains(&self.current_trick[0].with_rank(Rank::Nine)))
                 {
+                    self.led_suits |= self.current_trick[0].suit().cards();
                     let mut seat = seat.left();
                     let mut winning_seat = seat;
                     let mut winning_card = self.current_trick[0];
@@ -819,11 +820,6 @@ impl GameState {
             self.done_charging[seat.idx()] = true;
             if self.done_charging.iter().all(|b| *b) {
                 self.phase = self.phase.next(self.charge_count != 0);
-                if self.phase.is_playing() {
-                    self.played = Cards::NONE;
-                    self.led_suits = Cards::NONE;
-                    self.current_trick.clear();
-                }
             }
         } else {
             self.done_charging.iter_mut().for_each(|b| *b = false);
