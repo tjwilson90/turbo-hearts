@@ -1,5 +1,12 @@
 import { PlayerCardPositions } from "./types";
 
+export const Z_PILE_CARDS = 0;
+export const Z_DEALING_CARDS = 500;
+export const Z_PLAYED_CARDS = 1000;
+export const Z_CHARGED_CARDS = 2000;
+export const Z_HAND_CARDS = 3000;
+export const Z_TRANSIT_CARDS = 4000;
+
 export const CARD_SCALE = 0.5;
 export const CARD_NATIVE_WIDTH = 212;
 export const CARD_NATIVE_HEIGHT = 329;
@@ -11,11 +18,13 @@ export const TABLE_SIZE = 1000;
 export const TABLE_CENTER_X = TABLE_SIZE / 2;
 export const TABLE_CENTER_Y = TABLE_SIZE / 2;
 
-export const ANIMATION_DURATION = 200;
-export const ANIMATION_DELAY = 80;
+export const ANIMATION_DURATION = 600;
+export const ANIMATION_DELAY = 50;
 
 export const FAST_ANIMATION_DURATION = ANIMATION_DURATION / 2;
 export const FAST_ANIMATION_DELAY = ANIMATION_DELAY / 2;
+
+export const FASTER_ANIMATION_DURATION = ANIMATION_DURATION / 4;
 
 export const TABLE_CARD_UNDERLAP = 0.0;
 export const CARD_MARGIN = 10;

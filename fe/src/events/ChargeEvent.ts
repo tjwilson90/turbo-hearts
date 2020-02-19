@@ -1,16 +1,20 @@
 import { TurboHearts } from "../game/TurboHearts";
-import { ChargeEventData, Event } from "../types";
+import { ChargeEventData, Event, Seat } from "../types";
 import { pushAll, removeAll } from "../util/array";
 import { animateCharges, animateHand } from "./animations/animations";
 import { spriteCardsOf } from "./helpers";
 import { getPlayerAccessor } from "./playerAccessors";
+import { Z_CHARGED_CARDS } from "../const";
 
 export class ChargeEvent implements Event {
   public type = "charge" as const;
+  public seat: Seat;
 
   private finished = false;
 
-  constructor(private th: TurboHearts, private event: ChargeEventData) {}
+  constructor(private th: TurboHearts, private event: ChargeEventData) {
+    this.seat = event.seat;
+  }
 
   public begin() {
     if (this.event.cards.length === 0) {
@@ -33,7 +37,10 @@ export class ChargeEvent implements Event {
       removeAll(player.cards, chargeCards);
       pushAll(player.chargedCards, chargeCards);
     }
-
+    for (const card of player.chargedCards) {
+      card.sprite.zIndex = Z_CHARGED_CARDS;
+    }
+    this.th.app.stage.sortChildren();
     Promise.all([animateHand(this.th, this.event.seat), animateCharges(this.th, this.event.seat)]).then(() => {
       this.finished = true;
     });
