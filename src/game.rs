@@ -190,7 +190,7 @@ impl Games {
                 }
                 Ok(())
             }
-            None => Err(CardsError::IllegalPlayer(name.to_string())),
+            None => Err(CardsError::UnknownPlayer(name.to_string(), id)),
         })
         .await
     }
@@ -211,7 +211,7 @@ impl Games {
                 game.apply(&event, |g, e| g.broadcast(e));
                 Ok(())
             }
-            None => Err(CardsError::IllegalPlayer(name.to_string())),
+            None => Err(CardsError::UnknownPlayer(name.to_string(), id)),
         })
         .await
     }
@@ -245,7 +245,7 @@ impl Games {
                 }
                 Ok(game.state.phase == GamePhase::Complete)
             }
-            None => Err(CardsError::IllegalPlayer(name.to_string())),
+            None => Err(CardsError::UnknownPlayer(name.to_string(), id)),
         })
         .await
     }
@@ -391,7 +391,7 @@ impl Game {
             return Err(CardsError::GameComplete(id));
         }
         if !self.state.phase.is_passing() {
-            return Err(CardsError::IllegalAction(self.state.phase));
+            return Err(CardsError::IllegalAction("pass", self.state.phase));
         }
         if !self.pre_pass_hand[seat.idx()].contains_all(cards) {
             return Err(CardsError::NotYourCards(
@@ -413,7 +413,7 @@ impl Game {
             return Err(CardsError::GameComplete(id));
         }
         if !self.state.phase.is_charging() {
-            return Err(CardsError::IllegalAction(self.state.phase));
+            return Err(CardsError::IllegalAction("charge", self.state.phase));
         }
         let hand_cards = self.post_pass_hand[seat.idx()];
         if !hand_cards.contains_all(cards) {
@@ -430,6 +430,7 @@ impl Game {
         if !self.state.can_charge(seat) {
             return Err(CardsError::NotYourTurn(
                 self.state.players[self.state.next_charger.unwrap().idx()].clone(),
+                "charge",
             ));
         }
         Ok(())
@@ -440,7 +441,7 @@ impl Game {
             return Err(CardsError::GameComplete(id));
         }
         if !self.state.phase.is_playing() {
-            return Err(CardsError::IllegalAction(self.state.phase));
+            return Err(CardsError::IllegalAction("play", self.state.phase));
         }
         let mut plays = self.post_pass_hand[seat.idx()] - self.state.played;
         if !plays.contains(card) {
@@ -449,6 +450,7 @@ impl Game {
         if seat != self.state.next_player.unwrap() {
             return Err(CardsError::NotYourTurn(
                 self.state.players[self.state.next_player.unwrap().idx()].clone(),
+                "play",
             ));
         }
         if self.state.led_suits.is_empty() {

@@ -318,12 +318,12 @@ async fn test_pass() -> Result<(), CardsError> {
 
         assert!(matches!(
             server.charge_cards(id, "twilson", c!(AH)).await,
-            Err(CardsError::IllegalAction(phase)) if phase == GamePhase::PassLeft
+            Err(CardsError::IllegalAction("charge", phase)) if phase == GamePhase::PassLeft
         ));
 
         assert!(matches!(
             server.play_card(id, "twilson", Card::SixClubs).await,
-            Err(CardsError::IllegalAction(phase)) if phase == GamePhase::PassLeft
+            Err(CardsError::IllegalAction("play", phase)) if phase == GamePhase::PassLeft
         ));
 
         server.pass_cards(id, "twilson", c!(K86C)).await?;
