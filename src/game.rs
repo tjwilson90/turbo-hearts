@@ -486,9 +486,7 @@ impl Game {
                 }
             }
         } else {
-            if !self.state.played.contains_any(Cards::HEARTS)
-                && !Cards::HEARTS.contains_all(plays)
-                && card.suit() == Suit::Hearts
+            if !self.state.played.contains_any(Cards::HEARTS) && !Cards::HEARTS.contains_all(plays)
             {
                 plays -= Cards::HEARTS;
                 if !plays.contains(card) {
