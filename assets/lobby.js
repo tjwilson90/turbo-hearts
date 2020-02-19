@@ -202,7 +202,7 @@ function addBot(event) {
         headers: {
             'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ id: id, rules: rules, algorithm: "random" })
+        body: JSON.stringify({ id: id, rules: rules, algorithm: "duck" })
     })
     .then((response) => response.json())
     .then((data) => console.log('Add bot: %o', data));
@@ -238,7 +238,7 @@ function leaveGame(event) {
 function openGame(event) {
     let id = event.target.parentNode.id;
     console.log('openGame: %s', id);
-    window.open('/game#' + id);
+    window.open('http://localhost:8080#' + id);
 }
 
 document.addEventListener('DOMContentLoaded', (event) => {
