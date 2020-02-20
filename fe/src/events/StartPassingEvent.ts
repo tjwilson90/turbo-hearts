@@ -1,54 +1,10 @@
 import TWEEN from "@tweenjs/tween.js";
 import * as PIXI from "pixi.js";
-import {
-  BOTTOM,
-  CARD_DISPLAY_HEIGHT,
-  FASTER_ANIMATION_DURATION,
-  TABLE_CENTER_X,
-  TABLE_SIZE,
-  CARD_MARGIN
-} from "../const";
+import { BOTTOM, CARD_DISPLAY_HEIGHT, FASTER_ANIMATION_DURATION } from "../const";
 import { TurboHearts } from "../game/TurboHearts";
 import { Event, SpriteCard, StartPassingEventData } from "../types";
+import { Button } from "../ui/Button";
 import { getPlayerAccessor } from "./playerAccessors";
-
-class Button {
-  public container: PIXI.Container = new PIXI.Container();
-
-  constructor(private callback: () => void) {
-    const graphics = new PIXI.Graphics();
-    graphics.lineStyle(2, 0xe0e0e0, 1);
-    graphics.beginFill(0xf0f0f0);
-    graphics.drawRect(0, 0, 200, 60);
-    graphics.endFill();
-    this.container.addChild(graphics);
-    this.container.x = TABLE_CENTER_X;
-    this.container.y = TABLE_SIZE - CARD_DISPLAY_HEIGHT * 1.5 - CARD_MARGIN * 2;
-    this.container.pivot.x = this.container.width / 2;
-    this.container.pivot.y = this.container.height;
-
-    let text = new PIXI.Text("Pass 3 Cards", {
-      fontFamily: "Arial",
-      fontSize: 24,
-      fill: 0x101010,
-      lineHeight: 60
-    });
-    text.anchor.set(0.5, 0.5);
-    text.position.set(this.container.width / 2, (this.container.height * 3) / 4);
-    this.container.addChild(text);
-  }
-
-  public setEnabled(enabled: boolean) {
-    this.container.interactive = true;
-    this.container.buttonMode = enabled;
-    this.container.alpha = enabled ? 1.0 : 0.5;
-    if (enabled) {
-      this.container.addListener("pointertap", this.callback);
-    } else {
-      this.container.removeListener("pointertap", this.callback);
-    }
-  }
-}
 
 export class StartPassingEvent implements Event {
   public type = "start_passing" as const;
@@ -69,7 +25,7 @@ export class StartPassingEvent implements Event {
       card.sprite.addListener("pointertap", this.onClick);
       card.sprite.buttonMode = true;
     }
-    this.button = new Button(this.submitPass);
+    this.button = new Button("Pass 3 Cards", this.submitPass);
     this.th.app.stage.addChild(this.button.container);
     this.button.setEnabled(this.cardsToPass.size === 3);
     // Passing is non-blocking.
