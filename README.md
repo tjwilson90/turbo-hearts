@@ -279,10 +279,9 @@ convenience; the information it imparts can be inferred from other events.
 
 #### YourCharge
 
-A `your_charge` event is sent to a player when it is their turn to charge. With classic or blind
-rules there is no order to charging and this event is not sent. This event is never sent to
-spectators. This event is sent for convenience; the information it imparts can be inferred from
-other events.
+A `your_charge` event is sent to a player whenever they are able to charge. This event is never
+sent to spectators. This event is sent for convenience; the information it imparts can be inferred
+from other events.
 
 ```json
 {

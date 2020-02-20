@@ -121,6 +121,7 @@ impl Games {
                         g.state.rules,
                         g.state.next_player,
                         g.state.next_charger,
+                        g.state.done_charging,
                     ) {
                         tx.send(event).unwrap();
                     }
@@ -285,10 +286,11 @@ impl Game {
         let rules = self.state.rules;
         let next_player = self.state.next_player;
         let next_charger = self.state.next_charger;
+        let done_charging = self.state.done_charging;
         self.subscribers.retain(|name, tx| {
             let seat = seat(&players, name);
             event
-                .redact(seat, rules, next_player, next_charger)
+                .redact(seat, rules, next_player, next_charger, done_charging)
                 .map_or(true, |e| tx.send(e).is_ok())
         });
     }
@@ -324,9 +326,7 @@ impl Game {
                     broadcast(&mut *self, &GameEvent::StartPassing);
                 } else {
                     broadcast(&mut *self, &GameEvent::StartCharging);
-                    if self.state.next_charger.is_some() {
-                        broadcast(&mut *self, &GameEvent::YourCharge);
-                    }
+                    broadcast(&mut *self, &GameEvent::YourCharge);
                 }
             }
             GameEvent::SendPass { from, cards } => {
@@ -336,13 +336,11 @@ impl Game {
                 self.post_pass_hand[to.idx()] |= *cards;
                 if self.state.phase.is_charging() {
                     broadcast(&mut *self, &GameEvent::StartCharging);
-                    if self.state.next_charger.is_some() {
-                        broadcast(&mut *self, &GameEvent::YourCharge);
-                    }
+                    broadcast(&mut *self, &GameEvent::YourCharge);
                 }
             }
             GameEvent::Charge { .. } => {
-                if self.state.phase.is_charging() && self.state.next_charger.is_some() {
+                if self.state.phase.is_charging() {
                     broadcast(&mut *self, &GameEvent::YourCharge);
                 } else if self.state.phase.is_passing() {
                     broadcast(&mut *self, &GameEvent::StartPassing);
@@ -586,6 +584,7 @@ impl GameEvent {
         rules: ChargingRules,
         next_player: Option<Seat>,
         next_charger: Option<Seat>,
+        done_charging: [bool; 4],
     ) -> Option<GameEvent> {
         match self {
             GameEvent::Ping
@@ -663,13 +662,12 @@ impl GameEvent {
                     None
                 }
             }
-            GameEvent::YourCharge => {
-                if seat.is_some() && seat == next_charger {
-                    Some(self.clone())
-                } else {
-                    None
-                }
-            }
+            GameEvent::YourCharge => match (seat, next_charger) {
+                (None, _) => None,
+                (Some(seat), Some(next_charger)) if seat == next_charger => Some(self.clone()),
+                (Some(seat), None) if !done_charging[seat.idx()] => Some(self.clone()),
+                _ => None,
+            },
         }
     }
 }
