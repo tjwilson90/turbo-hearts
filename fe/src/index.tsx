@@ -14,6 +14,7 @@ import { StartPassingEvent } from "./events/StartPassingEvent";
 import { StartChargingEvent } from "./events/StartChargingEvent";
 import * as cookie from "cookie";
 import { PlaySubmitter } from "./game/PlaySubmitter";
+import { GameCompleteEvent } from "./events/GameCompleteEvent";
 
 // TODO extract
 function toEvent(th: TurboHearts, event: EventData) {
@@ -42,9 +43,33 @@ function toEvent(th: TurboHearts, event: EventData) {
       return new PlayEvent(th, event);
     case "end_trick":
       return new EndTrickEvent(th, event);
+    case "game_complete":
+      return new GameCompleteEvent(th, event);
     default:
       return undefined;
   }
+}
+
+class TurboHeartsEventSource {
+  private eventSource: EventSource;
+
+  constructor(private th: TurboHearts, gameId: string) {
+    this.eventSource = new EventSource(`/game/subscribe/${gameId}`, {
+      withCredentials: true
+    });
+    this.eventSource.addEventListener("message", this.handleEvent);
+  }
+
+  private handleEvent = (event: MessageEvent) => {
+    const realEvent = toEvent(this.th, JSON.parse(event.data) as EventData);
+    if (realEvent !== undefined) {
+      this.th.pushEvent(realEvent);
+    }
+    if (realEvent.type === "game_complete") {
+      console.log("game_complete, disconnecting");
+      this.eventSource.close();
+    }
+  };
 }
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -60,13 +85,5 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   const submitter = new PlaySubmitter(gameId);
   const th = new TurboHearts(document.getElementById("turbo-hearts") as HTMLCanvasElement, userId, submitter);
-  const eventSource = new EventSource(`/game/subscribe/${gameId}`, {
-    withCredentials: true
-  });
-  eventSource.addEventListener("message", event => {
-    const realEvent = toEvent(th, JSON.parse(event.data) as EventData);
-    if (realEvent !== undefined) {
-      th.pushEvent(realEvent);
-    }
-  });
+  new TurboHeartsEventSource(th, gameId);
 });
