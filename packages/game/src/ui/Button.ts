@@ -9,7 +9,7 @@ export class Button {
     const graphics = new PIXI.Graphics();
     graphics.lineStyle(2, 0xe0e0e0, 1);
     graphics.beginFill(0xf0f0f0);
-    graphics.drawRect(0, 0, 200, 60);
+    graphics.drawRect(0, 0, 240, 60);
     graphics.endFill();
     this.container.addChild(graphics);
     this.container.x = TABLE_CENTER_X;

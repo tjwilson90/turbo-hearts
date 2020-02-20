@@ -2,9 +2,16 @@ import TWEEN from "@tweenjs/tween.js";
 import * as PIXI from "pixi.js";
 import { BOTTOM, CARD_DISPLAY_HEIGHT, FASTER_ANIMATION_DURATION } from "../const";
 import { TurboHearts } from "../game/TurboHearts";
-import { Event, SpriteCard, StartPassingEventData } from "../types";
+import { Event, SpriteCard, StartPassingEventData, Pass } from "../types";
 import { Button } from "../ui/Button";
 import { getPlayerAccessor } from "./playerAccessors";
+
+const directionText: {[P in Pass]: string} = {
+  left: "Left",
+  right: "Right",
+  across: "Across",
+  keeper: "In",
+};
 
 export class StartPassingEvent implements Event {
   public type = "start_passing" as const;
@@ -25,7 +32,7 @@ export class StartPassingEvent implements Event {
       card.sprite.addListener("pointertap", this.onClick);
       card.sprite.buttonMode = true;
     }
-    this.button = new Button("Pass 3 Cards", this.submitPass);
+    this.button = new Button("Pass 3 Cards " + directionText[this.th.pass], this.submitPass);
     this.th.app.stage.addChild(this.button.container);
     this.button.setEnabled(this.cardsToPass.size === 3);
     // Passing is non-blocking.
