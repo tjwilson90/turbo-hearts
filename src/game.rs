@@ -344,8 +344,9 @@ impl Game {
             GameEvent::Charge { .. } => {
                 if self.state.phase.is_charging() && self.state.next_charger.is_some() {
                     broadcast(&mut *self, &GameEvent::YourCharge);
-                }
-                if self.state.phase.is_playing() {
+                } else if self.state.phase.is_passing() {
+                    broadcast(&mut *self, &GameEvent::StartPassing);
+                } else if self.state.phase.is_playing() {
                     self.state.next_player = Some(self.owner(Card::TwoClubs));
                     if self.state.rules.blind() {
                         let reveal = GameEvent::RevealCharges {
