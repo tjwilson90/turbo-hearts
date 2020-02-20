@@ -12,6 +12,7 @@ import { YourPlayEvent } from "../events/YourPlayEvent";
 import { PlayEvent } from "../events/PlayEvent";
 import { EndTrickEvent } from "../events/EndTrickEvent";
 import { GameCompleteEvent } from "../events/GameCompleteEvent";
+import { YourChargeEvent } from "../events/YourChargeEvent";
 
 export class TurboHeartsEventSource {
   private eventSource: EventSource;
@@ -37,6 +38,8 @@ export class TurboHeartsEventSource {
         return new ReceivePassEvent(this.th, event);
       case "start_charging":
         return new StartChargingEvent(this.th, event);
+      case "your_charge":
+        return new YourChargeEvent(this.th, event);
       case "charge":
         return new ChargeEvent(this.th, event);
       case "start_trick":
@@ -57,6 +60,7 @@ export class TurboHeartsEventSource {
   }
 
   private handleEvent = (event: MessageEvent) => {
+    console.log(event.data);
     const realEvent = this.convertEvent(JSON.parse(event.data) as EventData);
     if (realEvent !== undefined) {
       this.th.pushEvent(realEvent);
