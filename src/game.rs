@@ -339,8 +339,9 @@ impl Game {
                     broadcast(&mut *self, &GameEvent::YourCharge);
                 }
             }
-            GameEvent::Charge { .. } => {
-                if self.state.phase.is_charging() {
+            GameEvent::Charge { cards, .. } => {
+                if self.state.phase.is_charging() && (!self.state.rules.free() || !cards.is_empty())
+                {
                     broadcast(&mut *self, &GameEvent::YourCharge);
                 } else if self.state.phase.is_passing() {
                     broadcast(&mut *self, &GameEvent::StartPassing);
