@@ -136,6 +136,7 @@ impl Games {
 
     pub async fn pass_cards(&self, id: GameId, name: &str, cards: Cards) -> Result<(), CardsError> {
         self.with_game(id, |game| match game.seat(&name) {
+            None => Err(CardsError::UnknownPlayer(name.to_string(), id)),
             Some(seat) => {
                 game.verify_pass(id, seat, cards)?;
                 let mut events = vec![GameEvent::SendPass { from: seat, cards }];
@@ -191,7 +192,6 @@ impl Games {
                 }
                 Ok(())
             }
-            None => Err(CardsError::UnknownPlayer(name.to_string(), id)),
         })
         .await
     }
@@ -203,6 +203,7 @@ impl Games {
         cards: Cards,
     ) -> Result<(), CardsError> {
         self.with_game(id, |game| match game.seat(&name) {
+            None => Err(CardsError::UnknownPlayer(name.to_string(), id)),
             Some(seat) => {
                 game.verify_charge(id, seat, cards)?;
                 let event = GameEvent::Charge { seat, cards };
@@ -212,13 +213,13 @@ impl Games {
                 game.apply(&event, |g, e| g.broadcast(e));
                 Ok(())
             }
-            None => Err(CardsError::UnknownPlayer(name.to_string(), id)),
         })
         .await
     }
 
     pub async fn play_card(&self, id: GameId, name: &str, card: Card) -> Result<bool, CardsError> {
         self.with_game(id, |game| match game.seat(&name) {
+            None => Err(CardsError::UnknownPlayer(name.to_string(), id)),
             Some(seat) => {
                 game.verify_play(id, seat, card)?;
                 let mut events = vec![GameEvent::Play { seat, card }];
@@ -246,7 +247,73 @@ impl Games {
                 }
                 Ok(game.state.phase == GamePhase::Complete)
             }
+        })
+        .await
+    }
+
+    pub async fn claim(&self, id: GameId, name: &str) -> Result<(), CardsError> {
+        self.with_game(id, |game| match game.seat(&name) {
             None => Err(CardsError::UnknownPlayer(name.to_string(), id)),
+            Some(seat) => {
+                game.verify_claim(id, seat)?;
+                let event = GameEvent::Claim {
+                    seat,
+                    hand: game.post_pass_hand[seat.idx()] - game.state.played,
+                };
+                self.db.run_with_retry(|tx| {
+                    persist_events(&tx, id, game.events.len(), &[event.clone()])
+                })?;
+                game.apply(&event, |g, e| g.broadcast(e));
+                Ok(())
+            }
+        })
+        .await
+    }
+
+    pub async fn accept_claim(
+        &self,
+        id: GameId,
+        name: &str,
+        claimer: Seat,
+    ) -> Result<(), CardsError> {
+        self.with_game(id, |game| match game.seat(&name) {
+            None => Err(CardsError::UnknownPlayer(name.to_string(), id)),
+            Some(seat) => {
+                game.verify_accept_claim(id, claimer, seat)?;
+                let event = GameEvent::AcceptClaim {
+                    claimer,
+                    acceptor: seat,
+                };
+                self.db.run_with_retry(|tx| {
+                    persist_events(&tx, id, game.events.len(), &[event.clone()])
+                })?;
+                game.apply(&event, |g, e| g.broadcast(e));
+                Ok(())
+            }
+        })
+        .await
+    }
+
+    pub async fn reject_claim(
+        &self,
+        id: GameId,
+        name: &str,
+        claimer: Seat,
+    ) -> Result<(), CardsError> {
+        self.with_game(id, |game| match game.seat(&name) {
+            None => Err(CardsError::UnknownPlayer(name.to_string(), id)),
+            Some(seat) => {
+                game.verify_reject_claim(id, claimer)?;
+                let event = GameEvent::RejectClaim {
+                    claimer,
+                    rejector: seat,
+                };
+                self.db.run_with_retry(|tx| {
+                    persist_events(&tx, id, game.events.len(), &[event.clone()])
+                })?;
+                game.apply(&event, |g, e| g.broadcast(e));
+                Ok(())
+            }
         })
         .await
     }
@@ -514,6 +581,62 @@ impl Game {
         }
         Ok(())
     }
+
+    fn verify_claim(&mut self, id: GameId, seat: Seat) -> Result<(), CardsError> {
+        if self.state.phase.is_complete() {
+            return Err(CardsError::GameComplete(id));
+        }
+        if !self.state.phase.is_playing() {
+            return Err(CardsError::IllegalAction("claim", self.state.phase));
+        }
+        if self.state.claims.is_claiming(seat) {
+            return Err(CardsError::AlreadyClaiming(
+                self.state.players[seat.idx()].clone(),
+            ));
+        }
+        Ok(())
+    }
+
+    fn verify_accept_claim(
+        &mut self,
+        id: GameId,
+        claimer: Seat,
+        acceptor: Seat,
+    ) -> Result<(), CardsError> {
+        if self.state.phase.is_complete() {
+            return Err(CardsError::GameComplete(id));
+        }
+        if !self.state.phase.is_playing() {
+            return Err(CardsError::IllegalAction("accept claim", self.state.phase));
+        }
+        if !self.state.claims.is_claiming(claimer) {
+            return Err(CardsError::NotClaiming(
+                self.state.players[claimer.idx()].clone(),
+            ));
+        }
+        if self.state.claims.has_accepted(claimer, acceptor) {
+            return Err(CardsError::AlreadyAcceptedClaim(
+                self.state.players[acceptor.idx()].clone(),
+                self.state.players[claimer.idx()].clone(),
+            ));
+        }
+        Ok(())
+    }
+
+    fn verify_reject_claim(&mut self, id: GameId, claimer: Seat) -> Result<(), CardsError> {
+        if self.state.phase.is_complete() {
+            return Err(CardsError::GameComplete(id));
+        }
+        if !self.state.phase.is_playing() {
+            return Err(CardsError::IllegalAction("reject claim", self.state.phase));
+        }
+        if !self.state.claims.is_claiming(claimer) {
+            return Err(CardsError::NotClaiming(
+                self.state.players[claimer.idx()].clone(),
+            ));
+        }
+        Ok(())
+    }
 }
 
 #[serde(tag = "type", rename_all = "snake_case")]
@@ -572,6 +695,18 @@ pub enum GameEvent {
     EndTrick {
         winner: Seat,
     },
+    Claim {
+        seat: Seat,
+        hand: Cards,
+    },
+    AcceptClaim {
+        claimer: Seat,
+        acceptor: Seat,
+    },
+    RejectClaim {
+        claimer: Seat,
+        rejector: Seat,
+    },
     HandComplete {
         north_score: i16,
         east_score: i16,
@@ -612,6 +747,9 @@ impl GameEvent {
             | GameEvent::RevealCharges { .. }
             | GameEvent::StartTrick { .. }
             | GameEvent::EndTrick { .. }
+            | GameEvent::Claim { .. }
+            | GameEvent::AcceptClaim { .. }
+            | GameEvent::RejectClaim { .. }
             | GameEvent::HandComplete { .. }
             | GameEvent::GameComplete => Some(self.clone()),
             GameEvent::Deal {

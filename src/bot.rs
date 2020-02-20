@@ -80,6 +80,9 @@ impl Bot {
                         return Ok(());
                     }
                 }
+                Some(Action::RejectClaim(seat)) => {
+                    let _ = server.reject_claim(id, &self.state.name, seat).await;
+                }
                 None => {}
             }
             match rx.recv().await {
@@ -148,6 +151,9 @@ impl Bot {
             GameEvent::Play { seat, card } => {
                 self.algorithm.on_play(&self.state, seat, card);
             }
+            GameEvent::Claim { seat, .. } => {
+                return Some(Action::RejectClaim(seat));
+            }
             _ => {}
         }
 
@@ -186,6 +192,7 @@ enum Action {
     Pass(Cards),
     Charge(Cards),
     Play(Card),
+    RejectClaim(Seat),
 }
 
 #[allow(unused_variables)]
