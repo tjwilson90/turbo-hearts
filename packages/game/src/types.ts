@@ -47,6 +47,10 @@ export interface StartChargingEventData {
   type: "start_charging";
 }
 
+export interface YourChargeEventData {
+  type: "your_charge";
+}
+
 export interface ChargeEventData {
   type: "charge";
   seat: Seat;
@@ -119,6 +123,7 @@ export type EventData =
   | SendPassEventData
   | ReceivePassEventData
   | StartChargingEventData
+  | YourChargeEventData
   | ChargeEventData
   | StartTrickEventData
   | YourPlayEventData

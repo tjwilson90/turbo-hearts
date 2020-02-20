@@ -72,6 +72,8 @@ export class TurboHearts {
   private events: Event[] = [];
   private currentEvent: Event | undefined = undefined;
 
+  public asyncEvent: Event | undefined = undefined;
+
   constructor(private canvas: HTMLCanvasElement, public userId: string, public submitter: PlaySubmitter) {
     const dpr = window.devicePixelRatio;
     this.app = new PIXI.Application({
@@ -122,7 +124,11 @@ export class TurboHearts {
   }
 
   private hasFutureCharge() {
-    return this.currentEvent.type === "start_charging" && hasChargeFrom(this.events, this.bottomSeat);
+    return this.currentEvent.type === "your_charge" && hasChargeFrom(this.events, this.bottomSeat);
+  }
+
+  private duplicateAsyncEvent() {
+    return this.currentEvent.type === "your_charge" && this.asyncEvent?.type === "your_charge";
   }
 
   /**
@@ -141,10 +147,14 @@ export class TurboHearts {
       return;
     }
     this.currentEvent = this.events.shift();
-    if (this.hasEventAfterYourPlay() || this.hasFutureSendPass() || this.hasFutureCharge()) {
+    if (
+      this.hasEventAfterYourPlay() ||
+      this.hasFutureSendPass() ||
+      this.hasFutureCharge() ||
+      this.duplicateAsyncEvent()
+    ) {
       this.currentEvent = undefined;
     } else {
-      console.log(this.currentEvent, console.log(this.events.length), this.hasFutureCharge());
       this.currentEvent.begin();
     }
   };
