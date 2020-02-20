@@ -18,8 +18,8 @@ export const TABLE_SIZE = 1000;
 export const TABLE_CENTER_X = TABLE_SIZE / 2;
 export const TABLE_CENTER_Y = TABLE_SIZE / 2;
 
-export const ANIMATION_DURATION = 600;
-export const ANIMATION_DELAY = 50;
+export const ANIMATION_DURATION = 0;
+export const ANIMATION_DELAY = 0;
 
 export const FAST_ANIMATION_DURATION = ANIMATION_DURATION / 2;
 export const FAST_ANIMATION_DELAY = ANIMATION_DELAY / 2;
