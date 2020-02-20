@@ -31,7 +31,7 @@ export class StartChargingEvent implements Event {
     this.button.setEnabled(true);
     this.th.app.stage.addChild(this.button.container);
     if (this.chargeableCards.length === 0) {
-      this.th.submitter.chargeCards([]);
+      this.submitCharge();
     }
     this.finished = true;
     // TODO fix for non-classic
