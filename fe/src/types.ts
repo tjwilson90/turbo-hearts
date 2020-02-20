@@ -74,6 +74,10 @@ export interface EndTrickEventData {
   winner: Seat;
 }
 
+export interface GameCompleteEventData {
+  type: "game_complete";
+}
+
 export interface Event {
   type: EventData["type"];
   begin(): void;
@@ -119,7 +123,8 @@ export type EventData =
   | StartTrickEventData
   | YourPlayEventData
   | PlayEventData
-  | EndTrickEventData;
+  | EndTrickEventData
+  | GameCompleteEventData;
 
 export type Card =
   | "BACK"
