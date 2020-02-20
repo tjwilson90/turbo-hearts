@@ -675,6 +675,42 @@ impl GamePhase {
 }
 
 #[derive(Debug)]
+pub struct ClaimState {
+    accepts: [[bool; 4]; 4],
+}
+
+impl ClaimState {
+    pub fn new() -> Self {
+        Self {
+            accepts: [[false; 4]; 4],
+        }
+    }
+
+    pub fn is_claiming(&self, seat: Seat) -> bool {
+        self.accepts[seat.idx()][seat.idx()]
+    }
+
+    pub fn has_accepted(&self, claimer: Seat, acceptor: Seat) -> bool {
+        self.accepts[claimer.idx()][acceptor.idx()]
+    }
+
+    pub fn claim(&mut self, seat: Seat) {
+        self.accepts[seat.idx()][seat.idx()] = true;
+    }
+
+    pub fn accept(&mut self, claimer: Seat, acceptor: Seat) -> bool {
+        self.accepts[claimer.idx()][acceptor.idx()] = true;
+        self.accepts[claimer.idx()].iter().all(|b| *b)
+    }
+
+    pub fn reject(&mut self, claimer: Seat) {
+        self.accepts[claimer.idx()]
+            .iter_mut()
+            .for_each(|b| *b = false);
+    }
+}
+
+#[derive(Debug)]
 pub struct GameState {
     pub players: [String; 4],
     pub rules: ChargingRules,
@@ -686,6 +722,7 @@ pub struct GameState {
     pub done_charging: [bool; 4],
     pub next_charger: Option<Seat>,
     pub played: Cards,
+    pub claims: ClaimState,
     pub won: [Cards; 4],
     pub led_suits: Cards,
     pub next_player: Option<Seat>,
@@ -705,6 +742,7 @@ impl GameState {
             done_charging: [false; 4],
             next_charger: None,
             played: Cards::NONE,
+            claims: ClaimState::new(),
             won: [Cards::NONE; 4],
             led_suits: Cards::NONE,
             next_player: None,
@@ -788,6 +826,7 @@ impl GameState {
                 self.received_pass = [false; 4];
                 self.next_player = None;
                 self.played = Cards::NONE;
+                self.claims = ClaimState::new();
                 self.won = [Cards::NONE; 4];
                 self.led_suits = Cards::NONE;
                 self.current_trick.clear();
@@ -853,6 +892,20 @@ impl GameState {
                         self.phase = self.phase.next(self.charge_count != 0);
                     }
                 }
+            }
+            GameEvent::Claim { seat, .. } => {
+                self.claims.claim(*seat);
+            }
+            GameEvent::AcceptClaim { claimer, acceptor } => {
+                if self.claims.accept(*claimer, *acceptor) {
+                    self.won[claimer.idx()] |=
+                        self.current_trick.iter().cloned().collect::<Cards>();
+                    self.won[claimer.idx()] |= Cards::ALL - self.played;
+                    self.phase = self.phase.next(self.charge_count != 0);
+                }
+            }
+            GameEvent::RejectClaim { claimer, .. } => {
+                self.claims.reject(*claimer);
             }
             _ => {}
         }

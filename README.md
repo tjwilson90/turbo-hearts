@@ -364,7 +364,6 @@ other events.
 When a new trick starts, a `start_trick` event will be sent indicating which player makes the lead.
 This event is sent for convenience; the information is imparts can be inferred from other events.
 
-Response:
 ```json
 {
   "type": "start_trick",
@@ -378,11 +377,49 @@ When a trick is completed, an `end_trick` event will be sent indicating which pl
 trick. This event is sent for convenience; the information it imparts can be inferred from other
 events.
 
-Response:
 ```json
 {
   "type": "end_trick",
   "winner": "west"
+}
+```
+
+#### Claim
+
+When a claim is made, a `claim` event will be sent indicating who made the claim and the current
+contents of their hand.
+
+```json
+{
+  "type": "claim",
+  "seat": "west",
+  "hand": ["KS", "9S", "3H", "2H", "KC", "4C", "8D", "5D"]
+}
+```
+
+#### AcceptClaim
+
+When a player accepts a claim, an `accept_claim` event will be sent indicating whose claim was
+accepted and who accepted the claim.
+
+```json
+{
+  "type": "accept_claim",
+  "claimer": "west",
+  "acceptor": "south"
+}
+```
+
+#### RejectClaim
+
+When a player rejects a claim, a `reject_claim` event will be sent indicating whose claim was
+rejected and who rejected the claim.
+
+```json
+{
+  "type": "reject_claim",
+  "claimer": "west",
+  "acceptor": "north"
 }
 ```
 
@@ -450,5 +487,44 @@ Request:
 {
   "id": "8c9e2ff7-dcf3-49be-86f0-315f469840bc",
   "card": "8D"
+}
+```
+
+### `POST /game/claim`
+
+Claim that you will win all the remaining tricks. By claiming, the contents of your hand is
+revealed to all players. If all other players accept your claim, the hand will end, otherwise play
+will continue.
+
+Request:
+```json
+{
+  "id": "8c9e2ff7-dcf3-49be-86f0-315f469840bc"
+}
+```
+
+### `POST /game/accept_claim`
+
+Accept the claim made by another player. If all other players accept the claim, the hand will end,
+otherwise play will continue.
+
+Request:
+```json
+{
+  "id": "8c9e2ff7-dcf3-49be-86f0-315f469840bc",
+  "claimer": "west"
+}
+```
+
+### `POST /game/reject_claim`
+
+Reject the claim made by another player. Play will continue as if the claim never occurred (though
+all players will know the hand of the player who claimed).
+
+Request:
+```json
+{
+  "id": "8c9e2ff7-dcf3-49be-86f0-315f469840bc",
+  "claimer": "west"
 }
 ```

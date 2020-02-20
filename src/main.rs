@@ -3,7 +3,7 @@ use crate::{
     db::Database,
     error::CardsError,
     server::Server,
-    types::{ChargingRules, Event, GameId, Player},
+    types::{ChargingRules, Event, GameId, Player, Seat},
 };
 use r2d2_sqlite::SqliteConnectionManager;
 use serde::{Deserialize, Serialize};
@@ -172,6 +172,49 @@ async fn play_card(
     Ok(warp::reply())
 }
 
+#[derive(Debug, Deserialize)]
+struct Claim {
+    id: GameId,
+}
+
+async fn claim(server: Server, name: String, request: Claim) -> Result<impl Reply, Rejection> {
+    let Claim { id } = request;
+    server.claim(id, &name).await?;
+    Ok(warp::reply())
+}
+
+#[derive(Debug, Deserialize)]
+struct AcceptClaim {
+    id: GameId,
+    claimer: Seat,
+}
+
+async fn accept_claim(
+    server: Server,
+    name: String,
+    request: AcceptClaim,
+) -> Result<impl Reply, Rejection> {
+    let AcceptClaim { id, claimer } = request;
+    server.accept_claim(id, &name, claimer).await?;
+    Ok(warp::reply())
+}
+
+#[derive(Debug, Deserialize)]
+struct RejectClaim {
+    id: GameId,
+    claimer: Seat,
+}
+
+async fn reject_claim(
+    server: Server,
+    name: String,
+    request: RejectClaim,
+) -> Result<impl Reply, Rejection> {
+    let RejectClaim { id, claimer } = request;
+    server.reject_claim(id, &name, claimer).await?;
+    Ok(warp::reply())
+}
+
 fn as_stream<E>(
     rx: UnboundedReceiver<E>,
 ) -> impl Stream<Item = Result<impl ServerSentEvent, warp::Error>>
@@ -260,6 +303,24 @@ async fn main() -> Result<(), CardsError> {
         .and(name.clone())
         .and(warp::body::json())
         .and_then(play_card);
+    let claim = warp::path!("game" / "claim")
+        .and(warp::post())
+        .and(server.clone())
+        .and(name.clone())
+        .and(warp::body::json())
+        .and_then(claim);
+    let accept_claim = warp::path!("game" / "accept_claim")
+        .and(warp::post())
+        .and(server.clone())
+        .and(name.clone())
+        .and(warp::body::json())
+        .and_then(accept_claim);
+    let reject_claim = warp::path!("game" / "reject_claim")
+        .and(warp::post())
+        .and(server.clone())
+        .and(name.clone())
+        .and(warp::body::json())
+        .and_then(reject_claim);
     let lobby_html = warp::path!("lobby")
         .and(warp::get())
         .and(warp::fs::file("./lobby.html"));
@@ -277,6 +338,9 @@ async fn main() -> Result<(), CardsError> {
         .or(pass_cards)
         .or(charge_cards)
         .or(play_card)
+        .or(claim)
+        .or(accept_claim)
+        .or(reject_claim)
         .or(lobby_html)
         .or(game_html)
         .or(assets)

@@ -5,7 +5,7 @@ use crate::{
     error::CardsError,
     game::{GameEvent, Games},
     lobby::{Lobby, LobbyEvent},
-    types::{ChargingRules, GameId, Participant, Player},
+    types::{ChargingRules, GameId, Participant, Player, Seat},
 };
 use log::info;
 use rusqlite::{Transaction, NO_PARAMS};
@@ -143,6 +143,55 @@ impl Server {
             Err(e) => info!(
                 "{} failed to play {} in game {} with error {}",
                 name, card, id, e
+            ),
+        }
+        result
+    }
+
+    pub async fn claim(&self, id: GameId, name: &str) -> Result<(), CardsError> {
+        let result = self.games.claim(id, name).await;
+        match &result {
+            Ok(()) => info!("{} made a claim in game {} successfully", name, id),
+            Err(e) => info!("{} failed to claim in game {} with error {}", name, id, e),
+        }
+        result
+    }
+
+    pub async fn accept_claim(
+        &self,
+        id: GameId,
+        name: &str,
+        claimer: Seat,
+    ) -> Result<(), CardsError> {
+        let result = self.games.accept_claim(id, name, claimer).await;
+        match &result {
+            Ok(()) => info!(
+                "{} accepted the claim from {} in game {} successfully",
+                name, claimer, id
+            ),
+            Err(e) => info!(
+                "{} failed to accept the claim from {} in game {} with error {}",
+                name, claimer, id, e
+            ),
+        }
+        result
+    }
+
+    pub async fn reject_claim(
+        &self,
+        id: GameId,
+        name: &str,
+        claimer: Seat,
+    ) -> Result<(), CardsError> {
+        let result = self.games.reject_claim(id, name, claimer).await;
+        match &result {
+            Ok(()) => info!(
+                "{} rejected the claim from {} in game {} successfully",
+                name, claimer, id
+            ),
+            Err(e) => info!(
+                "{} failed to reject the claim from {} in game {} with error {}",
+                name, claimer, id, e
             ),
         }
         result

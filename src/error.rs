@@ -10,8 +10,12 @@ use warp::{http::StatusCode, reject::Reject, Rejection};
 
 #[derive(Debug, Error)]
 pub enum CardsError {
+    #[error("{0} has already accepted the claim from {1}")]
+    AlreadyAcceptedClaim(String, String),
     #[error("{0} has already been charged")]
     AlreadyCharged(Cards),
+    #[error("{0} has already made a claim")]
+    AlreadyClaiming(String),
     #[error("{0} has already been passed")]
     AlreadyPassed(Cards),
     #[error("game {0} is already complete")]
@@ -30,6 +34,8 @@ pub enum CardsError {
     NoChargeOnFirstTrickOfSuit,
     #[error("points cannot be played on the first trick")]
     NoPointsOnFirstTrick,
+    #[error("{0} is not claiming, or their claim has been rejected")]
+    NotClaiming(String),
     #[error("your hand does not contain {0}")]
     NotYourCards(Cards),
     #[error("player {0} makes the next {1}")]
