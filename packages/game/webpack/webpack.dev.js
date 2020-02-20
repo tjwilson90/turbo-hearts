@@ -73,6 +73,6 @@ module.exports = {
       template: "./" + src_Path + "/index.html",
       filename: "index.html"
     }),
-    new CopyWebpackPlugin([{ from: "../assets", to: "assets" }])
+    new CopyWebpackPlugin([{ from: "../../assets", to: "assets" }])
   ]
 };
