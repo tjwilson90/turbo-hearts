@@ -6,7 +6,11 @@ import {
   LIMBO_TOP,
   LIMBO_RIGHT,
   LIMBO_BOTTOM,
-  LIMBO_LEFT
+  LIMBO_LEFT,
+  LIMBO_CENTER_BOTTOM,
+  LIMBO_CENTER_LEFT,
+  LIMBO_CENTER_TOP,
+  LIMBO_CENTER_RIGHT
 } from "../const";
 import { TurboHearts } from "../game/TurboHearts";
 import { Event, PointWithRotation, SendPassEventData, Seat } from "../types";
@@ -86,6 +90,28 @@ passDestinations["across"]["west"]["east"] = LIMBO_BOTTOM;
 passDestinations["across"]["west"]["south"] = LIMBO_LEFT;
 passDestinations["across"]["west"]["west"] = LIMBO_TOP;
 
+passDestinations["keeper"] = {};
+passDestinations["keeper"]["north"] = {};
+passDestinations["keeper"]["north"]["north"] = LIMBO_CENTER_BOTTOM;
+passDestinations["keeper"]["north"]["east"] = LIMBO_CENTER_LEFT;
+passDestinations["keeper"]["north"]["south"] = LIMBO_CENTER_TOP;
+passDestinations["keeper"]["north"]["west"] = LIMBO_CENTER_RIGHT;
+passDestinations["keeper"]["east"] = {};
+passDestinations["keeper"]["east"]["north"] = LIMBO_CENTER_RIGHT;
+passDestinations["keeper"]["east"]["east"] = LIMBO_CENTER_BOTTOM;
+passDestinations["keeper"]["east"]["south"] = LIMBO_CENTER_LEFT;
+passDestinations["keeper"]["east"]["west"] = LIMBO_CENTER_TOP;
+passDestinations["keeper"]["south"] = {};
+passDestinations["keeper"]["south"]["north"] = LIMBO_CENTER_TOP;
+passDestinations["keeper"]["south"]["east"] = LIMBO_CENTER_RIGHT;
+passDestinations["keeper"]["south"]["south"] = LIMBO_CENTER_BOTTOM;
+passDestinations["keeper"]["south"]["west"] = LIMBO_CENTER_LEFT;
+passDestinations["keeper"]["west"] = {};
+passDestinations["keeper"]["west"]["north"] = LIMBO_CENTER_LEFT;
+passDestinations["keeper"]["west"]["east"] = LIMBO_CENTER_TOP;
+passDestinations["keeper"]["west"]["south"] = LIMBO_CENTER_RIGHT;
+passDestinations["keeper"]["west"]["west"] = LIMBO_CENTER_BOTTOM;
+
 export class SendPassEvent implements Event {
   public type = "send_pass" as const;
   public from: Seat;
@@ -118,6 +144,10 @@ export class SendPassEvent implements Event {
       const cardsToKeep = spriteCardsOfNot(player.cards, this.event.cards);
       removeAll(player.cards, cardsToMove);
       pushAll(player.limboCards, cardsToMove);
+      for (const card of cardsToMove) {
+        card.hidden = true;
+        card.sprite.texture = this.th.app.loader.resources["BACK"].texture;
+      }
       return { cardsToMove, cardsToKeep };
     }
   }

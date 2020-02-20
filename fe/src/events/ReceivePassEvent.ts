@@ -78,6 +78,28 @@ limboSources["across"]["west"]["east"] = (th: TurboHearts) => th.bottomPlayer.li
 limboSources["across"]["west"]["south"] = (th: TurboHearts) => th.leftPlayer.limboCards;
 limboSources["across"]["west"]["west"] = (th: TurboHearts) => th.topPlayer.limboCards;
 
+limboSources["keeper"] = {};
+limboSources["keeper"]["north"] = {};
+limboSources["keeper"]["north"]["north"] = limboSources["across"]["north"]["north"];
+limboSources["keeper"]["north"]["east"] = limboSources["across"]["north"]["east"];
+limboSources["keeper"]["north"]["south"] = limboSources["across"]["north"]["south"];
+limboSources["keeper"]["north"]["west"] = limboSources["across"]["north"]["west"];
+limboSources["keeper"]["east"] = {};
+limboSources["keeper"]["east"]["north"] = limboSources["across"]["east"]["north"];
+limboSources["keeper"]["east"]["east"] = limboSources["across"]["east"]["east"];
+limboSources["keeper"]["east"]["south"] = limboSources["across"]["east"]["south"];
+limboSources["keeper"]["east"]["west"] = limboSources["across"]["east"]["west"];
+limboSources["keeper"]["south"] = {};
+limboSources["keeper"]["south"]["north"] = limboSources["across"]["south"]["north"];
+limboSources["keeper"]["south"]["east"] = limboSources["across"]["south"]["east"];
+limboSources["keeper"]["south"]["south"] = limboSources["across"]["south"]["south"];
+limboSources["keeper"]["south"]["west"] = limboSources["across"]["south"]["west"];
+limboSources["keeper"]["west"] = {};
+limboSources["keeper"]["west"]["north"] = limboSources["across"]["west"]["north"];
+limboSources["keeper"]["west"]["east"] = limboSources["across"]["west"]["east"];
+limboSources["keeper"]["west"]["south"] = limboSources["across"]["west"]["south"];
+limboSources["keeper"]["west"]["west"] = limboSources["across"]["west"]["west"];
+
 export class ReceivePassEvent implements Event {
   public type = "recv_pass" as const;
 
