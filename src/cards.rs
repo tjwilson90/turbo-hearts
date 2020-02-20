@@ -686,6 +686,7 @@ pub struct GameState {
     pub done_charging: [bool; 4],
     pub next_charger: Option<Seat>,
     pub played: Cards,
+    pub won: [Cards; 4],
     pub led_suits: Cards,
     pub next_player: Option<Seat>,
     pub current_trick: Vec<Card>,
@@ -697,13 +698,14 @@ impl GameState {
             players: [String::new(), String::new(), String::new(), String::new()],
             rules: ChargingRules::Classic,
             phase: GamePhase::PassLeft,
-            sent_pass: [false, false, false, false],
-            received_pass: [false, false, false, false],
+            sent_pass: [false; 4],
+            received_pass: [false; 4],
             charge_count: 0,
-            charged: [Cards::NONE, Cards::NONE, Cards::NONE, Cards::NONE],
-            done_charging: [false, false, false, false],
+            charged: [Cards::NONE; 4],
+            done_charging: [false; 4],
             next_charger: None,
             played: Cards::NONE,
+            won: [Cards::NONE; 4],
             led_suits: Cards::NONE,
             next_player: None,
             current_trick: Vec::with_capacity(8),
@@ -712,6 +714,47 @@ impl GameState {
 
     fn charged_cards(&self) -> Cards {
         self.charged[0] | self.charged[1] | self.charged[2] | self.charged[3]
+    }
+
+    pub fn score(&self, seat: Seat) -> i16 {
+        let charged = self.charged_cards();
+        let won = self.won[seat.idx()];
+        let hearts = match (
+            (won & Cards::HEARTS).len() as i16,
+            charged.contains(Card::AceHearts),
+        ) {
+            (hearts, true) => 2 * hearts,
+            (hearts, _) => hearts,
+        };
+        let queen = match (
+            won.contains(Card::QueenSpades),
+            charged.contains(Card::QueenSpades),
+        ) {
+            (true, true) => 26,
+            (true, false) => 13,
+            _ => 0,
+        };
+        let jack = match (
+            won.contains(Card::JackDiamonds),
+            charged.contains(Card::JackDiamonds),
+        ) {
+            (true, true) => -20,
+            (true, false) => -10,
+            _ => 0,
+        };
+        let ten = match (
+            won.contains(Card::TenClubs),
+            charged.contains(Card::TenClubs),
+        ) {
+            (true, true) => 4,
+            (true, false) => 2,
+            _ => 1,
+        };
+        if won.contains(Card::QueenSpades) && won.contains_all(Cards::HEARTS) {
+            ten * (jack - hearts - queen)
+        } else {
+            ten * (jack + hearts + queen)
+        }
     }
 
     pub fn can_charge(&self, seat: Seat) -> bool {
@@ -738,13 +781,14 @@ impl GameState {
             }
             GameEvent::Deal { .. } => {
                 self.charge_count = 0;
-                self.charged = [Cards::NONE, Cards::NONE, Cards::NONE, Cards::NONE];
-                self.done_charging = [false, false, false, false];
+                self.charged = [Cards::NONE; 4];
+                self.done_charging = [false; 4];
                 self.next_charger = self.phase.first_charger(self.rules);
-                self.sent_pass = [false, false, false, false];
-                self.received_pass = [false, false, false, false];
+                self.sent_pass = [false; 4];
+                self.received_pass = [false; 4];
                 self.next_player = None;
                 self.played = Cards::NONE;
+                self.won = [Cards::NONE; 4];
                 self.led_suits = Cards::NONE;
                 self.current_trick.clear();
             }
@@ -801,6 +845,8 @@ impl GameState {
                             winning_seat = seat;
                         }
                     }
+                    self.won[winning_seat.idx()] |=
+                        self.current_trick.iter().cloned().collect::<Cards>();
                     self.next_player = Some(winning_seat);
                     self.current_trick.clear();
                     if self.played == Cards::ALL {

@@ -380,7 +380,16 @@ impl Game {
                         .state
                         .legal_plays(self.post_pass_hand[leader.idx()] - self.state.played);
                     broadcast(&mut *self, &GameEvent::YourPlay { legal_plays });
-                } else if self.state.phase.is_complete() {
+                } else {
+                    let hand_complete = GameEvent::HandComplete {
+                        north_score: self.state.score(Seat::North),
+                        east_score: self.state.score(Seat::East),
+                        south_score: self.state.score(Seat::South),
+                        west_score: self.state.score(Seat::West),
+                    };
+                    broadcast(&mut *self, &hand_complete);
+                }
+                if self.state.phase.is_complete() {
                     broadcast(&mut *self, &GameEvent::GameComplete);
                 }
             }
@@ -563,6 +572,12 @@ pub enum GameEvent {
     EndTrick {
         winner: Seat,
     },
+    HandComplete {
+        north_score: i16,
+        east_score: i16,
+        south_score: i16,
+        west_score: i16,
+    },
     GameComplete,
 }
 
@@ -597,6 +612,7 @@ impl GameEvent {
             | GameEvent::RevealCharges { .. }
             | GameEvent::StartTrick { .. }
             | GameEvent::EndTrick { .. }
+            | GameEvent::HandComplete { .. }
             | GameEvent::GameComplete => Some(self.clone()),
             GameEvent::Deal {
                 north,

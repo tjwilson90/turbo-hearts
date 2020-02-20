@@ -386,6 +386,22 @@ Response:
 }
 ```
 
+#### Hand Complete
+
+A `hand_complete` event is sent after the last trick in a hand ends and includes the scores for all
+players in the hand. This event is sent for convenience; the information it imparts can be inferred
+from other events.
+
+```json
+{
+  "type": "hand_complete",
+  "north_score": 5,
+  "east_score": 4,
+  "south_score": -32,
+  "west_score": 26
+}
+```
+
 #### Game Complete
 
 A `game_complete` event is sent as the last event in a game. Immediately after this event is sent
