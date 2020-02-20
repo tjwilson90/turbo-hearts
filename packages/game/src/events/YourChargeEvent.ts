@@ -30,10 +30,6 @@ export class YourChargeEvent implements Event {
     this.button = new Button("Charge Cards", this.submitCharge);
     this.button.setEnabled(true);
     this.th.app.stage.addChild(this.button.container);
-    if (this.chargeableCards.length === 0) {
-      // TODO don't auto submit empty charge
-      this.submitCharge();
-    }
     this.th.asyncEvent = this;
     this.finished = true;
     // TODO fix for non-classic

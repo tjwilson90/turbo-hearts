@@ -1,4 +1,3 @@
-import TWEEN from "@tweenjs/tween.js";
 import * as PIXI from "pixi.js";
 
 import { TABLE_CENTER_X, TABLE_SIZE, CARD_DISPLAY_HEIGHT, CARD_MARGIN } from "../const";

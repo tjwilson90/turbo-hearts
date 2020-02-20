@@ -5,6 +5,7 @@ import { TABLE_SIZE } from "../const";
 import { SendPassEvent } from "../events/SendPassEvent";
 import { ChargeEvent } from "../events/ChargeEvent";
 import { PlaySubmitter } from "./PlaySubmitter";
+import { Nameplate } from "../ui/Nameplate";
 
 export interface Player {
   type: "bot" | "human";
@@ -66,6 +67,8 @@ export class TurboHearts {
   public bottomPlayer: Player = emptyPlayer();
   public leftPlayer: Player = emptyPlayer();
 
+  public nameplates: Nameplate[] = [];
+
   public trickNumber = 0;
   public playIndex = 0;
 
@@ -98,6 +101,9 @@ export class TurboHearts {
     this.trickNumber = 0;
     this.playIndex = 0;
     this.app.stage.removeChildren();
+    for (const nameplate of this.nameplates) {
+      this.app.stage.addChild(nameplate.container);
+    }
   }
 
   private loadCards() {

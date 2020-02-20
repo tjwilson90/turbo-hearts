@@ -6,6 +6,7 @@ export const Z_PLAYED_CARDS = 1000;
 export const Z_CHARGED_CARDS = 2000;
 export const Z_HAND_CARDS = 3000;
 export const Z_TRANSIT_CARDS = 4000;
+export const Z_NAMEPLATE = 5000;
 
 export const CARD_SCALE = 0.5;
 export const CARD_NATIVE_WIDTH = 212;
