@@ -1,0 +1,10 @@
+@import "/node_modules/normalize.css/normalize.css";
+
+@import "modules/variables";
+@import "modules/base";
+
+.turbo-hearts-container {
+  background: #dfd;
+  width: 100vw;
+  height: 100vh;
+}
