@@ -26,8 +26,6 @@ export class YourPlayEvent implements Event {
     this.player = getPlayerAccessor(this.th.bottomSeat, this.th.bottomSeat)(this.th);
     this.playableCards = [...this.player.cards, ...this.player.chargedCards];
     this.legalCards = new Set(spriteCardsOf(this.playableCards, this.event.legalPlays));
-    const filter = new PIXI.filters.ColorMatrixFilter();
-    filter.blackAndWhite(false);
     for (const card of this.playableCards) {
       if (this.legalCards.has(card)) {
         this.cardMap.set(card.sprite, card);
@@ -36,8 +34,6 @@ export class YourPlayEvent implements Event {
         card.sprite.addListener("pointerover", this.onOver);
         card.sprite.addListener("pointerout", this.onOut);
         card.sprite.buttonMode = true;
-      } else {
-        card.sprite.filters = [filter];
       }
     }
   }
@@ -52,8 +48,6 @@ export class YourPlayEvent implements Event {
           card.sprite.removeListener("pointerover", this.onOver);
           card.sprite.removeListener("pointerout", this.onOut);
           card.sprite.buttonMode = false;
-        } else {
-          card.sprite.filters = [];
         }
       }
       this.th.submitter.playCard(card.card).then(() => {
