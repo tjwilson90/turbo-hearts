@@ -35,10 +35,6 @@ module.exports = {
         exclude: /node_modules/
       },
       {
-        test: /\.svg$/,
-        loader: "svg-inline-loader"
-      },
-      {
         test: selectedPreprocessor.fileRegexp,
         use: [
           {
