@@ -3,7 +3,8 @@ import { EndTrickEventData, Event, Seat, SpriteCard } from "../types";
 import { getPlayerAccessor } from "./playerAccessors";
 import { pushAll } from "../util/array";
 import { animatePile } from "./animations/animations";
-import { Z_PILE_CARDS } from "../const";
+import { Z_PILE_CARDS, TRICK_COLLECTION_PAUSE } from "../const";
+import { sleep } from "./helpers";
 
 export class EndTrickEvent implements Event {
   public type = "end_trick" as const;
@@ -12,7 +13,8 @@ export class EndTrickEvent implements Event {
 
   constructor(private th: TurboHearts, private event: EndTrickEventData) {}
 
-  public begin() {
+  public async begin() {
+    await sleep(TRICK_COLLECTION_PAUSE);
     const pileCards: SpriteCard[] = [];
     ["north", "east", "south", "west"].forEach((seat: Seat) => {
       const player = getPlayerAccessor(this.th.bottomSeat, seat)(this.th);
@@ -27,11 +29,10 @@ export class EndTrickEvent implements Event {
     this.th.app.stage.sortChildren();
     const winner = getPlayerAccessor(this.th.bottomSeat, this.event.winner)(this.th);
     pushAll(winner.pileCards, pileCards);
-    animatePile(this.th, this.event.winner).then(() => {
-      this.finished = true;
-    });
     this.th.playIndex = 0;
     this.th.trickNumber++;
+    await animatePile(this.th, this.event.winner);
+    this.finished = true;
   }
 
   public isFinished() {
