@@ -1,6 +1,6 @@
 import { TurboHearts } from "../game/TurboHearts";
 import { Event, ReceivePassEventData, SpriteCard } from "../types";
-import { animateHand } from "./animations/animations";
+import { animateHand, moveHand } from "./animations/animations";
 import { getPlayerAccessor } from "./playerAccessors";
 import { sortSpriteCards } from "../game/sortCards";
 import { Z_HAND_CARDS } from "../const";
@@ -110,19 +110,6 @@ export class ReceivePassEvent implements Event {
   public begin() {
     const player = getPlayerAccessor(this.th.bottomSeat, this.event.to)(this.th);
     const cards = player.cards;
-    this.updateCards(cards);
-    let i = Z_HAND_CARDS;
-    for (const card of cards) {
-      card.sprite.zIndex = i++;
-    }
-    animateHand(this.th, this.event.to).then(() => {
-      // TODO: this is resulting in jarring card flip
-      this.th.app.stage.sortChildren();
-      this.finished = true;
-    });
-  }
-
-  private updateCards(hand: SpriteCard[]) {
     const limboSource = limboSources[this.th.pass][this.th.bottomSeat][this.event.to](this.th);
     const received = [...this.event.cards];
     while (limboSource.length > 0) {
@@ -138,9 +125,24 @@ export class ReceivePassEvent implements Event {
         fromLimbo.sprite.texture = this.th.app.loader.resources["BACK"].texture;
         fromLimbo.hidden = true;
       }
-      hand.push(fromLimbo);
+      cards.push(fromLimbo);
     }
-    sortSpriteCards(hand);
+    sortSpriteCards(cards);
+    let i = Z_HAND_CARDS;
+    for (const card of cards) {
+      card.sprite.zIndex = i++;
+    }
+  }
+
+  public async transition(instant: boolean) {
+    if (instant) {
+      moveHand(this.th, this.event.to);
+    } else {
+      await animateHand(this.th, this.event.to);
+    }
+    // TODO: this is resulting in jarring card flip
+    this.th.app.stage.sortChildren();
+    this.finished = true;
   }
 
   public isFinished() {

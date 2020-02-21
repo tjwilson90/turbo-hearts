@@ -85,6 +85,7 @@ export interface GameCompleteEventData {
 export interface Event {
   type: EventData["type"];
   begin(): void;
+  transition(instant: boolean): void;
   isFinished(): boolean;
 
   // updateState(): void;

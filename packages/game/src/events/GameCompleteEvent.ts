@@ -10,6 +10,8 @@ export class GameCompleteEvent implements Event {
     this.th.resetForDeal();
   }
 
+  public transition(instant: boolean) {}
+
   public isFinished() {
     return true;
   }

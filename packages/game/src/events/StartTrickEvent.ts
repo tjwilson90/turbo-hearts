@@ -8,6 +8,8 @@ export class StartTrickEvent implements Event {
 
   public begin() {}
 
+  public transition(instant: boolean) {}
+
   public isFinished() {
     return true;
   }

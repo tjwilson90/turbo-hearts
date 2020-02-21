@@ -3,7 +3,7 @@ import { BOTTOM, CARD_SCALE, LEFT, RIGHT, TABLE_CENTER_X, TABLE_CENTER_Y, TOP } 
 import { sortSpriteCards } from "../game/sortCards";
 import { TurboHearts } from "../game/TurboHearts";
 import { Card, DealEventData, Event, PointWithRotation, Position, Seat, SpriteCard } from "../types";
-import { animateDeal } from "./animations/animations";
+import { animateDeal, moveDeal } from "./animations/animations";
 
 const handAccessors: {
   [bottomSeat: string]: {
@@ -88,9 +88,15 @@ export class DealEvent implements Event {
     this.th.rightPlayer.cards = this.createSpriteCards(right.cards, right.seat, RIGHT);
     this.th.bottomPlayer.cards = this.createSpriteCards(bottom.cards, bottom.seat, BOTTOM);
     this.th.leftPlayer.cards = this.createSpriteCards(left.cards, left.seat, LEFT);
-    animateDeal(this.th).then(() => {
-      this.finished = true;
-    });
+  }
+
+  public async transition(instant: boolean) {
+    if (instant) {
+      moveDeal(this.th);
+    } else {
+      await animateDeal(this.th);
+    }
+    this.finished = true;
   }
 
   public isFinished() {

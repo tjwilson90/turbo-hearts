@@ -13,9 +13,9 @@ import {
   LIMBO_CENTER_RIGHT
 } from "../const";
 import { TurboHearts } from "../game/TurboHearts";
-import { Event, PointWithRotation, SendPassEventData, Seat } from "../types";
+import { Event, PointWithRotation, SendPassEventData, Seat, SpriteCard } from "../types";
 import { pushAll, removeAll } from "../util/array";
-import { animateCards, animateHand } from "./animations/animations";
+import { animateCards, animateHand, moveCards, moveHand } from "./animations/animations";
 import { spriteCardsOf, spriteCardsOfNot } from "./helpers";
 import { getPlayerAccessor } from "./playerAccessors";
 
@@ -117,43 +117,43 @@ export class SendPassEvent implements Event {
   public from: Seat;
 
   private finished = false;
+  private cardsToKeep: SpriteCard[] = [];
+  private cardsToMove: SpriteCard[] = [];
 
   constructor(private th: TurboHearts, private event: SendPassEventData) {
     this.from = event.from;
   }
 
   public begin() {
-    const passDestination = this.getPassDestination();
-    const cards = this.updateCards();
-    Promise.all([
-      animateCards(this.th, cards.cardsToMove, passDestination.x, passDestination.y, passDestination.rotation),
-      animateHand(this.th, this.event.from)
-    ]).then(() => {
-      this.finished = true;
-    });
-  }
-
-  private updateCards() {
     const player = getPlayerAccessor(this.th.bottomSeat, this.event.from)(this.th);
     if (this.event.cards.length === 0) {
-      const cardsToMove = player.cards.splice(0, 3);
-      pushAll(player.limboCards, cardsToMove);
-      return { cardsToMove, cardsToKeep: player.cards };
+      this.cardsToMove = player.cards.splice(0, 3);
+      this.cardsToKeep = player.cards;
+      pushAll(player.limboCards, this.cardsToMove);
     } else {
-      const cardsToMove = spriteCardsOf(player.cards, this.event.cards);
-      const cardsToKeep = spriteCardsOfNot(player.cards, this.event.cards);
-      removeAll(player.cards, cardsToMove);
-      pushAll(player.limboCards, cardsToMove);
-      for (const card of cardsToMove) {
+      this.cardsToMove = spriteCardsOf(player.cards, this.event.cards);
+      this.cardsToKeep = spriteCardsOfNot(player.cards, this.event.cards);
+      removeAll(player.cards, this.cardsToMove);
+      pushAll(player.limboCards, this.cardsToMove);
+      for (const card of this.cardsToMove) {
         card.hidden = true;
         card.sprite.texture = this.th.app.loader.resources["BACK"].texture;
       }
-      return { cardsToMove, cardsToKeep };
     }
   }
 
-  private getPassDestination() {
-    return passDestinations[this.th.pass][this.th.bottomSeat][this.event.from];
+  public async transition(instant: boolean) {
+    const passDestination = passDestinations[this.th.pass][this.th.bottomSeat][this.event.from];
+    if (instant) {
+      moveCards(this.th, this.cardsToMove, passDestination.x, passDestination.y, passDestination.rotation);
+      moveHand(this.th, this.event.from);
+    } else {
+      await Promise.all([
+        animateCards(this.th, this.cardsToMove, passDestination.x, passDestination.y, passDestination.rotation),
+        await animateHand(this.th, this.event.from)
+      ]);
+    }
+    this.finished = true;
   }
 
   public isFinished() {
