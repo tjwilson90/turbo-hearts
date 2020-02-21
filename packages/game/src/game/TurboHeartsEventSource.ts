@@ -69,9 +69,10 @@ export class TurboHeartsEventSource {
     }
     console.log(event.data);
     const realEvent = this.convertEvent(JSON.parse(event.data) as EventData);
-    if (realEvent !== undefined) {
-      this.th.pushEvent(realEvent);
+    if (realEvent === undefined) {
+      return;
     }
+    this.th.pushEvent(realEvent);
     if (realEvent.type === "game_complete") {
       console.log("game_complete, disconnecting");
       this.eventSource.close();
