@@ -72,6 +72,8 @@ export class TurboHearts {
   public trickNumber = 0;
   public playIndex = 0;
 
+  public replay = true;
+
   private events: Event[] = [];
   private currentEvent: Event | undefined = undefined;
 
@@ -137,10 +139,7 @@ export class TurboHearts {
     return this.currentEvent.type === "your_charge" && this.asyncEvent?.type === "your_charge";
   }
 
-  /**
-   * @param delta the number of frames to advance at 60fps
-   */
-  private gameLoop = (delta: number) => {
+  private gameLoop = () => {
     TWEEN.update();
     if (this.currentEvent !== undefined) {
       if (!this.currentEvent.isFinished()) {
@@ -162,6 +161,12 @@ export class TurboHearts {
       this.currentEvent = undefined;
     } else {
       this.currentEvent.begin();
+      this.currentEvent.transition(this.replay);
+      if (this.currentEvent.isFinished()) {
+        this.gameLoop();
+      } else {
+        console.log("cycle", this.currentEvent.type);
+      }
     }
   };
 }

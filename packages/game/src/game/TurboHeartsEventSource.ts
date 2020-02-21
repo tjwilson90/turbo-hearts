@@ -16,6 +16,7 @@ import { YourChargeEvent } from "../events/YourChargeEvent";
 
 export class TurboHeartsEventSource {
   private eventSource: EventSource;
+  private firstTimeStamp: number | undefined;
 
   constructor(private th: TurboHearts, gameId: string) {
     this.eventSource = new EventSource(`/game/subscribe/${gameId}`, {
@@ -60,6 +61,13 @@ export class TurboHeartsEventSource {
   }
 
   private handleEvent = (event: MessageEvent) => {
+    if (this.firstTimeStamp === undefined) {
+      this.firstTimeStamp = event.timeStamp;
+    }
+    if (event.timeStamp - this.firstTimeStamp > 1000) {
+      console.log("NON REPLAY");
+      this.th.replay = false;
+    }
     console.log(event.data);
     const realEvent = this.convertEvent(JSON.parse(event.data) as EventData);
     if (realEvent !== undefined) {

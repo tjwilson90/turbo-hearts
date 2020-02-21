@@ -8,6 +8,7 @@ Started from this boilerplate: https://github.com/mwieth/Webpack-4-boilerplate-T
 
 # TODO
 
+- Strict null check
 - Who's being slow?
 - Who's charged
 

@@ -29,6 +29,8 @@ export class YourPlayEvent implements Event {
     this.finished = true;
   };
 
+  public transition(instant: boolean) {}
+
   public isFinished() {
     return this.finished;
   }

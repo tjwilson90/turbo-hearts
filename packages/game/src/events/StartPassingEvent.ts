@@ -38,6 +38,8 @@ export class StartPassingEvent implements Event {
     this.th.submitter.passCards([...this.cardPickSupport.picked.values()].map(c => c.card));
   };
 
+  public transition(instant: boolean) {}
+
   public isFinished() {
     // Passing is non-blocking.
     return true;

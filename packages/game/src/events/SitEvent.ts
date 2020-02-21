@@ -77,6 +77,8 @@ export class SitEvent implements Event {
     this.th.nameplates.push(leftName);
   }
 
+  public transition(instant: boolean) {}
+
   public isFinished() {
     return true;
   }

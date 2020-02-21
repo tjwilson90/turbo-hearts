@@ -31,6 +31,8 @@ export class YourChargeEvent implements Event {
     this.th.submitter.chargeCards([...this.cardPickSupport.picked.values()].map(c => c.card));
   };
 
+  public transition(instant: boolean) {}
+
   public isFinished() {
     // Async (at least classic)
     return true;
