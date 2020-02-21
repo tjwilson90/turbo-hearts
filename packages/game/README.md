@@ -12,8 +12,6 @@ Started from this boilerplate: https://github.com/mwieth/Webpack-4-boilerplate-T
 - Who's being slow?
 - Who's charged
 
-- Instant replay on reconnect
-
 - Multi rounds of charging
 - Play indicator
 - Tune animation speeds
@@ -23,6 +21,7 @@ Started from this boilerplate: https://github.com/mwieth/Webpack-4-boilerplate-T
 - Re-animate multi charged cards after a play
 - Animation when before deal
 
+- X Instant replay on reconnect
 - X Charge bug (uncharged card showing up charged)
 - X Disconnect after finished
 - X Pass arrow indicators

@@ -117,8 +117,6 @@ export class TurboHearts {
     });
   }
 
-  public activateCards(legalPlays: Card[]) {}
-
   public pushEvent(event: Event) {
     this.events.push(event);
   }
@@ -151,21 +149,23 @@ export class TurboHearts {
     if (this.events.length === 0) {
       return;
     }
-    this.currentEvent = this.events.shift();
-    if (
-      this.hasEventAfterYourPlay() ||
-      this.hasFutureSendPass() ||
-      this.hasFutureCharge() ||
-      this.duplicateAsyncEvent()
-    ) {
-      this.currentEvent = undefined;
-    } else {
-      this.currentEvent.begin();
-      this.currentEvent.transition(this.replay);
-      if (this.currentEvent.isFinished()) {
-        this.gameLoop();
+    while (this.currentEvent === undefined && this.events.length > 0) {
+      this.currentEvent = this.events.shift();
+      if (
+        this.hasEventAfterYourPlay() ||
+        this.hasFutureSendPass() ||
+        this.hasFutureCharge() ||
+        this.duplicateAsyncEvent()
+      ) {
+        this.currentEvent = undefined;
       } else {
-        console.log("cycle", this.currentEvent.type);
+        this.currentEvent.begin();
+        this.currentEvent.transition(this.replay);
+        if (this.currentEvent.isFinished()) {
+          this.currentEvent = undefined;
+        } else {
+          break;
+        }
       }
     }
   };
