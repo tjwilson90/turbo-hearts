@@ -127,6 +127,7 @@ impl Games {
                     }
                 });
             }
+            tx.send(GameEvent::EndReplay).unwrap();
             game.subscribers.insert(name.to_string(), tx);
             Ok(())
         })
@@ -643,6 +644,7 @@ impl Game {
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub enum GameEvent {
     Ping,
+    EndReplay,
     Sit {
         north: Player,
         east: Player,
@@ -739,6 +741,7 @@ impl GameEvent {
     ) -> Option<GameEvent> {
         match self {
             GameEvent::Ping
+            | GameEvent::EndReplay
             | GameEvent::Play { .. }
             | GameEvent::Sit { .. }
             | GameEvent::StartPassing
