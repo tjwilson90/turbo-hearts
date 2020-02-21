@@ -194,6 +194,18 @@ unredacted stream of all events.
 
 The following events can be returned in the game event stream.
 
+#### EndReplay
+
+When a client subscribes to the game stream, all pre-existing events are immediately streamed back.
+Immediately after that, an `end_replay` event is sent to that client to indicate that the client
+has caught up to the latest pre-existing event in the stream.
+
+```json
+{
+  "type": "end_event"
+}
+```
+
 #### Sit
 
 When a game starts, a `sit` event is be sent indicating where each player is sitting and what the
