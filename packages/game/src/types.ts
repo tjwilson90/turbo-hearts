@@ -31,6 +31,18 @@ export interface StartPassingEventData {
   type: "start_passing";
 }
 
+export interface EndReplayEventData {
+  type: "end_replay";
+}
+
+export interface PassStatusEventData {
+  type: "pass_status";
+  northDone: boolean;
+  eastDone: boolean;
+  southDone: boolean;
+  westDone: boolean;
+}
+
 export interface SendPassEventData {
   type: "send_pass";
   from: Seat;
@@ -47,8 +59,13 @@ export interface StartChargingEventData {
   type: "start_charging";
 }
 
-export interface YourChargeEventData {
-  type: "your_charge";
+export interface ChargeStatusEventData {
+  type: "charge_status";
+  nextCharger: string | null;
+  northDone: boolean;
+  eastDone: boolean;
+  southDone: boolean;
+  westDone: boolean;
 }
 
 export interface ChargeEventData {
@@ -62,8 +79,9 @@ export interface StartTrickEventData {
   leader: Seat;
 }
 
-export interface YourPlayEventData {
-  type: "your_play";
+export interface PlayStatusEventData {
+  type: "play_status";
+  nextPlayer: Seat;
   legalPlays: Card[];
 }
 
@@ -87,9 +105,6 @@ export interface Event {
   begin(): void;
   transition(instant: boolean): void;
   isFinished(): boolean;
-
-  // updateState(): void;
-  // animate(): Promise<void>;
 }
 
 export interface Point {
@@ -119,15 +134,17 @@ export interface SpriteCard {
 
 export type EventData =
   | SitEventData
+  | EndReplayEventData
   | DealEventData
   | StartPassingEventData
+  | PassStatusEventData
   | SendPassEventData
   | ReceivePassEventData
   | StartChargingEventData
-  | YourChargeEventData
+  | ChargeStatusEventData
   | ChargeEventData
   | StartTrickEventData
-  | YourPlayEventData
+  | PlayStatusEventData
   | PlayEventData
   | EndTrickEventData
   | GameCompleteEventData;
