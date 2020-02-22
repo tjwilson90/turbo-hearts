@@ -8,7 +8,7 @@ export class Nameplate {
     const graphics = new PIXI.Graphics();
     graphics.lineStyle(2, 0xe0e0e0, 1);
     graphics.beginFill(0xf0f0f0);
-    graphics.drawRect(0, 0, 200, 30);
+    graphics.drawRect(0, 0, 150, 24);
     graphics.endFill();
     this.container.addChild(graphics);
     this.container.x = x;
@@ -20,12 +20,12 @@ export class Nameplate {
 
     let textEl = new PIXI.Text(name, {
       fontFamily: "Arial",
-      fontSize: 16,
+      fontSize: 14,
       fill: 0x101010,
       lineHeight: 60
     });
     textEl.anchor.set(0.5, 0.5);
-    textEl.position.set(this.container.width / 2, this.container.height + 4);
+    textEl.position.set(this.container.width / 2, this.container.height + 6);
     this.container.addChild(textEl);
   }
 }

@@ -30,10 +30,15 @@ export class EndTrickEvent implements Event {
     if (!instant) {
       await sleep(TRICK_COLLECTION_PAUSE);
     }
+    let first = true;
     for (const card of this.pileCards) {
       card.hidden = true;
       card.sprite.texture = this.th.app.loader.resources["BACK"].texture;
       card.sprite.zIndex = Z_PILE_CARDS;
+      if (!first) {
+        card.sprite.filters = [];
+      }
+      first = false;
     }
     this.th.app.stage.sortChildren();
     if (instant) {

@@ -1,7 +1,7 @@
 import { Pass, SpriteCard, CARDS, Event, Seat, Card } from "../types";
 import TWEEN from "@tweenjs/tween.js";
 import * as PIXI from "pixi.js";
-import { TABLE_SIZE } from "../const";
+import { TABLE_SIZE, TABLE_CENTER_X, TABLE_CENTER_Y } from "../const";
 import { SendPassEvent } from "../events/SendPassEvent";
 import { ChargeEvent } from "../events/ChargeEvent";
 import { PlaySubmitter } from "./PlaySubmitter";
@@ -106,12 +106,17 @@ export class TurboHearts {
     for (const nameplate of this.nameplates) {
       this.app.stage.addChild(nameplate.container);
     }
+    const bg = new PIXI.Sprite(this.app.loader.resources["background"].texture);
+    bg.anchor.set(0.5);
+    bg.position.set(TABLE_CENTER_X, TABLE_CENTER_Y);
+    this.app.stage.addChild(bg);
   }
 
   private loadCards() {
     for (const card of CARDS) {
       this.app.loader.add(card, `assets/cards/${card}.svg`);
     }
+    this.app.loader.add("background", `assets/beige-leather@2x.jpg`);
     this.app.loader.load(() => {
       this.app.ticker.add(this.gameLoop);
     });

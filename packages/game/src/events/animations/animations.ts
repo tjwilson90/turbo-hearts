@@ -8,7 +8,8 @@ import {
   LEFT,
   RIGHT,
   TOP,
-  Z_DEALING_CARDS
+  Z_DEALING_CARDS,
+  CARD_DROP_SHADOW
 } from "../../const";
 import { TurboHearts } from "../../game/TurboHearts";
 import { Point, Seat, SpriteCard } from "../../types";
@@ -46,9 +47,10 @@ export function animateCards(
   x: number,
   y: number,
   rotation: number,
-  overlap = CARD_OVERLAP
+  overlap = CARD_OVERLAP,
+  invert = false
 ) {
-  const cardDests = groupCards(cards, x, y, rotation, overlap);
+  const cardDests = groupCards(cards, x, y, rotation, overlap, invert);
   return new Promise(resolve => {
     let finished = 0;
     let started = 0;
@@ -113,6 +115,7 @@ export function moveDeal(th: TurboHearts) {
     }
     card.sprite.position.set(dest.x, dest.y);
     card.sprite.rotation = rotation;
+    card.sprite.filters = [CARD_DROP_SHADOW];
     return;
   }
   for (let i = 12; i >= 0; i--) {
@@ -141,6 +144,9 @@ export function animateDeal(th: TurboHearts) {
       .to(dest, FAST_ANIMATION_DURATION)
       .easing(TWEEN.Easing.Quadratic.Out)
       .delay(delay)
+      .onStart(() => {
+        card.sprite.filters = [CARD_DROP_SHADOW];
+      })
       .onComplete(() => {
         if (card.hidden && card.sprite.texture !== backTexture) {
           card.sprite.texture = backTexture;
@@ -194,7 +200,15 @@ export function movePlay(th: TurboHearts, seat: Seat) {
 export function animatePlay(th: TurboHearts, seat: Seat) {
   const player = getPlayerAccessor(th.bottomSeat, seat)(th);
   const handPosition = getHandPosition(th.bottomSeat, seat);
-  return animateCards(th, player.playCards, handPosition.playX, handPosition.playY, handPosition.rotation);
+  return animateCards(
+    th,
+    player.playCards,
+    handPosition.playX,
+    handPosition.playY,
+    handPosition.rotation,
+    CARD_OVERLAP,
+    true
+  );
 }
 
 export function moveCharges(th: TurboHearts, seat: Seat) {

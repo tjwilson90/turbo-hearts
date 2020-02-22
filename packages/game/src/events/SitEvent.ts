@@ -1,8 +1,8 @@
+import { LEFT, RIGHT, TOP } from "../const";
 import { TurboHearts } from "../game/TurboHearts";
 import { Event, SitEventData, SitPlayer } from "../types";
-import { getPlayerAccessor } from "./playerAccessors";
-import { BOTTOM, TOP, RIGHT, LEFT } from "../const";
 import { Nameplate } from "../ui/Nameplate";
+import { getPlayerAccessor } from "./playerAccessors";
 
 interface PlayerAccessor {
   (event: SitEventData): SitPlayer;
@@ -67,13 +67,13 @@ export class SitEvent implements Event {
     bottom.type = eventAccessors[this.th.bottomSeat]["bottom"](this.event).type;
     left.name = eventAccessors[this.th.bottomSeat]["left"](this.event).name;
     left.type = eventAccessors[this.th.bottomSeat]["left"](this.event).type;
-    const topName = new Nameplate(top.name, TOP.x, TOP.y + 30, 0);
-    const rightName = new Nameplate(right.name, RIGHT.x + 4, RIGHT.y, -Math.PI / 2);
-    const bottomName = new Nameplate(bottom.name, BOTTOM.x, BOTTOM.y + 3, 0);
-    const leftName = new Nameplate(left.name, LEFT.x - 4, LEFT.y, Math.PI / 2);
+    const topName = new Nameplate(top.name, TOP.x, TOP.y + 46, 0);
+    const rightName = new Nameplate(right.name, RIGHT.x - 12, RIGHT.y, -Math.PI / 2);
+    // const bottomName = new Nameplate(bottom.name, BOTTOM.x, BOTTOM.y - 10, 0);
+    const leftName = new Nameplate(left.name, LEFT.x + 12, LEFT.y, Math.PI / 2);
     this.th.nameplates.push(topName);
     this.th.nameplates.push(rightName);
-    this.th.nameplates.push(bottomName);
+    // this.th.nameplates.push(bottomName);
     this.th.nameplates.push(leftName);
   }
 

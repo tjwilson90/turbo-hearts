@@ -8,7 +8,14 @@ import { SpriteCard } from "../types";
  * @param offset how much of an underlapping card to show
  * @param rotation
  */
-export function groupCards(cards: SpriteCard[], x: number, y: number, rotation: number, overlap = CARD_OVERLAP) {
+export function groupCards(
+  cards: SpriteCard[],
+  x: number,
+  y: number,
+  rotation: number,
+  overlap = CARD_OVERLAP,
+  invert = false
+) {
   const cosR = Math.cos(rotation);
   const sinR = Math.sin(rotation);
   const dx = cosR * overlap;
@@ -17,8 +24,14 @@ export function groupCards(cards: SpriteCard[], x: number, y: number, rotation: 
   const totalLength = (cards.length - 1) * overlap;
   const offsetX = (cosR * totalLength) / 2;
   const offsetY = (sinR * totalLength) / 2;
-  for (let i = 0; i < cards.length; i++) {
-    result.push({ x: x + i * dx - offsetX, y: y + i * dy - offsetY });
+  if (invert) {
+    for (let i = cards.length - 1; i >= 0; i--) {
+      result.push({ x: x + i * dx - offsetX, y: y + i * dy - offsetY });
+    }
+  } else {
+    for (let i = 0; i < cards.length; i++) {
+      result.push({ x: x + i * dx - offsetX, y: y + i * dy - offsetY });
+    }
   }
   return result;
 }
