@@ -101,6 +101,18 @@ When the last play is made in a game a `finish_game` event is sent to all subscr
 }
 ```
 
+#### Chat
+
+When a chat message is sent to the lobby a `chat` event is sent to all subscribers.
+
+```json
+{
+  "type": "chat",
+  "name": "twilson",
+  "message": "Anyone here?"
+}
+```
+
 #### LeaveLobby
 
 Whenever a player disconnects from the lobby every stream, a `leave_lobby` message is sent to all
@@ -181,6 +193,17 @@ Request:
 }
 ```
 
+### `POST /lobby/chat`
+
+Send a chat message to all subscribers in the lobby.
+
+Request:
+```json
+{
+  "message": "Anyone here?"
+}
+```
+
 ### `GET /game#<id>`
 
 Returns an html page for a game displaying the live refreshing game state.
@@ -203,6 +226,18 @@ has caught up to the latest pre-existing event in the stream.
 ```json
 {
   "type": "end_replay"
+}
+```
+
+#### Chat
+
+When a chat message is sent to a game a `chat` event is sent to all subscribers.
+
+```json
+{
+  "type": "chat",
+  "name": "twilson",
+  "message": "carrino, it's your play"
 }
 ```
 
@@ -561,5 +596,17 @@ Request:
 {
   "id": "8c9e2ff7-dcf3-49be-86f0-315f469840bc",
   "claimer": "west"
+}
+```
+
+### `POST /game/chat`
+
+Send a chat message to all subscribers watching a game.
+
+Request:
+```json
+{
+  "id": "8c9e2ff7-dcf3-49be-86f0-315f469840bc",
+  "message": "carrino, it's your play"
 }
 ```

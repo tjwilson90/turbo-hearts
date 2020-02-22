@@ -48,6 +48,10 @@ pub enum LobbyEvent {
     FinishGame {
         id: GameId,
     },
+    Chat {
+        name: String,
+        message: String,
+    },
     LeaveLobby {
         name: String,
     },
@@ -162,6 +166,11 @@ impl Lobby {
         if inner.games.remove(&id).is_some() {
             inner.broadcast(LobbyEvent::FinishGame { id });
         }
+    }
+
+    pub async fn chat(&self, name: String, message: String) {
+        let mut inner = self.inner.lock().await;
+        inner.broadcast(LobbyEvent::Chat { name, message });
     }
 }
 

@@ -92,6 +92,10 @@ impl Server {
         self.lobby.leave_game(id, name).await
     }
 
+    pub async fn lobby_chat(&self, name: String, message: String) {
+        self.lobby.chat(name, message).await
+    }
+
     pub async fn subscribe_game(
         &self,
         id: GameId,
@@ -195,6 +199,15 @@ impl Server {
             ),
         }
         result
+    }
+
+    pub async fn game_chat(
+        &self,
+        id: GameId,
+        name: String,
+        message: String,
+    ) -> Result<(), CardsError> {
+        self.games.chat(id, name, message).await
     }
 }
 
