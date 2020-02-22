@@ -2,28 +2,33 @@ import { BOTTOM, LEFT, RIGHT, TOP } from "../const";
 import { PlayerCardPositions, Seat } from "../types";
 
 const handPositions: {
-  [bottomSeat: string]: { [seat: string]: PlayerCardPositions };
-} = {};
-handPositions["north"] = {};
-handPositions["north"]["north"] = BOTTOM;
-handPositions["north"]["east"] = LEFT;
-handPositions["north"]["south"] = TOP;
-handPositions["north"]["west"] = RIGHT;
-handPositions["east"] = {};
-handPositions["east"]["north"] = RIGHT;
-handPositions["east"]["east"] = BOTTOM;
-handPositions["east"]["south"] = LEFT;
-handPositions["east"]["west"] = TOP;
-handPositions["south"] = {};
-handPositions["south"]["north"] = TOP;
-handPositions["south"]["east"] = RIGHT;
-handPositions["south"]["south"] = BOTTOM;
-handPositions["south"]["west"] = LEFT;
-handPositions["west"] = {};
-handPositions["west"]["north"] = LEFT;
-handPositions["west"]["east"] = TOP;
-handPositions["west"]["south"] = RIGHT;
-handPositions["west"]["west"] = BOTTOM;
+  [bottomSeat in Seat]: { [seat in Seat]: PlayerCardPositions };
+} = {
+  north: {
+    north: BOTTOM,
+    east: LEFT,
+    south: TOP,
+    west: RIGHT
+  },
+  east: {
+    north: RIGHT,
+    east: BOTTOM,
+    south: LEFT,
+    west: TOP
+  },
+  south: {
+    north: TOP,
+    east: RIGHT,
+    south: BOTTOM,
+    west: LEFT
+  },
+  west: {
+    north: LEFT,
+    east: TOP,
+    south: RIGHT,
+    west: BOTTOM
+  }
+};
 
 export function getHandPosition(bottomSeat: Seat, seat: Seat) {
   return handPositions[bottomSeat][seat];

@@ -11,28 +11,33 @@ const BOTTOM_PLAYER_ACCESSOR: PlayerAccessor = (th: TurboHearts) => th.bottomPla
 const LEFT_PLAYER_ACCESSOR: PlayerAccessor = (th: TurboHearts) => th.leftPlayer;
 
 const playerAccessors: {
-  [bottomSeat: string]: { [passFrom: string]: PlayerAccessor };
-} = {};
-playerAccessors["north"] = {};
-playerAccessors["north"]["north"] = BOTTOM_PLAYER_ACCESSOR;
-playerAccessors["north"]["east"] = LEFT_PLAYER_ACCESSOR;
-playerAccessors["north"]["south"] = TOP_PLAYER_ACCESSOR;
-playerAccessors["north"]["west"] = RIGHT_PLAYER_ACCESSOR;
-playerAccessors["east"] = {};
-playerAccessors["east"]["north"] = RIGHT_PLAYER_ACCESSOR;
-playerAccessors["east"]["east"] = BOTTOM_PLAYER_ACCESSOR;
-playerAccessors["east"]["south"] = LEFT_PLAYER_ACCESSOR;
-playerAccessors["east"]["west"] = TOP_PLAYER_ACCESSOR;
-playerAccessors["south"] = {};
-playerAccessors["south"]["north"] = TOP_PLAYER_ACCESSOR;
-playerAccessors["south"]["east"] = RIGHT_PLAYER_ACCESSOR;
-playerAccessors["south"]["south"] = BOTTOM_PLAYER_ACCESSOR;
-playerAccessors["south"]["west"] = LEFT_PLAYER_ACCESSOR;
-playerAccessors["west"] = {};
-playerAccessors["west"]["north"] = LEFT_PLAYER_ACCESSOR;
-playerAccessors["west"]["east"] = TOP_PLAYER_ACCESSOR;
-playerAccessors["west"]["south"] = RIGHT_PLAYER_ACCESSOR;
-playerAccessors["west"]["west"] = BOTTOM_PLAYER_ACCESSOR;
+  [bottomSeat in Seat]: { [passFrom in Seat]: PlayerAccessor };
+} = {
+  north: {
+    north: BOTTOM_PLAYER_ACCESSOR,
+    east: LEFT_PLAYER_ACCESSOR,
+    south: TOP_PLAYER_ACCESSOR,
+    west: RIGHT_PLAYER_ACCESSOR
+  },
+  east: {
+    north: RIGHT_PLAYER_ACCESSOR,
+    east: BOTTOM_PLAYER_ACCESSOR,
+    south: LEFT_PLAYER_ACCESSOR,
+    west: TOP_PLAYER_ACCESSOR
+  },
+  south: {
+    north: TOP_PLAYER_ACCESSOR,
+    east: RIGHT_PLAYER_ACCESSOR,
+    south: BOTTOM_PLAYER_ACCESSOR,
+    west: LEFT_PLAYER_ACCESSOR
+  },
+  west: {
+    north: LEFT_PLAYER_ACCESSOR,
+    east: TOP_PLAYER_ACCESSOR,
+    south: RIGHT_PLAYER_ACCESSOR,
+    west: BOTTOM_PLAYER_ACCESSOR
+  }
+};
 
 export function getPlayerAccessor(bottomSeat: Seat, seat: Seat) {
   return playerAccessors[bottomSeat][seat];
