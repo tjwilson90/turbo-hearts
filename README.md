@@ -202,7 +202,7 @@ has caught up to the latest pre-existing event in the stream.
 
 ```json
 {
-  "type": "end_event"
+  "type": "end_replay"
 }
 ```
 
@@ -250,6 +250,22 @@ convenience; the information it imparts can be inferred from other events.
 }
 ```
 
+#### PassStatus
+
+A `pass_status` event is sent when passing begins and after each pass is sent indicating which
+players are done passing. This event is sent for convenience; the information it imparts can be
+inferred from other events.
+
+```json
+{
+  "type": "pass_status",
+  "north_done": false,
+  "east_done": true,
+  "south_done": false,
+  "west_done": false
+}
+```
+
 #### SendPass
 
 When a player makes a pass, a `send_pass` event is sent indicating who sent the pass and what cards
@@ -289,15 +305,21 @@ convenience; the information it imparts can be inferred from other events.
 }
 ```
 
-#### YourCharge
+#### ChargeStatus
 
-A `your_charge` event is sent to a player whenever they are able to charge. This event is never
-sent to spectators. This event is sent for convenience; the information it imparts can be inferred
-from other events.
+A `charge_status` event is sent when charging begins and after each charge is made. It indicates
+who is the next player to charge (only for non-free charging rules) and each player who still needs
+to make a charge eventually to finish charging. This event is sent for convenience; the information
+it imparts can be inferred from other events.
 
 ```json
 {
-  "type": "your_charge"
+  "type": "charge_status",
+  "next_charger": "east",
+  "north_done": true,
+  "east_done": false,
+  "south_done": true,
+  "west_done": false
 }
 ```
 
@@ -357,16 +379,17 @@ played.
 }
 ```
 
-#### YourPlay
+#### PlayStatus
 
-A `your_play` event is sent to a player when it is their turn to play. The event contains the set
-of cards in their hand that are legal to play at that moment. This event is never sent to
-spectators. This event is sent for convenience; the information it imparts can be inferred from
-other events.
+A `play_status` event is sent whenever it is someone's turn to play a card. The event indicates who
+is next to play and what cards in their hand are legal to play. Players in the game other than the
+next player will receive a redacted event without the legal plays. This event is sent for
+convenience; the information it imparts can be inferred from other events.
 
 ```json
 {
-  "type": "your_play",
+  "type": "play_status",
+  "next_player": "north",
   "legal_plays": ["AS", "8S", "4S", "3S"]
 }
 ```

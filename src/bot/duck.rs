@@ -1,6 +1,7 @@
 use crate::{
     bot::{Algorithm, BotState},
     cards::{Card, Cards},
+    game::GameEvent,
 };
 use rand::Rng;
 
@@ -59,6 +60,8 @@ impl Algorithm for Duck {
             _ => cards.into_iter().max().unwrap(),
         }
     }
+
+    fn on_event(&mut self, _: &BotState, _: &GameEvent) {}
 }
 
 fn score(card: Card, hand: Cards) -> usize {

@@ -99,7 +99,7 @@ impl Bot {
     fn handle(&mut self, event: GameEvent) -> Option<Action> {
         info!("{} handling event {:?}", self.state.name, event);
         self.state.game.apply(&event);
-        match event {
+        match &event {
             GameEvent::Sit {
                 north,
                 east,
@@ -118,7 +118,6 @@ impl Bot {
                 } else {
                     panic!("{} is not a player in the game", self.state.name);
                 };
-                self.algorithm.on_sit(&self.state);
             }
             GameEvent::Deal {
                 north,
@@ -127,35 +126,22 @@ impl Bot {
                 west,
                 ..
             } => {
-                self.state.pre_pass_hand = north | east | south | west;
+                self.state.pre_pass_hand = *north | *east | *south | *west;
                 self.state.post_pass_hand = self.state.pre_pass_hand;
-                self.algorithm.on_deal(&self.state);
             }
-            GameEvent::SendPass { from, cards } => {
-                self.state.post_pass_hand -= cards;
-                self.algorithm.on_send_pass(&self.state, from, cards);
+            GameEvent::SendPass { cards, .. } => {
+                self.state.post_pass_hand -= *cards;
             }
-            GameEvent::RecvPass { to, cards } => {
-                self.state.post_pass_hand |= cards;
-                self.algorithm.on_recv_pass(&self.state, to, cards);
-            }
-            GameEvent::BlindCharge { seat, count } => {
-                self.algorithm.on_blind_charge(&self.state, seat, count);
-            }
-            GameEvent::Charge { seat, cards } => {
-                self.algorithm.on_charge(&self.state, seat, cards);
-            }
-            GameEvent::RevealCharges { .. } => {
-                self.algorithm.on_reveal_charges(&self.state);
-            }
-            GameEvent::Play { seat, card } => {
-                self.algorithm.on_play(&self.state, seat, card);
+            GameEvent::RecvPass { cards, .. } => {
+                self.state.post_pass_hand |= *cards;
             }
             GameEvent::Claim { seat, .. } => {
-                return Some(Action::RejectClaim(seat));
+                return Some(Action::RejectClaim(*seat));
             }
             _ => {}
         }
+
+        self.algorithm.on_event(&self.state, &event);
 
         if self.state.game.phase.is_charging() {
             if self.state.game.can_charge(self.state.seat)
@@ -201,12 +187,5 @@ trait Algorithm {
     fn charge(&mut self, state: &BotState) -> Cards;
     fn play(&mut self, state: &BotState) -> Card;
 
-    fn on_sit(&mut self, state: &BotState) {}
-    fn on_deal(&mut self, state: &BotState) {}
-    fn on_send_pass(&mut self, state: &BotState, from: Seat, cards: Cards) {}
-    fn on_recv_pass(&mut self, state: &BotState, to: Seat, cards: Cards) {}
-    fn on_charge(&mut self, state: &BotState, seat: Seat, cards: Cards) {}
-    fn on_blind_charge(&mut self, state: &BotState, seat: Seat, count: usize) {}
-    fn on_reveal_charges(&mut self, state: &BotState) {}
-    fn on_play(&mut self, state: &BotState, seat: Seat, card: Card) {}
+    fn on_event(&mut self, state: &BotState, event: &GameEvent);
 }
