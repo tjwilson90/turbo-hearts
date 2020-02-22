@@ -1,3 +1,4 @@
+import { DropShadowFilter } from "@pixi/filter-drop-shadow";
 import { PlayerCardPositions } from "./types";
 
 export const Z_PILE_CARDS = 0;
@@ -15,7 +16,7 @@ export const CARD_DISPLAY_WIDTH = CARD_NATIVE_WIDTH * CARD_SCALE;
 export const CARD_DISPLAY_HEIGHT = CARD_NATIVE_HEIGHT * CARD_SCALE;
 export const CARD_OVERLAP = 52 * CARD_SCALE;
 
-export const TABLE_SIZE = 1000;
+export const TABLE_SIZE = 768;
 export const TABLE_CENTER_X = TABLE_SIZE / 2;
 export const TABLE_CENTER_Y = TABLE_SIZE / 2;
 
@@ -29,7 +30,7 @@ export const FASTER_ANIMATION_DURATION = ANIMATION_DURATION / 4;
 
 export const TRICK_COLLECTION_PAUSE = 1000;
 
-export const TABLE_CARD_UNDERLAP = 0.0;
+export const TABLE_CARD_UNDERLAP = -0.1;
 export const CARD_MARGIN = 10;
 export const CHARGE_OFFSET = CARD_DISPLAY_HEIGHT * (1 + TABLE_CARD_UNDERLAP) + CARD_MARGIN;
 export const CHARGE_OVERLAP = CARD_DISPLAY_WIDTH + CARD_MARGIN;
@@ -198,3 +199,11 @@ export const LIMBO_CENTER_LEFT = {
   y: LEFT.playY,
   rotation: LEFT_ROTATION
 };
+
+export const CARD_DROP_SHADOW = new DropShadowFilter({
+  distance: 0.5,
+  alpha: 0.4,
+  pixelSize: 1,
+  blur: 1,
+  resolution: window.devicePixelRatio
+});
