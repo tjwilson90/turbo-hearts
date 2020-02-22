@@ -6,30 +6,35 @@ import { Card, DealEventData, Event, PointWithRotation, Position, Seat, SpriteCa
 import { animateDeal, moveDeal } from "./animations/animations";
 
 const handAccessors: {
-  [bottomSeat: string]: {
-    [position: string]: (event: DealEventData) => { seat: Seat; cards: Card[] };
+  [bottomSeat in Seat]: {
+    [position in Position]: (event: DealEventData) => { seat: Seat; cards: Card[] };
   };
-} = {};
-handAccessors["north"] = {};
-handAccessors["north"]["top"] = event => ({ seat: "south", cards: event.south });
-handAccessors["north"]["right"] = event => ({ seat: "west", cards: event.west });
-handAccessors["north"]["bottom"] = event => ({ seat: "north", cards: event.north });
-handAccessors["north"]["left"] = event => ({ seat: "east", cards: event.east });
-handAccessors["east"] = {};
-handAccessors["east"]["top"] = event => ({ seat: "west", cards: event.west });
-handAccessors["east"]["right"] = event => ({ seat: "north", cards: event.north });
-handAccessors["east"]["bottom"] = event => ({ seat: "east", cards: event.east });
-handAccessors["east"]["left"] = event => ({ seat: "south", cards: event.south });
-handAccessors["south"] = {};
-handAccessors["south"]["top"] = event => ({ seat: "north", cards: event.north });
-handAccessors["south"]["right"] = event => ({ seat: "east", cards: event.east });
-handAccessors["south"]["bottom"] = event => ({ seat: "south", cards: event.south });
-handAccessors["south"]["left"] = event => ({ seat: "west", cards: event.west });
-handAccessors["west"] = {};
-handAccessors["west"]["top"] = event => ({ seat: "east", cards: event.east });
-handAccessors["west"]["right"] = event => ({ seat: "south", cards: event.south });
-handAccessors["west"]["bottom"] = event => ({ seat: "west", cards: event.west });
-handAccessors["west"]["left"] = event => ({ seat: "north", cards: event.north });
+} = {
+  north: {
+    top: event => ({ seat: "south", cards: event.south }),
+    right: event => ({ seat: "west", cards: event.west }),
+    bottom: event => ({ seat: "north", cards: event.north }),
+    left: event => ({ seat: "east", cards: event.east })
+  },
+  east: {
+    top: event => ({ seat: "west", cards: event.west }),
+    right: event => ({ seat: "north", cards: event.north }),
+    bottom: event => ({ seat: "east", cards: event.east }),
+    left: event => ({ seat: "south", cards: event.south })
+  },
+  south: {
+    top: event => ({ seat: "north", cards: event.north }),
+    right: event => ({ seat: "east", cards: event.east }),
+    bottom: event => ({ seat: "south", cards: event.south }),
+    left: event => ({ seat: "west", cards: event.west })
+  },
+  west: {
+    top: event => ({ seat: "east", cards: event.east }),
+    right: event => ({ seat: "south", cards: event.south }),
+    bottom: event => ({ seat: "west", cards: event.west }),
+    left: event => ({ seat: "north", cards: event.north })
+  }
+};
 
 function getCardsForPosition(bottomSeat: Seat, position: Position, event: DealEventData) {
   return handAccessors[bottomSeat][position](event);

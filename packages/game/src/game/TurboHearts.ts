@@ -126,8 +126,18 @@ export class TurboHearts {
     this.events.push(event);
   }
 
+  // TODO
+  // The next few functions should be replaced with some sort of
+  // InputAction that is separate from the backend event stream.
+  // The backend event stream should just be used to update state
+  // and kickoff animations. At the end of the replay, the game
+  // state should be inspected to see if the the current player
+  // needs to make an action. The "asyncEvent" is essentially the
+  // current input action the user needs to take.
+  //
   private hasEventAfterYourPlay() {
-    return this.currentEvent.type === "your_play" && this.events.length > 0;
+    // HACK: > 1 because of end_replay event
+    return this.currentEvent.type === "play_status" && this.events.length > 1;
   }
 
   private hasFutureSendPass() {
@@ -135,11 +145,11 @@ export class TurboHearts {
   }
 
   private hasFutureCharge() {
-    return this.currentEvent.type === "your_charge" && hasChargeFrom(this.events, this.bottomSeat);
+    return this.currentEvent.type === "charge_status" && hasChargeFrom(this.events, this.bottomSeat);
   }
 
   private duplicateAsyncEvent() {
-    return this.currentEvent.type === "your_charge" && this.asyncEvent?.type === "your_charge";
+    return this.currentEvent.type === "charge_status" && this.asyncEvent?.type === "charge_status";
   }
 
   private gameLoop = () => {
