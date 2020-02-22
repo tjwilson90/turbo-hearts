@@ -2,7 +2,7 @@ import { TurboHearts } from "../game/TurboHearts";
 import { Event, EndReplayEventData } from "../types";
 
 export class EndReplayEvent implements Event {
-  public type = "start_trick" as const;
+  public type = "end_replay" as const;
 
   constructor(private th: TurboHearts, private event: EndReplayEventData) {}
 
