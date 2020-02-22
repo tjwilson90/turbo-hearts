@@ -750,8 +750,27 @@ impl GameState {
         }
     }
 
-    fn charged_cards(&self) -> Cards {
+    pub fn charged_cards(&self) -> Cards {
         self.charged[0] | self.charged[1] | self.charged[2] | self.charged[3]
+    }
+
+    pub fn pass_status_event(&self) -> GameEvent {
+        GameEvent::PassStatus {
+            north_done: self.sent_pass[Seat::North.idx()],
+            east_done: self.sent_pass[Seat::East.idx()],
+            south_done: self.sent_pass[Seat::South.idx()],
+            west_done: self.sent_pass[Seat::West.idx()],
+        }
+    }
+
+    pub fn charge_status_event(&self) -> GameEvent {
+        GameEvent::ChargeStatus {
+            next_charger: self.next_charger,
+            north_done: self.done_charging[Seat::North.idx()],
+            east_done: self.done_charging[Seat::East.idx()],
+            south_done: self.done_charging[Seat::South.idx()],
+            west_done: self.done_charging[Seat::West.idx()],
+        }
     }
 
     pub fn score(&self, seat: Seat) -> i16 {

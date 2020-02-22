@@ -1,7 +1,7 @@
 use crate::{
     bot::{Algorithm, BotState},
     cards::{Card, Cards},
-    types::Seat,
+    game::GameEvent,
 };
 use rand::{seq::SliceRandom, Rng};
 
@@ -42,15 +42,18 @@ impl Algorithm for Random {
         cards.into_iter().nth(index).unwrap()
     }
 
-    fn on_deal(&mut self, _: &BotState) {
-        self.charged = false;
-    }
-
-    fn on_charge(&mut self, state: &BotState, seat: Seat, _: Cards) {
-        self.charged |= seat == state.seat;
-    }
-
-    fn on_blind_charge(&mut self, state: &BotState, seat: Seat, _: usize) {
-        self.charged |= seat == state.seat;
+    fn on_event(&mut self, state: &BotState, event: &GameEvent) {
+        match event {
+            GameEvent::Deal { .. } => {
+                self.charged = false;
+            }
+            GameEvent::Charge { seat, .. } => {
+                self.charged |= state.seat == *seat;
+            }
+            GameEvent::BlindCharge { seat, .. } => {
+                self.charged |= state.seat == *seat;
+            }
+            _ => {}
+        }
     }
 }
