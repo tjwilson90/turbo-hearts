@@ -125,6 +125,21 @@ async fn subscribe_game(id: GameId, server: Server, name: String) -> Result<impl
 }
 
 #[derive(Debug, Deserialize)]
+struct LobbyChat {
+    message: String,
+}
+
+async fn lobby_chat(
+    server: Server,
+    name: String,
+    request: LobbyChat,
+) -> Result<impl Reply, Rejection> {
+    let LobbyChat { message } = request;
+    server.lobby_chat(name, message).await;
+    Ok(warp::reply())
+}
+
+#[derive(Debug, Deserialize)]
 struct PassCards {
     id: GameId,
     cards: Cards,
@@ -215,6 +230,22 @@ async fn reject_claim(
     Ok(warp::reply())
 }
 
+#[derive(Debug, Deserialize)]
+struct GameChat {
+    id: GameId,
+    message: String,
+}
+
+async fn game_chat(
+    server: Server,
+    name: String,
+    request: GameChat,
+) -> Result<impl Reply, Rejection> {
+    let GameChat { id, message } = request;
+    server.game_chat(id, name, message).await?;
+    Ok(warp::reply())
+}
+
 fn as_stream<E>(
     rx: UnboundedReceiver<E>,
 ) -> impl Stream<Item = Result<impl ServerSentEvent, warp::Error>>
@@ -280,6 +311,12 @@ async fn main() -> Result<(), CardsError> {
         .and(server.clone())
         .and(warp::body::json())
         .and_then(remove_bot);
+    let lobby_chat = warp::path!("lobby" / "chat")
+        .and(warp::post())
+        .and(server.clone())
+        .and(name.clone())
+        .and(warp::body::json())
+        .and_then(lobby_chat);
     let subscribe_game = warp::path!("game" / "subscribe" / GameId)
         .and(warp::get())
         .and(server.clone())
@@ -321,6 +358,12 @@ async fn main() -> Result<(), CardsError> {
         .and(name.clone())
         .and(warp::body::json())
         .and_then(reject_claim);
+    let game_chat = warp::path!("game" / "chat")
+        .and(warp::post())
+        .and(server.clone())
+        .and(name.clone())
+        .and(warp::body::json())
+        .and_then(game_chat);
     let lobby_html = warp::path!("lobby")
         .and(warp::get())
         .and(warp::fs::file("./lobby.html"));
@@ -334,6 +377,7 @@ async fn main() -> Result<(), CardsError> {
         .or(leave_game)
         .or(add_bot)
         .or(remove_bot)
+        .or(lobby_chat)
         .or(subscribe_game)
         .or(pass_cards)
         .or(charge_cards)
@@ -341,6 +385,7 @@ async fn main() -> Result<(), CardsError> {
         .or(claim)
         .or(accept_claim)
         .or(reject_claim)
+        .or(game_chat)
         .or(lobby_html)
         .or(game_html)
         .or(assets)

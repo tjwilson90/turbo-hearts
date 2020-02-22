@@ -310,6 +310,18 @@ impl Games {
         })
         .await
     }
+
+    pub async fn chat(&self, id: GameId, name: String, message: String) -> Result<(), CardsError> {
+        self.with_game(id, |game| {
+            let event = GameEvent::Chat { name, message };
+            self.db.run_with_retry(|tx| {
+                persist_events(&tx, id, game.events.len(), &[event.clone()])
+            })?;
+            game.apply(&event, |g, e| g.broadcast(e));
+            Ok(())
+        })
+        .await
+    }
 }
 
 #[derive(Debug)]
@@ -326,8 +338,8 @@ impl Game {
         Self {
             events: Vec::new(),
             subscribers: HashMap::new(),
-            pre_pass_hand: [Cards::NONE, Cards::NONE, Cards::NONE, Cards::NONE],
-            post_pass_hand: [Cards::NONE, Cards::NONE, Cards::NONE, Cards::NONE],
+            pre_pass_hand: [Cards::NONE; 4],
+            post_pass_hand: [Cards::NONE; 4],
             state: GameState::new(),
         }
     }
@@ -641,6 +653,10 @@ impl Game {
 pub enum GameEvent {
     Ping,
     EndReplay,
+    Chat {
+        name: String,
+        message: String,
+    },
     Sit {
         north: Player,
         east: Player,
