@@ -114,9 +114,9 @@ export class ReceivePassEvent implements Event {
     const received = [...this.event.cards];
     while (limboSource.length > 0) {
       // Note: this is mutating both hand and limbo arrays
-      const fromLimbo = limboSource.pop();
+      const fromLimbo = limboSource.pop()!;
       if (fromLimbo.card === "BACK" && received.length > 0) {
-        fromLimbo.card = received.pop();
+        fromLimbo.card = received.pop()!;
         fromLimbo.sprite.texture = this.th.app.loader.resources[fromLimbo.card].texture;
         fromLimbo.hidden = false;
       } else if (fromLimbo.card !== "BACK" && received.length === 0) {

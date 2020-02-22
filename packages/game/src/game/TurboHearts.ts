@@ -137,19 +137,19 @@ export class TurboHearts {
   //
   private hasEventAfterYourPlay() {
     // HACK: > 1 because of end_replay event
-    return this.currentEvent.type === "play_status" && this.events.length > 1;
+    return this.currentEvent?.type === "play_status" && this.events.length > 1;
   }
 
   private hasFutureSendPass() {
-    return this.currentEvent.type === "start_passing" && hasSendPassFrom(this.events, this.bottomSeat);
+    return this.currentEvent?.type === "start_passing" && hasSendPassFrom(this.events, this.bottomSeat);
   }
 
   private hasFutureCharge() {
-    return this.currentEvent.type === "charge_status" && hasChargeFrom(this.events, this.bottomSeat);
+    return this.currentEvent?.type === "charge_status" && hasChargeFrom(this.events, this.bottomSeat);
   }
 
   private duplicateAsyncEvent() {
-    return this.currentEvent.type === "charge_status" && this.asyncEvent?.type === "charge_status";
+    return this.currentEvent?.type === "charge_status" && this.asyncEvent?.type === "charge_status";
   }
 
   private gameLoop = () => {
@@ -165,7 +165,7 @@ export class TurboHearts {
       return;
     }
     while (this.currentEvent === undefined && this.events.length > 0) {
-      this.currentEvent = this.events.shift();
+      this.currentEvent = this.events.shift()!;
       if (
         this.hasEventAfterYourPlay() ||
         this.hasFutureSendPass() ||

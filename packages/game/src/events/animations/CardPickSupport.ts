@@ -47,6 +47,9 @@ export class CardPickSupport {
 
   private animate(card: SpriteCard) {
     const initialPosition = this.initialPosition.get(card);
+    if (initialPosition === undefined) {
+      throw new Error("missing card to animate");
+    }
     let pos;
     const offset = CARD_DISPLAY_HEIGHT / 4;
     if (this.picked.has(card)) {
@@ -62,6 +65,9 @@ export class CardPickSupport {
   private onOver = (event: PIXI.interaction.InteractionEvent) => {
     const sprite = event.currentTarget as PIXI.Sprite;
     const card = this.cardMap.get(sprite);
+    if (card === undefined) {
+      throw new Error("missing card to animate");
+    }
     this.hovered = card;
     this.animate(card);
   };
@@ -69,6 +75,9 @@ export class CardPickSupport {
   private onOut = (event: PIXI.interaction.InteractionEvent) => {
     const sprite = event.currentTarget as PIXI.Sprite;
     const card = this.cardMap.get(sprite);
+    if (card === undefined) {
+      throw new Error("missing card to animate");
+    }
     if (this.hovered === card) {
       this.hovered = undefined;
     }

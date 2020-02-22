@@ -117,7 +117,6 @@ export class SendPassEvent implements Event {
   public from: Seat;
 
   private finished = false;
-  private cardsToKeep: SpriteCard[] = [];
   private cardsToMove: SpriteCard[] = [];
 
   constructor(private th: TurboHearts, private event: SendPassEventData) {
@@ -128,11 +127,9 @@ export class SendPassEvent implements Event {
     const player = getPlayerAccessor(this.th.bottomSeat, this.event.from)(this.th);
     if (this.event.cards.length === 0) {
       this.cardsToMove = player.cards.splice(0, 3);
-      this.cardsToKeep = player.cards;
       pushAll(player.limboCards, this.cardsToMove);
     } else {
       this.cardsToMove = spriteCardsOf(player.cards, this.event.cards);
-      this.cardsToKeep = spriteCardsOfNot(player.cards, this.event.cards);
       removeAll(player.cards, this.cardsToMove);
       pushAll(player.limboCards, this.cardsToMove);
       for (const card of this.cardsToMove) {
