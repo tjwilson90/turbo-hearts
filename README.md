@@ -525,9 +525,8 @@ from other events.
 
 #### Game Complete
 
-A `game_complete` event is sent as the last event in a game. Immediately after this event is sent
-all subscribers will be disconnected. Subscribers who receive this event should not attempt to
-reconnect to the game event stream. This event is sent for convenience; the information it imparts
+A `game_complete` event is sent after all four hands are complete. The only events that can occur
+after this event are chat events. This event is sent for convenience; the information it imparts
 can be inferred from other events.
 
 ```json
