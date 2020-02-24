@@ -1,12 +1,13 @@
 use crate::{
+    auth::AuthFlow,
     cards::{Cards, GamePhase},
     types::GameId,
 };
+use http::{Response, StatusCode};
 use rusqlite::ErrorCode;
-use serde::Serialize;
 use std::convert::Infallible;
 use thiserror::Error;
-use warp::{http::StatusCode, reject::Reject, Rejection};
+use warp::{reject::Reject, Rejection, Reply};
 
 #[derive(Debug, Error)]
 pub enum CardsError {
@@ -30,6 +31,8 @@ pub enum CardsError {
     IllegalPassSize(Cards),
     #[error("{0} is not a valid name for a human player")]
     InvalidName(String),
+    #[error("{0} is not a member of game {1}")]
+    InvalidPlayer(String, GameId),
     #[error("charged cards cannot be played on the first trick of their suit")]
     NoChargeOnFirstTrickOfSuit,
     #[error("points cannot be played on the first trick")]
@@ -64,8 +67,8 @@ pub enum CardsError {
     Unchargeable(Cards),
     #[error("{0} is not a known game id")]
     UnknownGame(GameId),
-    #[error("{0} is not a member of game {1}")]
-    UnknownPlayer(String, GameId),
+    #[error("{0} is not a known player")]
+    UnknownPlayer(String),
 }
 
 impl CardsError {
@@ -97,31 +100,29 @@ impl From<CardsError> for Rejection {
     }
 }
 
-#[derive(Serialize)]
-struct ErrorMessage {
-    code: u16,
-    message: String,
-}
-
-pub async fn handle_rejection(err: Rejection) -> Result<impl warp::Reply, Infallible> {
-    let code;
-    let message;
-
-    if err.is_not_found() {
-        code = StatusCode::NOT_FOUND;
-        message = "not found".to_string();
+pub async fn handle_rejection(err: Rejection) -> Result<Box<dyn Reply>, Infallible> {
+    Ok(if let Some(auth_flow) = err.find::<AuthFlow>() {
+        Box::new(auth_flow.to_reply())
     } else if let Some(error) = err.find::<CardsError>() {
-        code = error.status_code();
-        message = error.to_string();
+        Box::new(
+            Response::builder()
+                .status(error.status_code())
+                .body(error.to_string())
+                .unwrap(),
+        )
+    } else if err.is_not_found() {
+        Box::new(
+            Response::builder()
+                .status(StatusCode::NOT_FOUND)
+                .body("")
+                .unwrap(),
+        )
     } else {
-        code = StatusCode::INTERNAL_SERVER_ERROR;
-        message = format!("{:?}", err);
-    }
-
-    let json = warp::reply::json(&ErrorMessage {
-        code: code.as_u16(),
-        message,
-    });
-
-    Ok(warp::reply::with_status(json, code))
+        Box::new(
+            Response::builder()
+                .status(StatusCode::INTERNAL_SERVER_ERROR)
+                .body(format!("{:?}", err))
+                .unwrap(),
+        )
+    })
 }

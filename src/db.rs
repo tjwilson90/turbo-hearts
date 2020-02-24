@@ -24,6 +24,11 @@ impl Database {
         conn.execute_batch(
             "PRAGMA journal_mode = WAL;
             BEGIN;
+            CREATE TABLE IF NOT EXISTS user (
+                id TEXT NOT NULL,
+                name TEXT NOT NULL,
+                PRIMARY KEY (id)
+            );
             CREATE TABLE IF NOT EXISTS game (
                 id TEXT NOT NULL,
                 PRIMARY KEY (id)
@@ -79,7 +84,7 @@ impl Database {
                     tx.set_drop_behavior(DropBehavior::Commit);
                     tx
                 })
-                .map_err(|err| CardsError::from(err))
+                .map_err(|e| e.into())
                 .and_then(&mut f);
             match result {
                 Err(e) if i < 5 && e.is_retriable() => continue,
