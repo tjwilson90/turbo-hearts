@@ -3,6 +3,7 @@ import { Event, Pass, StartPassingEventData } from "../types";
 import { Button } from "../ui/Button";
 import { CardPickSupport } from "./animations/CardPickSupport";
 import { getPlayerAccessor } from "./playerAccessors";
+import { CARD_MARGIN, TABLE_SIZE, CARD_DISPLAY_HEIGHT } from "../const";
 
 const directionText: { [P in Pass]: string } = {
   left: "Left",
@@ -22,7 +23,11 @@ export class StartPassingEvent implements Event {
   public begin() {
     const player = getPlayerAccessor(this.th.bottomSeat, this.th.bottomSeat)(this.th);
     this.cardPickSupport = new CardPickSupport(player.cards, this.setButtonEnabled);
-    this.button = new Button("Pass 3 Cards " + directionText[this.th.pass], this.submitPass);
+    this.button = new Button(
+      "Pass 3 Cards " + directionText[this.th.pass],
+      TABLE_SIZE - CARD_DISPLAY_HEIGHT - CARD_MARGIN * 3,
+      this.submitPass
+    );
     this.setButtonEnabled();
     this.th.app.stage.addChild(this.button.container);
   }

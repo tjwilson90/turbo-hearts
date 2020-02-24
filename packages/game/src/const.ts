@@ -8,6 +8,7 @@ export const Z_CHARGED_CARDS = 2000;
 export const Z_HAND_CARDS = 3000;
 export const Z_TRANSIT_CARDS = 4000;
 export const Z_NAMEPLATE = 5000;
+export const Z_BUTTON = 6000;
 
 export const CARD_SCALE = 0.5;
 export const CARD_NATIVE_WIDTH = 212;
@@ -176,28 +177,10 @@ export const LIMBO_LEFT = {
   rotation: LEFT_ROTATION
 };
 
-export const LIMBO_CENTER_TOP = {
-  x: TOP.playX,
-  y: TOP.playY + (CARD_DISPLAY_HEIGHT * 3) / 4,
-  rotation: TOP_ROTATION
-};
-
-export const LIMBO_CENTER_RIGHT = {
-  x: RIGHT.playX - (CARD_DISPLAY_HEIGHT * 3) / 4,
-  y: RIGHT.playY,
-  rotation: RIGHT_ROTATION
-};
-
-export const LIMBO_CENTER_BOTTOM = {
-  x: BOTTOM.playX,
-  y: BOTTOM.playY - (CARD_DISPLAY_HEIGHT * 3) / 4,
-  rotation: BOTTOM_ROTATION
-};
-
-export const LIMBO_CENTER_LEFT = {
-  x: LEFT.playX + (CARD_DISPLAY_HEIGHT * 3) / 4,
-  y: LEFT.playY,
-  rotation: LEFT_ROTATION
+export const LIMBO_CENTER = {
+  x: TABLE_CENTER_X,
+  y: TABLE_CENTER_Y,
+  rotation: 0
 };
 
 export const CARD_DROP_SHADOW = new DropShadowFilter({
