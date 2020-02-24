@@ -386,8 +386,12 @@ async fn test_bot_game() -> Result<(), CardsError> {
         let mut rx = server.subscribe_game(id, s!(foo)).await?;
         let mut plays = 0;
         while let Some(event) = rx.recv().await {
-            if let GameEvent::Play { .. } = event {
-                plays += 1;
+            match event {
+                GameEvent::Play { .. } => {
+                    plays += 1;
+                }
+                GameEvent::GameComplete => break,
+                _ => {}
             }
         }
         assert_eq!(plays, 208);

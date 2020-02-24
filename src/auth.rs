@@ -1,11 +1,10 @@
 use crate::{config::CONFIG, db::Database, error::CardsError};
 use http::{header, Response, StatusCode};
-use reqwest::Client;
+use reqwest::{Client, Url};
 use rusqlite::{OptionalExtension, ToSql};
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, convert::Infallible, sync::Arc};
 use tokio::sync::Mutex;
-use url::Url;
 use uuid::Uuid;
 use warp::{path::FullPath, reject::Reject, Filter, Rejection, Reply};
 
