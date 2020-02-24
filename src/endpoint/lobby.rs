@@ -7,7 +7,7 @@ use serde::Deserialize;
 use std::convert::Infallible;
 use warp::{sse, Filter, Rejection, Reply};
 
-pub fn html() -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone + Send {
+pub fn html() -> reply!() {
     warp::path!("lobby")
         .and(warp::get())
         .and(crate::auth_flow())
@@ -15,10 +15,7 @@ pub fn html() -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone + 
         .and(warp::fs::file("lobby.html"))
 }
 
-pub fn subscribe(
-    server: impl Filter<Extract = (Server,), Error = Infallible> + Clone + Send,
-    name: impl Filter<Extract = (String,), Error = Rejection> + Clone + Send,
-) -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone + Send {
+pub fn subscribe(server: infallible!(Server), name: rejection!(String)) -> reply!() {
     async fn handle(server: Server, name: String) -> Result<impl Reply, Infallible> {
         let rx = server.subscribe_lobby(name).await;
         Ok(sse::reply(endpoint::as_stream(rx)))
@@ -31,10 +28,7 @@ pub fn subscribe(
         .and_then(handle)
 }
 
-pub fn new_game(
-    server: impl Filter<Extract = (Server,), Error = Infallible> + Clone + Send,
-    name: impl Filter<Extract = (String,), Error = Rejection> + Clone + Send,
-) -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone + Send {
+pub fn new_game(server: infallible!(Server), name: rejection!(String)) -> reply!() {
     #[derive(Debug, Deserialize)]
     struct Request {
         rules: ChargingRules,
@@ -58,10 +52,7 @@ pub fn new_game(
         .and_then(handle)
 }
 
-pub fn join_game(
-    server: impl Filter<Extract = (Server,), Error = Infallible> + Clone + Send,
-    name: impl Filter<Extract = (String,), Error = Rejection> + Clone + Send,
-) -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone + Send {
+pub fn join_game(server: infallible!(Server), name: rejection!(String)) -> reply!() {
     #[derive(Debug, Deserialize)]
     struct Request {
         id: GameId,
@@ -86,10 +77,7 @@ pub fn join_game(
         .and_then(handle)
 }
 
-pub fn leave_game(
-    server: impl Filter<Extract = (Server,), Error = Infallible> + Clone + Send,
-    name: impl Filter<Extract = (String,), Error = Rejection> + Clone + Send,
-) -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone + Send {
+pub fn leave_game(server: infallible!(Server), name: rejection!(String)) -> reply!() {
     #[derive(Debug, Deserialize)]
     struct Request {
         id: GameId,
@@ -113,9 +101,7 @@ pub fn leave_game(
         .and_then(handle)
 }
 
-pub fn add_bot(
-    server: impl Filter<Extract = (Server,), Error = Infallible> + Clone + Send,
-) -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone + Send {
+pub fn add_bot(server: infallible!(Server)) -> reply!() {
     #[derive(Debug, Deserialize)]
     struct Request {
         id: GameId,
@@ -145,9 +131,7 @@ pub fn add_bot(
         .and_then(handle)
 }
 
-pub fn remove_bot(
-    server: impl Filter<Extract = (Server,), Error = Infallible> + Clone + Send,
-) -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone + Send {
+pub fn remove_bot(server: infallible!(Server)) -> reply!() {
     #[derive(Debug, Deserialize)]
     struct Request {
         id: GameId,
@@ -167,10 +151,7 @@ pub fn remove_bot(
         .and_then(handle)
 }
 
-pub fn chat(
-    server: impl Filter<Extract = (Server,), Error = Infallible> + Clone + Send,
-    name: impl Filter<Extract = (String,), Error = Rejection> + Clone + Send,
-) -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone + Send {
+pub fn chat(server: infallible!(Server), name: rejection!(String)) -> reply!() {
     #[derive(Debug, Deserialize)]
     struct Request {
         message: String,

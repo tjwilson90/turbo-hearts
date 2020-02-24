@@ -11,6 +11,9 @@ use std::convert::Infallible;
 use tokio::{stream::StreamExt, task, time, time::Duration};
 use warp::{path::FullPath, Filter, Rejection};
 
+#[macro_use]
+mod macros;
+
 mod auth;
 mod bot;
 mod cards;
