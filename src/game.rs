@@ -40,7 +40,7 @@ impl Games {
         for (id, game) in inner.iter_mut() {
             let mut game = game.lock().await;
             game.broadcast(&GameEvent::Ping);
-            if game.subscribers.is_empty() || game.state.phase.is_complete() {
+            if game.subscribers.is_empty() {
                 unwatched.push(*id);
             }
         }
@@ -70,11 +70,7 @@ impl Games {
         if game.events.is_empty() {
             Err(CardsError::UnknownGame(id))
         } else {
-            let result = f(&mut game);
-            if game.state.phase.is_complete() {
-                game.subscribers.clear();
-            }
-            result
+            f(&mut game)
         }
     }
 
