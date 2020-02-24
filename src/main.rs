@@ -7,7 +7,6 @@ use crate::{
 };
 use r2d2_sqlite::SqliteConnectionManager;
 use reqwest::Client;
-use std::convert::Infallible;
 use tokio::{stream::StreamExt, task, time, time::Duration};
 use warp::{path::FullPath, Filter, Rejection};
 
@@ -35,7 +34,7 @@ async fn ping_event_streams(server: Server) {
     }
 }
 
-pub fn auth_flow() -> impl Filter<Extract = ((),), Error = Rejection> + Clone + Send {
+pub fn auth_flow() -> rejection!(()) {
     async fn handle(path: FullPath, auth_token: Option<String>) -> Result<(), Rejection> {
         match auth_token {
             Some(_) => Ok(()),
@@ -48,9 +47,7 @@ pub fn auth_flow() -> impl Filter<Extract = ((),), Error = Rejection> + Clone + 
         .and_then(handle)
 }
 
-pub fn name(
-    users: impl Filter<Extract = (Users,), Error = Infallible> + Clone + Send,
-) -> impl Filter<Extract = (String,), Error = Rejection> + Clone + Send {
+pub fn name(users: infallible!(Users)) -> rejection!(String) {
     async fn handle(users: Users, auth_token: String) -> Result<String, Rejection> {
         Ok(users.get(auth_token).await?)
     }
