@@ -5,7 +5,7 @@ import { TurboHeartsEventSource } from "./game/TurboHeartsEventSource";
 import "./styles/style.scss";
 
 document.addEventListener("DOMContentLoaded", () => {
-  const userId = cookie.parse(document.cookie)["name"];
+  const userId = cookie.parse(document.cookie)["NAME"];
   if (userId?.length === 0) {
     document.body.innerHTML = "Missing user id";
     return;
