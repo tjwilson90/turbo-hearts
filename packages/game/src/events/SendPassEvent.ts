@@ -1,22 +1,20 @@
 import {
-  LIMBO_BOTTOM_LEFT,
-  LIMBO_TOP_LEFT,
-  LIMBO_TOP_RIGHT,
-  LIMBO_BOTTOM_RIGHT,
-  LIMBO_TOP,
-  LIMBO_RIGHT,
+  CARD_OVERLAP,
   LIMBO_BOTTOM,
+  LIMBO_BOTTOM_LEFT,
+  LIMBO_BOTTOM_RIGHT,
+  LIMBO_CENTER,
   LIMBO_LEFT,
-  LIMBO_CENTER_BOTTOM,
-  LIMBO_CENTER_LEFT,
-  LIMBO_CENTER_TOP,
-  LIMBO_CENTER_RIGHT
+  LIMBO_RIGHT,
+  LIMBO_TOP,
+  LIMBO_TOP_LEFT,
+  LIMBO_TOP_RIGHT
 } from "../const";
 import { TurboHearts } from "../game/TurboHearts";
-import { Event, PointWithRotation, SendPassEventData, Seat, SpriteCard } from "../types";
+import { Event, PointWithRotation, Seat, SendPassEventData, SpriteCard } from "../types";
 import { pushAll, removeAll } from "../util/array";
 import { animateCards, animateHand, moveCards, moveHand } from "./animations/animations";
-import { spriteCardsOf, spriteCardsOfNot } from "./helpers";
+import { spriteCardsOf } from "./helpers";
 import { getPlayerAccessor } from "./playerAccessors";
 
 const passDestinations: {
@@ -92,25 +90,25 @@ passDestinations["across"]["west"]["west"] = LIMBO_TOP;
 
 passDestinations["keeper"] = {};
 passDestinations["keeper"]["north"] = {};
-passDestinations["keeper"]["north"]["north"] = LIMBO_CENTER_BOTTOM;
-passDestinations["keeper"]["north"]["east"] = LIMBO_CENTER_LEFT;
-passDestinations["keeper"]["north"]["south"] = LIMBO_CENTER_TOP;
-passDestinations["keeper"]["north"]["west"] = LIMBO_CENTER_RIGHT;
+passDestinations["keeper"]["north"]["north"] = LIMBO_CENTER;
+passDestinations["keeper"]["north"]["east"] = LIMBO_CENTER;
+passDestinations["keeper"]["north"]["south"] = LIMBO_CENTER;
+passDestinations["keeper"]["north"]["west"] = LIMBO_CENTER;
 passDestinations["keeper"]["east"] = {};
-passDestinations["keeper"]["east"]["north"] = LIMBO_CENTER_RIGHT;
-passDestinations["keeper"]["east"]["east"] = LIMBO_CENTER_BOTTOM;
-passDestinations["keeper"]["east"]["south"] = LIMBO_CENTER_LEFT;
-passDestinations["keeper"]["east"]["west"] = LIMBO_CENTER_TOP;
+passDestinations["keeper"]["east"]["north"] = LIMBO_CENTER;
+passDestinations["keeper"]["east"]["east"] = LIMBO_CENTER;
+passDestinations["keeper"]["east"]["south"] = LIMBO_CENTER;
+passDestinations["keeper"]["east"]["west"] = LIMBO_CENTER;
 passDestinations["keeper"]["south"] = {};
-passDestinations["keeper"]["south"]["north"] = LIMBO_CENTER_TOP;
-passDestinations["keeper"]["south"]["east"] = LIMBO_CENTER_RIGHT;
-passDestinations["keeper"]["south"]["south"] = LIMBO_CENTER_BOTTOM;
-passDestinations["keeper"]["south"]["west"] = LIMBO_CENTER_LEFT;
+passDestinations["keeper"]["south"]["north"] = LIMBO_CENTER;
+passDestinations["keeper"]["south"]["east"] = LIMBO_CENTER;
+passDestinations["keeper"]["south"]["south"] = LIMBO_CENTER;
+passDestinations["keeper"]["south"]["west"] = LIMBO_CENTER;
 passDestinations["keeper"]["west"] = {};
-passDestinations["keeper"]["west"]["north"] = LIMBO_CENTER_LEFT;
-passDestinations["keeper"]["west"]["east"] = LIMBO_CENTER_TOP;
-passDestinations["keeper"]["west"]["south"] = LIMBO_CENTER_RIGHT;
-passDestinations["keeper"]["west"]["west"] = LIMBO_CENTER_BOTTOM;
+passDestinations["keeper"]["west"]["north"] = LIMBO_CENTER;
+passDestinations["keeper"]["west"]["east"] = LIMBO_CENTER;
+passDestinations["keeper"]["west"]["south"] = LIMBO_CENTER;
+passDestinations["keeper"]["west"]["west"] = LIMBO_CENTER;
 
 export class SendPassEvent implements Event {
   public type = "send_pass" as const;
@@ -141,12 +139,13 @@ export class SendPassEvent implements Event {
 
   public async transition(instant: boolean) {
     const passDestination = passDestinations[this.th.pass][this.th.bottomSeat][this.event.from];
+    const spread = this.th.pass === "keeper" ? 0 : CARD_OVERLAP;
     if (instant) {
-      moveCards(this.th, this.cardsToMove, passDestination.x, passDestination.y, passDestination.rotation);
+      moveCards(this.th, this.cardsToMove, passDestination.x, passDestination.y, passDestination.rotation, spread);
       moveHand(this.th, this.event.from);
     } else {
       await Promise.all([
-        animateCards(this.th, this.cardsToMove, passDestination.x, passDestination.y, passDestination.rotation),
+        animateCards(this.th, this.cardsToMove, passDestination.x, passDestination.y, passDestination.rotation, spread),
         await animateHand(this.th, this.event.from)
       ]);
     }

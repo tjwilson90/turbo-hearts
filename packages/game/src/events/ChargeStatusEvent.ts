@@ -4,6 +4,7 @@ import { Button } from "../ui/Button";
 import { CardPickSupport } from "./animations/CardPickSupport";
 import { spriteCardsOf } from "./helpers";
 import { getPlayerAccessor } from "./playerAccessors";
+import { TABLE_SIZE, CARD_DISPLAY_HEIGHT, CARD_MARGIN } from "../const";
 
 export class ChargeStatusEvent implements Event {
   public type = "charge_status" as const;
@@ -20,9 +21,10 @@ export class ChargeStatusEvent implements Event {
     const player = getPlayerAccessor(this.th.bottomSeat, this.th.bottomSeat)(this.th);
     const chargeableCards = spriteCardsOf(player.cards, ["TC", "JD", "AH", "QS"]);
     this.cardPickSupport = new CardPickSupport(chargeableCards);
-    this.button = new Button("Charge Cards", this.submitCharge);
+    this.button = new Button("Charge Cards", TABLE_SIZE - CARD_DISPLAY_HEIGHT * 1.5, this.submitCharge);
     this.button.setEnabled(true);
     this.th.app.stage.addChild(this.button.container);
+    this.th.app.stage.sortChildren();
     this.th.asyncEvent = this;
   }
 
