@@ -129,7 +129,7 @@ impl Games {
 
     pub async fn pass_cards(&self, id: GameId, name: &str, cards: Cards) -> Result<(), CardsError> {
         self.with_game(id, |game| match game.seat(&name) {
-            None => Err(CardsError::UnknownPlayer(name.to_string(), id)),
+            None => Err(CardsError::InvalidPlayer(name.to_string(), id)),
             Some(seat) => {
                 game.verify_pass(id, seat, cards)?;
                 let mut events = vec![GameEvent::SendPass { from: seat, cards }];
@@ -196,7 +196,7 @@ impl Games {
         cards: Cards,
     ) -> Result<(), CardsError> {
         self.with_game(id, |game| match game.seat(&name) {
-            None => Err(CardsError::UnknownPlayer(name.to_string(), id)),
+            None => Err(CardsError::InvalidPlayer(name.to_string(), id)),
             Some(seat) => {
                 game.verify_charge(id, seat, cards)?;
                 let event = GameEvent::Charge { seat, cards };
@@ -212,7 +212,7 @@ impl Games {
 
     pub async fn play_card(&self, id: GameId, name: &str, card: Card) -> Result<bool, CardsError> {
         self.with_game(id, |game| match game.seat(&name) {
-            None => Err(CardsError::UnknownPlayer(name.to_string(), id)),
+            None => Err(CardsError::InvalidPlayer(name.to_string(), id)),
             Some(seat) => {
                 game.verify_play(id, seat, card)?;
                 let mut events = vec![GameEvent::Play { seat, card }];
@@ -246,7 +246,7 @@ impl Games {
 
     pub async fn claim(&self, id: GameId, name: &str) -> Result<(), CardsError> {
         self.with_game(id, |game| match game.seat(&name) {
-            None => Err(CardsError::UnknownPlayer(name.to_string(), id)),
+            None => Err(CardsError::InvalidPlayer(name.to_string(), id)),
             Some(seat) => {
                 game.verify_claim(id, seat)?;
                 let event = GameEvent::Claim {
@@ -270,7 +270,7 @@ impl Games {
         claimer: Seat,
     ) -> Result<(), CardsError> {
         self.with_game(id, |game| match game.seat(&name) {
-            None => Err(CardsError::UnknownPlayer(name.to_string(), id)),
+            None => Err(CardsError::InvalidPlayer(name.to_string(), id)),
             Some(seat) => {
                 game.verify_accept_claim(id, claimer, seat)?;
                 let event = GameEvent::AcceptClaim {
@@ -294,7 +294,7 @@ impl Games {
         claimer: Seat,
     ) -> Result<(), CardsError> {
         self.with_game(id, |game| match game.seat(&name) {
-            None => Err(CardsError::UnknownPlayer(name.to_string(), id)),
+            None => Err(CardsError::InvalidPlayer(name.to_string(), id)),
             Some(seat) => {
                 game.verify_reject_claim(id, claimer)?;
                 let event = GameEvent::RejectClaim {

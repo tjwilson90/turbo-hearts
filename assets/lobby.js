@@ -159,18 +159,10 @@ function createOpenButton() {
 }
 
 function getName() {
-    return document.cookie.replace(/(?:(?:^|.*;\s*)name\s*\=\s*([^;]*).*$)|^.*$/, '$1');
-}
-
-function setName() {
-    document.cookie = 'name=' + document.getElementById('name-input').value;
-    subscribe();
+    return document.cookie.replace(/(?:(?:^|.*;\s*)NAME\s*\=\s*([^;]*).*$)|^.*$/, '$1');
 }
 
 function subscribe() {
-    if (!getName()) {
-        return;
-    }
     if (eventStream != null) {
         eventStream.close();
     }
@@ -242,8 +234,6 @@ function openGame(event) {
 }
 
 document.addEventListener('DOMContentLoaded', (event) => {
-    document.getElementById('name-input').value = getName();
-    document.getElementById('name-button').addEventListener('click', setName);
     document.getElementById('new-game').addEventListener('submit', newGame);
     subscribe();
 });

@@ -1,10 +1,6 @@
 var trick = [];
 var trick_number = 0;
 
-function getName() {
-    return document.cookie.replace(/(?:(?:^|.*;\s*)name\s*\=\s*([^;]*).*$)|^.*$/, '$1');
-}
-
 function getGameId() {
     return window.location.hash.substring(1);
 }

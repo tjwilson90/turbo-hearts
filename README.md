@@ -8,10 +8,24 @@
 2) Run the server - `cargo run`
 3) Run the client - http://localhost:7380/lobby
 
-## Endpoints
+## Configuration
 
-All endpoints require the caller to pass a `name` cookie identifying themselves. There's no
-authentication; please don't cheat.
+The backend loads a `config.json` file from its working directory for configuration. A
+configuration suitable for local development is checked into the repo. Changes to the default
+configuration are necessary to deploy the backend on a public server.
+
+The `client_id` and `client_secret` parameters are OAuth 2.0
+[client credentials](https://console.developers.google.com/) for google. Player identities are
+determined using [OpenID Connect](https://developers.google.com/identity/protocols/OpenIDConnect)
+through google.
+
+The `external_uri` parameter is url to the backend (or to the proxy if deployed behind a proxy).
+This needs to match one of the authorized redirect URIs for your client credentials, minus the
+trailing `/redirect` path. 
+
+The `port` is the port the backend should serve from.
+
+## Endpoints
 
 ### `GET /lobby`
 
