@@ -90,9 +90,5 @@ export class TurboHeartsEventSource {
       return;
     }
     this.th.pushEvent(realEvent);
-    if (realEvent.type === "game_complete") {
-      console.log("game_complete, disconnecting");
-      this.eventSource.close();
-    }
   };
 }
