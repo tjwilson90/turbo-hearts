@@ -1,6 +1,6 @@
 import { SitEvent } from "../events/SitEvent";
 import { TurboHearts } from "./TurboHearts";
-import { EventData, PassStatusEventData, ChargeStatusEventData } from "../types";
+import { EventData, PassStatusEventData, ChargeStatusEventData, ChatEvent } from "../types";
 import { DealEvent } from "../events/DealEvent";
 import { StartPassingEvent } from "../events/StartPassingEvent";
 import { SendPassEvent } from "../events/SendPassEvent";
@@ -32,7 +32,7 @@ function mutateNesw<T extends PassStatusEventData | ChargeStatusEventData>(event
 export class TurboHeartsEventSource {
   private eventSource: EventSource;
 
-  constructor(private th: TurboHearts, gameId: string) {
+  constructor(private th: TurboHearts, gameId: string, private onChat: (chat: ChatEvent) => void) {
     this.eventSource = new EventSource(`/game/subscribe/${gameId}`, {
       withCredentials: true
     });
@@ -76,6 +76,8 @@ export class TurboHeartsEventSource {
         return new EndTrickEvent(this.th, event);
       case "game_complete":
         return new GameCompleteEvent(this.th, event);
+      case "chat":
+        this.onChat(event);
       default:
         return undefined;
     }

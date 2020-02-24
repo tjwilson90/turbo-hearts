@@ -18,6 +18,12 @@ export interface SitEventData {
   rules: Rules;
 }
 
+export interface ChatEvent {
+  type: "chat";
+  name: string;
+  message: string;
+}
+
 export interface DealEventData {
   type: "deal";
   north: Card[];
@@ -134,6 +140,7 @@ export interface SpriteCard {
 
 export type EventData =
   | SitEventData
+  | ChatEvent
   | EndReplayEventData
   | DealEventData
   | StartPassingEventData
