@@ -28,10 +28,10 @@ document.addEventListener("DOMContentLoaded", () => {
     nameSpan.classList.add("chat-user");
     nameSpan.textContent = message.name;
     div.appendChild(nameSpan);
-    const messageDiv = document.createElement("div");
-    messageDiv.classList.add("chat-message");
-    messageDiv.textContent = message.message;
-    div.appendChild(messageDiv);
+    const messageSpan = document.createElement("span");
+    messageSpan.classList.add("chat-message");
+    messageSpan.textContent = message.message;
+    div.appendChild(messageSpan);
     chatLog.appendChild(div);
     div.scrollIntoView();
   };
