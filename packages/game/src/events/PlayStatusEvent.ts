@@ -14,6 +14,7 @@ export class PlayStatusEvent implements Event {
 
   public begin() {
     if (this.event.nextPlayer !== this.th.bottomSeat) {
+      this.finished = true;
       return;
     }
     const player = getPlayerAccessor(this.th.bottomSeat, this.th.bottomSeat)(this.th);
