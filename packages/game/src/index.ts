@@ -19,6 +19,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
   const submitter = new PlaySubmitter(gameId);
   const th = new TurboHearts(document.getElementById("turbo-hearts") as HTMLCanvasElement, userId, submitter);
+  (window as any).th = th;
   const chatLog = document.getElementById("chat-log")!;
   const chatAppender = (message: ChatEvent) => {
     const div = document.createElement("div");
