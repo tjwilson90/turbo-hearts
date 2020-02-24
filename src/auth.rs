@@ -3,7 +3,7 @@ use http::{header, Response, StatusCode};
 use reqwest::{Client, Url};
 use rusqlite::{OptionalExtension, ToSql};
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, convert::Infallible, sync::Arc};
+use std::{collections::HashMap, sync::Arc};
 use tokio::sync::Mutex;
 use uuid::Uuid;
 use warp::{path::FullPath, reject::Reject, Filter, Rejection, Reply};
@@ -97,10 +97,7 @@ impl AuthFlow {
     }
 }
 
-pub fn auth_redirect(
-    users: impl Filter<Extract = (Users,), Error = Infallible> + Clone + Send,
-    http_client: impl Filter<Extract = (Client,), Error = Infallible> + Clone + Send,
-) -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone + Send {
+pub fn auth_redirect(users: infallible!(Users), http_client: infallible!(Client)) -> reply!() {
     #[derive(Debug, Deserialize)]
     struct QueryParams {
         code: String,
