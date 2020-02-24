@@ -116,7 +116,7 @@ export class TurboHearts {
     for (const card of CARDS) {
       this.app.loader.add(card, `assets/cards/${card}.svg`);
     }
-    this.app.loader.add("background", `assets/beige-leather@2x.jpg`);
+    this.app.loader.add("background", `assets/fabric@2x.jpg`);
     this.app.loader.load(() => {
       this.app.ticker.add(this.gameLoop);
     });
