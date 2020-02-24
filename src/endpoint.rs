@@ -4,12 +4,12 @@ use tokio::{
     stream::{Stream, StreamExt},
     sync::mpsc::UnboundedReceiver,
 };
-use warp::{sse, sse::ServerSentEvent, Filter, Rejection, Reply};
+use warp::{sse, sse::ServerSentEvent, Filter};
 
 pub mod game;
 pub mod lobby;
 
-pub fn assets() -> impl Filter<Extract = impl Reply, Error = Rejection> + Clone + Send {
+pub fn assets() -> reply!() {
     warp::path("assets")
         .and(crate::auth_flow())
         .untuple_one()
