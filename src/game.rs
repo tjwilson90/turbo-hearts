@@ -116,7 +116,7 @@ impl Games {
                 });
             }
             tx.send(GameEvent::EndReplay).unwrap();
-            game.subscribers.insert(name.to_string(), tx);
+            game.subscribers.push((seat, tx));
             Ok(())
         })
         .await?;
@@ -323,7 +323,7 @@ impl Games {
 #[derive(Debug)]
 struct Game {
     events: Vec<GameEvent>,
-    subscribers: HashMap<String, UnboundedSender<GameEvent>>,
+    subscribers: Vec<(Option<Seat>, UnboundedSender<GameEvent>)>,
     pre_pass_hand: [Cards; 4],
     post_pass_hand: [Cards; 4],
     state: GameState,
@@ -333,7 +333,7 @@ impl Game {
     fn new() -> Self {
         Self {
             events: Vec::new(),
-            subscribers: HashMap::new(),
+            subscribers: Vec::new(),
             pre_pass_hand: [Cards::NONE; 4],
             post_pass_hand: [Cards::NONE; 4],
             state: GameState::new(),
@@ -350,16 +350,17 @@ impl Game {
     }
 
     fn broadcast(&mut self, event: &GameEvent) {
-        let players = &self.state.players;
         let rules = self.state.rules;
-        self.subscribers.retain(|name, tx| {
-            let seat = seat(&players, name);
-            tx.send(event.redact(seat, rules)).is_ok()
-        });
+        self.subscribers
+            .retain(|(seat, tx)| tx.send(event.redact(*seat, rules)).is_ok());
     }
 
     fn seat(&self, name: &str) -> Option<Seat> {
-        seat(&self.state.players, name)
+        self.state
+            .players
+            .iter()
+            .position(|p| p == name)
+            .map(|idx| Seat::VALUES[idx])
     }
 
     fn play_status_event(&self, leader: Seat) -> GameEvent {
@@ -844,13 +845,6 @@ impl FromSql for GameEvent {
     fn column_result(value: ValueRef<'_>) -> Result<Self, FromSqlError> {
         value.as_str().map(|s| serde_json::from_str(s).unwrap())
     }
-}
-
-fn seat(players: &[String; 4], name: &str) -> Option<Seat> {
-    players
-        .iter()
-        .position(|p| p == name)
-        .map(|idx| Seat::VALUES[idx])
 }
 
 pub fn persist_events(
