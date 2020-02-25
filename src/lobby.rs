@@ -18,7 +18,7 @@ pub struct Lobby {
 }
 
 struct Inner {
-    subscribers: HashMap<String, UnboundedSender<LobbyEvent>>,
+    subscribers: HashMap<String, Vec<UnboundedSender<LobbyEvent>>>,
     games: HashMap<GameId, HashSet<Participant>>,
 }
 
@@ -84,10 +84,14 @@ impl Lobby {
     pub async fn subscribe(&self, name: String) -> UnboundedReceiver<LobbyEvent> {
         let (tx, rx) = unbounded_channel();
         let mut inner = self.inner.lock().await;
-        if inner.subscribers.remove(&name).is_none() {
+        if !inner.subscribers.contains_key(&name) {
             inner.broadcast(LobbyEvent::JoinLobby { name: name.clone() });
         }
-        inner.subscribers.insert(name, tx.clone());
+        inner
+            .subscribers
+            .entry(name)
+            .or_insert(Vec::new())
+            .push(tx.clone());
         tx.send(LobbyEvent::LobbyState {
             subscribers: inner.subscribers.keys().cloned().collect(),
             games: inner
@@ -179,12 +183,13 @@ impl Inner {
         let mut events = VecDeque::new();
         events.push_back(event);
         while let Some(event) = events.pop_front() {
-            self.subscribers.retain(|name, tx| {
-                if tx.send(event.clone()).is_ok() {
-                    true
-                } else {
+            self.subscribers.retain(|name, txs| {
+                txs.retain(|tx| tx.send(event.clone()).is_ok());
+                if txs.is_empty() {
                     events.push_back(LobbyEvent::LeaveLobby { name: name.clone() });
                     false
+                } else {
+                    true
                 }
             });
         }
