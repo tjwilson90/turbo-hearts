@@ -16,6 +16,8 @@ jobs:
       - name: Build Frontend
         run: yarn build:prod
         working-directory: packages/game
+      - name: Install musl
+        run: sudo apt-get install musl-tools
       - name: Install Rust Target
         run: rustup target add x86_64-unknown-linux-musl
       - name: Build Backend
