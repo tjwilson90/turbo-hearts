@@ -13,6 +13,14 @@ export class PlayStatusEvent implements Event {
   constructor(private th: TurboHearts, private event: PlayStatusEventData) {}
 
   public begin() {
+    this.th.topPlayer.toPlay = false;
+    this.th.rightPlayer.toPlay = false;
+    this.th.bottomPlayer.toPlay = false;
+    this.th.leftPlayer.toPlay = false;
+    const toPlayPlayer = getPlayerAccessor(this.th.bottomSeat, this.event.nextPlayer)(this.th);
+    toPlayPlayer.toPlay = true;
+    this.th.syncToPlay();
+
     if (this.event.nextPlayer !== this.th.bottomSeat) {
       this.finished = true;
       return;
