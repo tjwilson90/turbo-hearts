@@ -32,6 +32,7 @@ jobs:
 
   deploy:
     needs: [build-frontend, build-backend]
+    runs-on: ubuntu-latest
     steps:
       - name: Build Dist
         run: ./scripts/make-dist.sh
