@@ -1,6 +1,8 @@
-name: Push
+name: Release
 
-on: [push]
+on:
+  release:
+    types: [published]
 
 jobs:
   run:
@@ -20,3 +22,14 @@ jobs:
         run: cargo build --target x86_64-unknown-linux-musl --release --verbose
       - name: Test Backend
         run: cargo test --target x86_64-unknown-linux-musl --release --verbose
+      - name: Build Dist
+        run: ./scripts/make-dist.sh
+      - name: Upload Dist
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: ./turbo-hearts.tgz
+          asset_name: turbo-hearts.tgz
+          asset_content_type: application/gzip
