@@ -22,8 +22,6 @@ jobs:
         run: rustup target add x86_64-unknown-linux-musl
       - name: Build Backend
         run: cargo build --target x86_64-unknown-linux-musl --release --verbose
-      - name: Test Backend
-        run: cargo test --target x86_64-unknown-linux-musl --release --verbose
       - name: Build Dist
         run: ./scripts/make-dist.sh
       - name: Upload Dist
