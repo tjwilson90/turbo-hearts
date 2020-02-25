@@ -1,7 +1,7 @@
 #!/bin/bash
 
 mkdir -p turbo-hearts/assets/dist/assets
-cp target/release/turbo-hearts turbo-hearts
+cp target/x86_64-unknown-linux-musl/release/turbo-hearts turbo-hearts
 cp -r assets/* turbo-hearts/assets
 cp assets/*.jpg turbo-hearts/assets/dist/assets
 cp -r assets/cards turbo-hearts/assets/dist/assets
