@@ -14,7 +14,7 @@ jobs:
         run: yarn install
         working-directory: packages/game
       - name: Build Frontend
-        run: yarn build:dev
+        run: yarn build:prod
         working-directory: packages/game
       - name: Build Backend
         run: cargo build --verbose
