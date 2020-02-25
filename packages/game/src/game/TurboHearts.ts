@@ -1,7 +1,7 @@
 import { Pass, SpriteCard, CARDS, Event, Seat, Card } from "../types";
 import TWEEN from "@tweenjs/tween.js";
 import * as PIXI from "pixi.js";
-import { TABLE_SIZE, TABLE_CENTER_X, TABLE_CENTER_Y, TOP, RIGHT, BOTTOM, LEFT } from "../const";
+import { TABLE_SIZE, TABLE_CENTER_X, TABLE_CENTER_Y } from "../const";
 import { SendPassEvent } from "../events/SendPassEvent";
 import { ChargeEvent } from "../events/ChargeEvent";
 import { PlaySubmitter } from "./PlaySubmitter";
@@ -10,36 +10,23 @@ import { Nameplate } from "../ui/Nameplate";
 export interface Player {
   type: "bot" | "human";
   name: string;
-  toPlay: boolean;
   cards: SpriteCard[];
   limboCards: SpriteCard[];
   chargedCards: SpriteCard[];
   playCards: SpriteCard[];
   pileCards: SpriteCard[];
-  nameplate: Nameplate;
 }
 
-function emptyPlayer(x: number, y: number, rotation: number): Player {
+function emptyPlayer(): Player {
   return {
     type: "bot",
     name: "empty",
-    toPlay: false,
     cards: [],
     limboCards: [],
     chargedCards: [],
     playCards: [],
-    pileCards: [],
-    nameplate: new Nameplate("", x, y, rotation)
+    pileCards: []
   };
-}
-
-function resetPlayer(player: Player) {
-  player.toPlay = false;
-  player.cards = [];
-  player.limboCards = [];
-  player.chargedCards = [];
-  player.playCards = [];
-  player.pileCards = [];
 }
 
 function isChargeEvent(event: Event): event is ChargeEvent {
@@ -75,10 +62,12 @@ export class TurboHearts {
 
   public bottomSeat: Seat = "south";
 
-  public topPlayer: Player = emptyPlayer(TOP.x, TOP.y + 43, 0);
-  public rightPlayer: Player = emptyPlayer(RIGHT.x - 14, RIGHT.y, -Math.PI / 2);
-  public bottomPlayer: Player = emptyPlayer(BOTTOM.x, BOTTOM.y - 14, 0);
-  public leftPlayer: Player = emptyPlayer(LEFT.x + 14, LEFT.y, Math.PI / 2);
+  public topPlayer: Player = emptyPlayer();
+  public rightPlayer: Player = emptyPlayer();
+  public bottomPlayer: Player = emptyPlayer();
+  public leftPlayer: Player = emptyPlayer();
+
+  public nameplates: Nameplate[] = [];
 
   public trickNumber = 0;
   public playIndex = 0;
@@ -107,28 +96,20 @@ export class TurboHearts {
 
   public resetForDeal() {
     this.pass = "left";
-    resetPlayer(this.topPlayer);
-    resetPlayer(this.rightPlayer);
-    resetPlayer(this.bottomPlayer);
-    resetPlayer(this.leftPlayer);
+    this.topPlayer = emptyPlayer();
+    this.rightPlayer = emptyPlayer();
+    this.bottomPlayer = emptyPlayer();
+    this.leftPlayer = emptyPlayer();
     this.trickNumber = 0;
     this.playIndex = 0;
     this.app.stage.removeChildren();
-    this.app.stage.addChild(this.topPlayer.nameplate.container);
-    this.app.stage.addChild(this.rightPlayer.nameplate.container);
-    this.app.stage.addChild(this.bottomPlayer.nameplate.container);
-    this.app.stage.addChild(this.leftPlayer.nameplate.container);
+    for (const nameplate of this.nameplates) {
+      this.app.stage.addChild(nameplate.container);
+    }
     const bg = new PIXI.Sprite(this.app.loader.resources["background"].texture);
     bg.anchor.set(0.5);
     bg.position.set(TABLE_CENTER_X, TABLE_CENTER_Y);
     this.app.stage.addChild(bg);
-  }
-
-  public syncToPlay() {
-    this.topPlayer.nameplate.setToPlay(this.topPlayer.toPlay);
-    this.rightPlayer.nameplate.setToPlay(this.rightPlayer.toPlay);
-    this.bottomPlayer.nameplate.setToPlay(this.bottomPlayer.toPlay);
-    this.leftPlayer.nameplate.setToPlay(this.leftPlayer.toPlay);
   }
 
   private loadCards() {
@@ -185,7 +166,12 @@ export class TurboHearts {
     }
     while (this.currentEvent === undefined && this.events.length > 0) {
       this.currentEvent = this.events.shift()!;
-      if (this.hasEventAfterYourPlay() || this.hasFutureSendPass() || this.hasFutureCharge()) {
+      if (
+        this.hasEventAfterYourPlay() ||
+        this.hasFutureSendPass() ||
+        this.hasFutureCharge() ||
+        this.duplicateAsyncEvent()
+      ) {
         this.currentEvent = undefined;
       } else {
         this.currentEvent.begin();

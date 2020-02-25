@@ -1,23 +1,41 @@
-import { LEFT, RIGHT, TOP, BOTTOM } from "../const";
-import { TurboHearts, Player } from "../game/TurboHearts";
+import { LEFT, RIGHT, TOP } from "../const";
+import { TurboHearts } from "../game/TurboHearts";
 import { Event, SitEventData, SitPlayer } from "../types";
 import { Nameplate } from "../ui/Nameplate";
 import { getPlayerAccessor } from "./playerAccessors";
-import { DirectionAccessor, seatEventFunction } from "./handPositions";
 
-const NameTypeAccessor: DirectionAccessor<SitEventData, { name: string; type: "human" | "bot" }> = {
-  north: e => ({ name: e.north.name, type: e.north.type }),
-  east: e => ({ name: e.east.name, type: e.east.type }),
-  south: e => ({ name: e.south.name, type: e.south.type }),
-  west: e => ({ name: e.west.name, type: e.west.type })
-};
+interface PlayerAccessor {
+  (event: SitEventData): SitPlayer;
+}
 
-const PlayerAccessor: DirectionAccessor<TurboHearts, Player> = {
-  north: e => e.topPlayer,
-  east: e => e.rightPlayer,
-  south: e => e.bottomPlayer,
-  west: e => e.leftPlayer
-};
+const NORTH_ACCESSOR: PlayerAccessor = (event: SitEventData) => event.north;
+const EAST_ACCESSOR: PlayerAccessor = (event: SitEventData) => event.east;
+const SOUTH_ACCESSOR: PlayerAccessor = (event: SitEventData) => event.south;
+const WEST_ACCESSOR: PlayerAccessor = (event: SitEventData) => event.west;
+
+const eventAccessors: {
+  [bottomSeat: string]: { [position: string]: PlayerAccessor };
+} = {};
+eventAccessors["north"] = {};
+eventAccessors["north"]["top"] = SOUTH_ACCESSOR;
+eventAccessors["north"]["right"] = WEST_ACCESSOR;
+eventAccessors["north"]["bottom"] = NORTH_ACCESSOR;
+eventAccessors["north"]["left"] = EAST_ACCESSOR;
+eventAccessors["east"] = {};
+eventAccessors["east"]["top"] = WEST_ACCESSOR;
+eventAccessors["east"]["right"] = NORTH_ACCESSOR;
+eventAccessors["east"]["bottom"] = EAST_ACCESSOR;
+eventAccessors["east"]["left"] = SOUTH_ACCESSOR;
+eventAccessors["south"] = {};
+eventAccessors["south"]["top"] = NORTH_ACCESSOR;
+eventAccessors["south"]["right"] = EAST_ACCESSOR;
+eventAccessors["south"]["bottom"] = SOUTH_ACCESSOR;
+eventAccessors["south"]["left"] = WEST_ACCESSOR;
+eventAccessors["west"] = {};
+eventAccessors["west"]["top"] = EAST_ACCESSOR;
+eventAccessors["west"]["right"] = SOUTH_ACCESSOR;
+eventAccessors["west"]["bottom"] = WEST_ACCESSOR;
+eventAccessors["west"]["left"] = NORTH_ACCESSOR;
 
 export class SitEvent implements Event {
   public type = "sit" as const;
@@ -37,31 +55,26 @@ export class SitEvent implements Event {
   }
 
   public begin() {
-    // const top = seatEventFunction(this.th.bottomSeat, "top", PlayerAccessor, this.th);
-    // const right = seatEventFunction(this.th.bottomSeat, "right", PlayerAccessor, this.th);
-    // const bottom = seatEventFunction(this.th.bottomSeat, "bottom", PlayerAccessor, this.th);
-    // const left = seatEventFunction(this.th.bottomSeat, "left", PlayerAccessor, this.th);
     const top = getPlayerAccessor(this.th.bottomSeat, "north")(this.th);
     const right = getPlayerAccessor(this.th.bottomSeat, "east")(this.th);
     const bottom = getPlayerAccessor(this.th.bottomSeat, "south")(this.th);
     const left = getPlayerAccessor(this.th.bottomSeat, "west")(this.th);
-
-    const topNameType = seatEventFunction(this.th.bottomSeat, "top", NameTypeAccessor, this.event);
-    top.name = topNameType.name;
-    top.type = topNameType.type;
-    top.nameplate.setName(top.name);
-    const rightNameType = seatEventFunction(this.th.bottomSeat, "right", NameTypeAccessor, this.event);
-    right.name = rightNameType.name;
-    right.type = rightNameType.type;
-    right.nameplate.setName(right.name);
-    const bottomNameType = seatEventFunction(this.th.bottomSeat, "bottom", NameTypeAccessor, this.event);
-    bottom.name = bottomNameType.name;
-    bottom.type = bottomNameType.type;
-    bottom.nameplate.setName(bottom.name);
-    const leftNameType = seatEventFunction(this.th.bottomSeat, "left", NameTypeAccessor, this.event);
-    left.name = leftNameType.name;
-    left.type = leftNameType.type;
-    left.nameplate.setName(left.name);
+    top.name = eventAccessors[this.th.bottomSeat]["top"](this.event).name;
+    top.type = eventAccessors[this.th.bottomSeat]["top"](this.event).type;
+    right.name = eventAccessors[this.th.bottomSeat]["right"](this.event).name;
+    right.type = eventAccessors[this.th.bottomSeat]["right"](this.event).type;
+    bottom.name = eventAccessors[this.th.bottomSeat]["bottom"](this.event).name;
+    bottom.type = eventAccessors[this.th.bottomSeat]["bottom"](this.event).type;
+    left.name = eventAccessors[this.th.bottomSeat]["left"](this.event).name;
+    left.type = eventAccessors[this.th.bottomSeat]["left"](this.event).type;
+    const topName = new Nameplate(top.name, TOP.x, TOP.y + 46, 0);
+    const rightName = new Nameplate(right.name, RIGHT.x - 12, RIGHT.y, -Math.PI / 2);
+    // const bottomName = new Nameplate(bottom.name, BOTTOM.x, BOTTOM.y - 10, 0);
+    const leftName = new Nameplate(left.name, LEFT.x + 12, LEFT.y, Math.PI / 2);
+    this.th.nameplates.push(topName);
+    this.th.nameplates.push(rightName);
+    // this.th.nameplates.push(bottomName);
+    this.th.nameplates.push(leftName);
   }
 
   public transition(instant: boolean) {}
