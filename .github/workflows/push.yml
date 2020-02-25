@@ -3,37 +3,22 @@ name: Push
 on: [push]
 
 jobs:
-  checkout:
+  run:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v2
-
-  build-frontend:
-    needs: checkout
-    runs-on: ubuntu-latest
-    steps:
+      - run: echo ${{github.ref}}
       - name: Install Frontend Dependencies
         run: yarn install
         working-directory: packages/game
       - name: Build Frontend
         run: yarn build:prod
         working-directory: packages/game
-
-  build-backend:
-    needs: checkout
-    runs-on: ubuntu-latest
-    steps:
-      - run: echo ${{github.ref}}
       - name: Build Backend
         run: cargo build --release --verbose
       - name: Test Backend
         run: cargo test --release --verbose
-
-  deploy:
-    needs: [build-frontend, build-backend]
-    runs-on: ubuntu-latest
-    steps:
       - name: Build Dist
         run: ./scripts/make-dist.sh
       - name: Create Release
