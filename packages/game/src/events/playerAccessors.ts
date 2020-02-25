@@ -11,7 +11,7 @@ const BOTTOM_PLAYER_ACCESSOR: PlayerAccessor = (th: TurboHearts) => th.bottomPla
 const LEFT_PLAYER_ACCESSOR: PlayerAccessor = (th: TurboHearts) => th.leftPlayer;
 
 const playerAccessors: {
-  [bottomSeat in Seat]: { [passFrom in Seat]: PlayerAccessor };
+  [bottomSeat in Seat]: { [trueSeat in Seat]: PlayerAccessor };
 } = {
   north: {
     north: BOTTOM_PLAYER_ACCESSOR,
@@ -39,6 +39,6 @@ const playerAccessors: {
   }
 };
 
-export function getPlayerAccessor(bottomSeat: Seat, seat: Seat) {
-  return playerAccessors[bottomSeat][seat];
+export function getPlayerAccessor(bottomSeat: Seat, trueSeat: Seat) {
+  return playerAccessors[bottomSeat][trueSeat];
 }

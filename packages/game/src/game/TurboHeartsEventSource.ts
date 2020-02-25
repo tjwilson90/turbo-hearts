@@ -13,7 +13,7 @@ import { PlayEvent } from "../events/PlayEvent";
 import { EndTrickEvent } from "../events/EndTrickEvent";
 import { GameCompleteEvent } from "../events/GameCompleteEvent";
 import { ChargeStatusEvent } from "../events/ChargeStatusEvent";
-import { PassStatusEvent } from "../events/PassStatus";
+import { PassStatusEvent } from "../events/PassStatusEvent";
 import { EndReplayEvent } from "../events/EndReplayEvent";
 
 function mutateNesw<T extends PassStatusEventData | ChargeStatusEventData>(event: T) {
