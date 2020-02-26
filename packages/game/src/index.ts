@@ -20,6 +20,7 @@ import { PlayStatusEvent } from "./events/PlayStatusEvent";
 import { PlayEvent } from "./events/PlayEvent";
 import { EndTrickEvent } from "./events/EndTrickEvent";
 import { GameCompleteEvent } from "./events/GameCompleteEvent";
+import { Snapshotter } from "./game/snapshotter";
 
 document.addEventListener("DOMContentLoaded", () => {
   const userId = cookie.parse(document.cookie)["NAME"];
@@ -54,7 +55,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const eventSource = new TurboHeartsEventSource(th, gameId);
   eventSource.on("chat", chatAppender);
 
-  eventSource.on("event", event => console.log(event));
+  // eventSource.on("event", event => console.log(event));
 
   function convertEvent(th: TurboHearts, event: EventData) {
     switch (event.type) {
@@ -101,6 +102,9 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     th.pushEvent(realEvent);
   });
+
+  const snapshotter = new Snapshotter(userId);
+  eventSource.on("event", snapshotter.onEvent);
 
   new ChatInput(document.getElementById("chat-input") as HTMLTextAreaElement, gameId);
 });

@@ -9,6 +9,10 @@ export interface SitPlayer {
   algorithm?: string;
 }
 
+export interface InitialEventData {
+  type: "initial";
+}
+
 export interface SitEventData {
   type: "sit";
   north: SitPlayer;
@@ -139,6 +143,7 @@ export interface SpriteCard {
 }
 
 export type EventData =
+  | InitialEventData
   | SitEventData
   | ChatEvent
   | EndReplayEventData
