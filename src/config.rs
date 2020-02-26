@@ -12,11 +12,17 @@ pub static CONFIG: Lazy<Config> = Lazy::new(|| {
 
 #[derive(Debug, Deserialize)]
 pub struct Config {
-    pub client_id: String,
-    pub client_secret: String,
     pub db_path: String,
     pub external_uri: String,
+    pub github: OAuthCredentials,
+    pub google: OAuthCredentials,
     pub port: u16,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct OAuthCredentials {
+    pub client_id: String,
+    pub client_secret: String,
 }
 
 impl Config {
