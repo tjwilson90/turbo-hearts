@@ -1,4 +1,4 @@
-use crate::{config::CONFIG, db::Database, error::CardsError};
+use crate::{auth::google::Google, config::CONFIG, db::Database, error::CardsError};
 use http::{header, Response, StatusCode};
 use reqwest::{Client, Url};
 use rusqlite::{OptionalExtension, ToSql};
@@ -7,6 +7,8 @@ use std::{collections::HashMap, sync::Arc};
 use tokio::sync::Mutex;
 use uuid::Uuid;
 use warp::{path::FullPath, reject::Reject, Filter, Rejection, Reply};
+
+mod google;
 
 #[derive(Clone)]
 pub struct Users {
@@ -61,6 +63,11 @@ impl Users {
     }
 }
 
+pub struct User {
+    id: String,
+    name: String,
+}
+
 #[derive(Debug)]
 pub struct AuthFlow(pub FullPath);
 
@@ -75,6 +82,7 @@ impl From<AuthFlow> for Rejection {
 impl AuthFlow {
     pub fn to_reply(&self) -> impl Reply {
         let state = Uuid::new_v4().to_string();
+        let redirect = auth_url()
         let mut location = Url::parse("https://accounts.google.com/o/oauth2/v2/auth").unwrap();
         location
             .query_pairs_mut()
@@ -104,25 +112,6 @@ pub fn auth_redirect(users: infallible!(Users), http_client: infallible!(Client)
         state: String,
     }
 
-    #[derive(Debug, Serialize)]
-    struct AuthRequest<'a> {
-        grant_type: &'a str,
-        code: &'a str,
-        client_id: &'a str,
-        client_secret: &'a str,
-        redirect_uri: &'a str,
-    }
-
-    #[derive(Debug, Deserialize)]
-    struct AuthResponse {
-        id_token: String,
-    }
-
-    #[derive(Debug, Deserialize)]
-    struct Jwt {
-        name: String,
-    }
-
     async fn handle(
         users: Users,
         client: Client,
@@ -135,21 +124,7 @@ pub fn auth_redirect(users: infallible!(Users), http_client: infallible!(Client)
         if state != &query.state {
             return Err(warp::reject());
         }
-        let response = client
-            .post("https://oauth2.googleapis.com/token")
-            .form(&AuthRequest {
-                grant_type: "authorization_code",
-                code: &query.code,
-                client_id: &CONFIG.client_id,
-                client_secret: &CONFIG.client_secret,
-                redirect_uri: &CONFIG.redirect_uri(),
-            })
-            .send()
-            .await
-            .unwrap();
-        let response = response.json::<AuthResponse>().await.unwrap();
-        let jwt = base64::decode(response.id_token.split(".").nth(1).unwrap()).unwrap();
-        let jwt = serde_json::from_slice::<Jwt>(&jwt).unwrap();
+
         let token = Uuid::new_v4();
         users.put(token.to_string(), jwt.name.clone()).await?;
         Ok(Response::builder()
@@ -168,4 +143,18 @@ pub fn auth_redirect(users: infallible!(Users), http_client: infallible!(Client)
         .and(warp::query())
         .and(warp::cookie("state"))
         .and_then(handle)
+}
+
+fn auth_url(kind: &str, state: &str) -> Url {
+    match kind {
+        Google::KIND => Google.auth_url(state),
+        _ => panic!("Unknown auth provider: {}", kind),
+    }
+}
+
+async fn exchange_code(kind: &str, http_client: &Client, code: &str) -> User {
+    match kind {
+        Google::KIND => Google.exchange_code(http_client, code).await,
+        _ => panic!("Unknown auth provider: {}", kind),
+    }
 }
