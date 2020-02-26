@@ -50,21 +50,22 @@ function unrustify(event: EventData): EventData {
 
 export class TurboHeartsEventSource {
   private eventSource: EventSource;
-
   private emitter = new EventEmitter();
 
-  constructor(private th: TurboHearts, gameId: string) {
-    this.eventSource = new EventSource(`/game/subscribe/${gameId}`, {
+  constructor(private gameId: string) {}
+
+  public connect() {
+    this.eventSource = new EventSource(`/game/subscribe/${this.gameId}`, {
       withCredentials: true
     });
     this.eventSource.addEventListener("message", this.handleEvent);
   }
 
-  public on(event: EventType, fn: ListenerFn) {
+  public on(event: EventType, fn: (event: EventData) => void) {
     this.emitter.on(event, fn);
   }
 
-  public off(event: EventType, fn: ListenerFn) {
+  public off(event: EventType, fn: (event: EventData) => void) {
     this.emitter.off(event, fn);
   }
 

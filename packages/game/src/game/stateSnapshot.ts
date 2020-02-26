@@ -1,6 +1,6 @@
 import { Card, EventData, Pass } from "../types";
 import { emptyArray } from "../util/array";
-import { sortSpriteCards, sortCards } from "./sortCards";
+import { sortCards } from "./sortCards";
 
 export const EMPTY_HAND: Card[] = [
   "BACK",
@@ -44,6 +44,7 @@ export namespace TurboHearts {
   }
 
   export interface StateSnapshot {
+    index: number;
     event: EventData;
     north: Player;
     east: Player;
@@ -190,6 +191,7 @@ export function withEndTrick(player: TurboHearts.Player, plays: Card[], winner: 
 
 export function emptyStateSnapshot(userName: string): TurboHearts.StateSnapshot {
   return {
+    index: 0,
     event: { type: "initial" },
     north: newPlayer("bot", "north"),
     east: newPlayer("bot", "east"),

@@ -1,16 +1,17 @@
-import { EventData, Seat, Pass } from "../types";
+import { EventData, Pass, Seat } from "../types";
 import {
-  TurboHearts,
   emptyStateSnapshot,
   newPlayer,
-  withDeal,
-  withToPlay,
-  withSentPass,
-  withReceivePass,
+  TurboHearts,
   withCharge,
+  withDeal,
+  withEndTrick,
   withPlay,
-  withEndTrick
+  withReceivePass,
+  withSentPass,
+  withToPlay
 } from "./stateSnapshot";
+import { EventEmitter } from "eventemitter3";
 
 export const SEATS: Seat[] = ["north", "east", "south", "west"];
 
@@ -31,9 +32,10 @@ function addToSeat(seat: Seat, n: number): Seat {
 }
 
 export class Snapshotter {
+  private emitter = new EventEmitter();
   private snapshots: TurboHearts.StateSnapshot[] = [];
 
-  constructor(private userName: string) {
+  constructor(userName: string) {
     this.snapshots.push(emptyStateSnapshot(userName));
   }
 
@@ -43,6 +45,7 @@ export class Snapshotter {
       case "sit": {
         this.snapshots.push({
           ...previous,
+          index: previous.index + 1,
           event,
           north: newPlayer(event.north.type, event.north.name),
           east: newPlayer(event.east.type, event.east.name),
@@ -55,6 +58,7 @@ export class Snapshotter {
       case "deal": {
         this.snapshots.push({
           ...previous,
+          index: previous.index + 1,
           event,
           pass: event.pass,
           north: withDeal(previous.north, event.north),
@@ -68,6 +72,7 @@ export class Snapshotter {
       case "pass_status": {
         this.snapshots.push({
           ...previous,
+          index: previous.index + 1,
           event,
           north: withToPlay(previous.north, !event.northDone),
           east: withToPlay(previous.east, !event.eastDone),
@@ -81,6 +86,7 @@ export class Snapshotter {
         const fromPlayer = previous[event.from];
         this.snapshots.push({
           ...previous,
+          index: previous.index + 1,
           event,
           [event.from]: withSentPass(fromPlayer, event.cards)
         });
@@ -94,6 +100,7 @@ export class Snapshotter {
         const passPlayers = withReceivePass(fromPlayer, toPlayer, event.cards);
         this.snapshots.push({
           ...previous,
+          index: previous.index + 1,
           event,
           [event.to]: passPlayers.to,
           [fromSeat]: passPlayers.from
@@ -104,6 +111,7 @@ export class Snapshotter {
       case "charge_status": {
         this.snapshots.push({
           ...previous,
+          index: previous.index + 1,
           event,
           north: withToPlay(previous.north, !event.northDone),
           east: withToPlay(previous.east, !event.eastDone),
@@ -117,6 +125,7 @@ export class Snapshotter {
         const chargePlayer = previous[event.seat];
         this.snapshots.push({
           ...previous,
+          index: previous.index + 1,
           event,
           [event.seat]: withCharge(chargePlayer, event.cards)
         });
@@ -127,6 +136,7 @@ export class Snapshotter {
         const player = previous[event.nextPlayer];
         this.snapshots.push({
           ...previous,
+          index: previous.index + 1,
           event,
           north: withToPlay(previous.north, false),
           east: withToPlay(previous.east, false),
@@ -141,6 +151,7 @@ export class Snapshotter {
         const player = previous[event.seat];
         this.snapshots.push({
           ...previous,
+          index: previous.index + 1,
           event,
           [event.seat]: withPlay(player, event.card)
         });
@@ -157,17 +168,33 @@ export class Snapshotter {
         ];
         this.snapshots.push({
           ...previous,
+          index: previous.index + 1,
           event,
           north: withEndTrick(previous.north, allPlays, previous.north === winner),
           east: withEndTrick(previous.east, allPlays, previous.east === winner),
           south: withEndTrick(previous.south, allPlays, previous.south === winner),
           west: withEndTrick(previous.west, allPlays, previous.west === winner)
         });
+        break;
       }
     }
     const next = this.snapshots[this.snapshots.length - 1];
     if (next !== previous) {
-      console.log(next);
+      this.emitter.emit("snapshot", { next, previous });
     }
   };
+
+  public on(
+    event: "snapshot",
+    fn: (event: { next: TurboHearts.StateSnapshot; previous: TurboHearts.StateSnapshot }) => void
+  ) {
+    this.emitter.on("snapshot", fn);
+  }
+
+  public off(
+    event: "snapshot",
+    fn: (event: { next: TurboHearts.StateSnapshot; previous: TurboHearts.StateSnapshot }) => void
+  ) {
+    this.emitter.off("snapshot", fn);
+  }
 }
