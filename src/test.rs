@@ -358,7 +358,7 @@ async fn test_bot_game() -> Result<(), CardsError> {
                 id,
                 Player::Bot {
                     name: s!(two),
-                    algorithm: s!(random),
+                    algorithm: s!(duck),
                 },
                 ChargingRules::Classic,
             )
@@ -378,7 +378,7 @@ async fn test_bot_game() -> Result<(), CardsError> {
                 id,
                 Player::Bot {
                     name: s!(four),
-                    algorithm: s!(duck),
+                    algorithm: s!(gottatry),
                 },
                 ChargingRules::Blind,
             )

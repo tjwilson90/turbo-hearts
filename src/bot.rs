@@ -1,5 +1,5 @@
 use crate::{
-    bot::{duck::Duck, random::Random},
+    bot::{duck::Duck, gottatry::GottaTry, random::Random},
     cards::{Card, Cards, GameState},
     error::CardsError,
     game::GameEvent,
@@ -11,6 +11,7 @@ use rand::Rng;
 use tokio::sync::mpsc::error::TryRecvError;
 
 mod duck;
+mod gottatry;
 mod random;
 
 static NAMES: &[&str] = &include!("../data/names.json");
@@ -40,8 +41,9 @@ pub struct BotState {
 impl Bot {
     pub fn new(name: String, algorithm: &str) -> Self {
         let algorithm: Box<dyn Algorithm + Send + Sync> = match algorithm {
-            Random::NAME => Box::new(Random::new()),
             Duck::NAME => Box::new(Duck::new()),
+            GottaTry::NAME => Box::new(GottaTry::new()),
+            Random::NAME => Box::new(Random::new()),
             _ => panic!("Unknown algorithm"),
         };
         Self {

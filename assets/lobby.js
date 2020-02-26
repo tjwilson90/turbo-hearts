@@ -1,4 +1,5 @@
 var eventStream = null;
+let algorithms = ["duck", "gottatry", "random"];
 
 function onEvent(event) {
   const data = JSON.parse(event.data);
@@ -197,7 +198,7 @@ function addBot(event) {
     headers: {
       "Content-Type": "application/json"
     },
-    body: JSON.stringify({ id: id, rules: rules, algorithm: "duck" })
+    body: JSON.stringify({ id: id, rules: rules, algorithm: algorithms[Math.floor(Math.random() * algorithms.length)] })
   })
     .then(response => response.json())
     .then(data => console.log("Add bot: %o", data));
