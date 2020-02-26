@@ -84,13 +84,13 @@ export class TurboHeartsAnimator {
     let finished = false;
     return {
       start: () => {
-        setTimeout(() => {
-          this.snapToState(next);
-          finished = true;
-        }, 500);
+        this.snapToState(next);
+        // setTimeout(() => {
+        //   finished = true;
+        // }, 500);
       },
       isFinished: () => {
-        return finished;
+        return true;
       }
     };
   }
@@ -127,6 +127,8 @@ export class TurboHeartsAnimator {
         card.sprite.zIndex = Z_HAND_CARDS;
         this.app.stage.addChild(card.sprite);
       }
+
+      // TODO: limbo cards
 
       const chargeCards = state[seat].charged.map(c => createSpriteCard(this.app.loader.resources, c, false));
       const chargeDests = groupCards(
