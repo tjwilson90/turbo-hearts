@@ -58,7 +58,7 @@ pub fn name(users: infallible!(Users)) -> rejection!(String) {
 #[tokio::main]
 async fn main() -> Result<(), CardsError> {
     env_logger::init();
-    let db = Database::new(SqliteConnectionManager::file("turbo-hearts.db"))?;
+    let db = Database::new(SqliteConnectionManager::file(&CONFIG.db_path))?;
     let server = Server::new(db.clone())?;
     let users = Users::new(db);
     let http_client = Client::new();
