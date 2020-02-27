@@ -67,7 +67,7 @@ impl TestRunner {
         let mut path = temp_dir.path().to_owned();
         path.push("test.db");
         let db = Database::new(SqliteConnectionManager::file(path)).unwrap();
-        let server = Server::new(db.clone()).unwrap();
+        let server = Server::with_fast_bots(db.clone()).unwrap();
         Self {
             _temp_dir: temp_dir,
             db,

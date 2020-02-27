@@ -6,6 +6,7 @@ use crate::{
     server::Server,
 };
 use r2d2_sqlite::SqliteConnectionManager;
+use rand_distr::Gamma;
 use reqwest::Client;
 use tokio::{stream::StreamExt, task, time, time::Duration};
 use warp::{path::FullPath, Filter, Rejection};
@@ -59,7 +60,7 @@ pub fn name(users: infallible!(Users)) -> rejection!(String) {
 async fn main() -> Result<(), CardsError> {
     env_logger::init();
     let db = Database::new(SqliteConnectionManager::file(&CONFIG.db_path))?;
-    let server = Server::new(db.clone())?;
+    let server = Server::with_slow_bots(db.clone(), Gamma::new(2.0, 1.0).unwrap())?;
     let users = Users::new(db);
     let http_client = Client::new();
     task::spawn(ping_event_streams(server.clone()));

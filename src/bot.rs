@@ -7,8 +7,8 @@ use crate::{
     types::{GameId, Seat},
 };
 use log::info;
-use rand::Rng;
-use tokio::sync::mpsc::error::TryRecvError;
+use rand::{distributions::Distribution, Rng};
+use tokio::{sync::mpsc::error::TryRecvError, time, time::Duration};
 
 mod duck;
 mod gottatry;
@@ -69,6 +69,12 @@ impl Bot {
                     }
                     Err(TryRecvError::Empty) => break,
                     Err(TryRecvError::Closed) => return Ok(()),
+                }
+            }
+            if action.is_some() {
+                if let Some(delay) = &server.bot_delay {
+                    let seconds = delay.sample(&mut rand::thread_rng());
+                    time::delay_for(Duration::from_secs_f32(seconds)).await;
                 }
             }
             match action {
