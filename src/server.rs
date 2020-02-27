@@ -8,20 +8,31 @@ use crate::{
     types::{ChargingRules, GameId, Participant, Player, Seat},
 };
 use log::info;
+use rand_distr::Gamma;
 use rusqlite::{Transaction, NO_PARAMS};
 use std::collections::{HashMap, HashSet};
 use tokio::{sync::mpsc::UnboundedReceiver, task};
 
 #[derive(Clone)]
 pub struct Server {
+    pub bot_delay: Option<Gamma<f32>>,
     lobby: Lobby,
     games: Games,
 }
 
 impl Server {
-    pub fn new(db: Database) -> Result<Self, CardsError> {
+    pub fn with_fast_bots(db: Database) -> Result<Self, CardsError> {
+        Server::new(db, None)
+    }
+
+    pub fn with_slow_bots(db: Database, bot_delay: Gamma<f32>) -> Result<Self, CardsError> {
+        Self::new(db, Some(bot_delay))
+    }
+
+    fn new(db: Database, bot_delay: Option<Gamma<f32>>) -> Result<Self, CardsError> {
         let partial_games = db.run_blocking_read_only(|tx| hydrate_games(&tx))?;
         let server = Self {
+            bot_delay,
             lobby: Lobby::new(partial_games.clone()),
             games: Games::new(db),
         };
