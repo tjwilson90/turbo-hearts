@@ -15,7 +15,9 @@ import {
   Z_PILE_CARDS,
   Z_PLAYED_CARDS,
   Z_TRANSIT_CARDS,
-  Z_HAND_CARDS
+  Z_HAND_CARDS,
+  TABLE_CENTER_X,
+  TABLE_CENTER_Y
 } from "../const";
 import { groupCards } from "../events/groupCards";
 import { sleep, spriteCardsOf } from "../events/helpers";
@@ -36,6 +38,7 @@ import {
 } from "../types";
 import { pushAll, removeAll } from "../util/array";
 import { PASS_POSITION_OFFSETS, addToSeat } from "../game/snapshotter";
+import { LIMBO_POSITIONS_FOR_BOTTOM_SEAT } from "./TurboHeartsAnimator";
 
 const TRUE_SEAT_ORDER_FOR_BOTTOM_SEAT: { [bottomSeat in Seat]: Seat[] } = {
   // [top, right, bottom, left]
@@ -123,12 +126,32 @@ export class StepAnimation implements Animation {
   private animateDeal() {
     const backTexture = this.cardTextures["BACK"].texture;
     const seatOrder = TRUE_SEAT_ORDER_FOR_BOTTOM_SEAT[this.bottomSeat];
+    const deckCards: SpriteCard[] = [];
+    for (let i = 0; i < 4; i++) {
+      const spriteCards = this[POSITION_ORDER[i]];
+      pushAll(deckCards, spriteCards.pile);
+    }
+    if (deckCards.length === 0) {
+      for (let i = 0; i < 52; i++) {
+        deckCards.push(this.cardCreator("BACK", false));
+      }
+    } else if (deckCards.length === 52) {
+      for (let i = 0; i < 52; i++) {
+        deckCards[i].hidden = false;
+        deckCards[i].card = "BACK";
+      }
+    } else {
+      throw new Error("illegal deck");
+    }
     for (let i = 0; i < 4; i++) {
       const player = this.next[seatOrder[i]];
       sortCards(player.hand);
       const spriteCards = this[POSITION_ORDER[i]];
       for (let j = 0; j < 13; j++) {
-        const spriteCard = this.cardCreator(player.hand[j], false);
+        const spriteCard = deckCards.pop()!;
+        spriteCard.card = player.hand[j];
+        spriteCard.hidden = false;
+        spriteCard.sprite.position.set(TABLE_CENTER_X, TABLE_CENTER_Y);
         spriteCard.sprite.texture = backTexture;
         spriteCard.sprite.rotation = -Math.PI;
         spriteCard.sprite.filters = [];
@@ -149,12 +172,12 @@ export class StepAnimation implements Animation {
           card.sprite.filters = [CARD_DROP_SHADOW];
         })
         .onComplete(() => {
-          // if (card.hidden && card.sprite.texture !== backTexture) {
-          //   card.sprite.texture = backTexture;
-          // }
-          // if (!card.hidden && card.sprite.texture === backTexture) {
-          //   card.sprite.texture = this.cardTextures[card.card].texture;
-          // }
+          if (card.hidden && card.sprite.texture !== backTexture) {
+            card.sprite.texture = backTexture;
+          }
+          if (!card.hidden && card.sprite.texture === backTexture) {
+            card.sprite.texture = this.cardTextures[card.card].texture;
+          }
           finished++;
           if (finished === started) {
             this.finished = true;
@@ -192,6 +215,24 @@ export class StepAnimation implements Animation {
 
   private async animateSendPass(event: SendPassEventData) {
     const fromPlayer = this.getSpritePlayer(event.from);
+    let cardsToMove: SpriteCard[];
+    if (event.cards.length === 0) {
+      cardsToMove = fromPlayer.sprites.hand.splice(0, 3);
+      pushAll(fromPlayer.sprites.limbo, cardsToMove);
+    } else {
+      cardsToMove = spriteCardsOf(fromPlayer.sprites.hand, event.cards);
+      removeAll(fromPlayer.sprites.hand, cardsToMove);
+      pushAll(fromPlayer.sprites.limbo, cardsToMove);
+      for (const card of cardsToMove) {
+        card.sprite.texture = this.cardTextures["BACK"].texture;
+      }
+    }
+    const layout = LIMBO_POSITIONS_FOR_BOTTOM_SEAT[this.bottomSeat][event.from][this.next.pass];
+    await Promise.all([
+      this.animateCards(cardsToMove, layout.x, layout.y, layout.rotation),
+      this.animateCards(fromPlayer.sprites.hand, fromPlayer.layout.x, fromPlayer.layout.y, fromPlayer.layout.rotation)
+    ]);
+    this.finished = true;
   }
 
   private async animateReceivePass(event: ReceivePassEventData) {
@@ -219,6 +260,7 @@ export class StepAnimation implements Animation {
     for (const card of toPlayer.sprites.hand) {
       card.sprite.zIndex = i++;
     }
+    this.zSort();
     await this.animateCards(toPlayer.sprites.hand, toPlayer.layout.x, toPlayer.layout.y, toPlayer.layout.rotation);
     this.finished = true;
   }

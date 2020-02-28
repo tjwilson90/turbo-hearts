@@ -75,7 +75,7 @@ const LIMBO_1 = { left: LIMBO_TOP_RIGHT, right: LIMBO_TOP_LEFT, across: LIMBO_BO
 const LIMBO_2 = { left: LIMBO_BOTTOM_RIGHT, right: LIMBO_TOP_RIGHT, across: LIMBO_LEFT, keeper: LIMBO_CENTER };
 const LIMBO_3 = { left: LIMBO_BOTTOM_LEFT, right: LIMBO_BOTTOM_RIGHT, across: LIMBO_TOP, keeper: LIMBO_CENTER };
 const LIMBO_4 = { left: LIMBO_TOP_LEFT, right: LIMBO_BOTTOM_LEFT, across: LIMBO_RIGHT, keeper: LIMBO_CENTER };
-const LIMBO_POSITIONS_FOR_BOTTOM_SEAT: {
+export const LIMBO_POSITIONS_FOR_BOTTOM_SEAT: {
   [bottomSeat in Seat]: {
     [trueSeat in Seat]: {
       [pass in Pass]: PointWithRotation;
@@ -193,6 +193,7 @@ export class TurboHeartsAnimator {
         next.event.type === "play" ||
         next.event.type === "end_trick" ||
         next.event.type === "recv_pass" ||
+        next.event.type === "send_pass" ||
         next.event.type === "charge"
       ) {
         return new StepAnimation(
@@ -212,7 +213,10 @@ export class TurboHeartsAnimator {
     if (next.event.type === "charge_status" || next.event.type === "pass_status" || next.event.type === "play_status") {
       return noopAnimation();
     }
-    return snapAnimation();
+    if (next.event.type === "sit") {
+      return snapAnimation();
+    }
+    throw new Error("");
   }
 
   private getBottomSeat(state: TurboHearts.StateSnapshot) {
