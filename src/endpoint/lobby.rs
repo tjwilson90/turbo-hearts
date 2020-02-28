@@ -1,7 +1,7 @@
 use crate::{
-    bot, endpoint,
+    endpoint,
     server::Server,
-    types::{ChargingRules, GameId, Player},
+    types::{ChargingRules, GameId, Player, UserId},
 };
 use serde::Deserialize;
 use std::convert::Infallible;
@@ -15,20 +15,20 @@ pub fn html() -> reply!() {
         .and(warp::fs::file("lobby.html"))
 }
 
-pub fn subscribe(server: infallible!(Server), name: rejection!(String)) -> reply!() {
-    async fn handle(server: Server, name: String) -> Result<impl Reply, Infallible> {
-        let rx = server.subscribe_lobby(name).await;
+pub fn subscribe(server: infallible!(Server), user_id: rejection!(UserId)) -> reply!() {
+    async fn handle(server: Server, user_id: UserId) -> Result<impl Reply, Infallible> {
+        let rx = server.subscribe_lobby(user_id).await;
         Ok(sse::reply(endpoint::as_stream(rx)))
     }
 
     warp::path!("lobby" / "subscribe")
         .and(warp::get())
         .and(server)
-        .and(name)
+        .and(user_id)
         .and_then(handle)
 }
 
-pub fn new_game(server: infallible!(Server), name: rejection!(String)) -> reply!() {
+pub fn new_game(server: infallible!(Server), user_id: rejection!(UserId)) -> reply!() {
     #[derive(Debug, Deserialize)]
     struct Request {
         rules: ChargingRules,
@@ -36,67 +36,69 @@ pub fn new_game(server: infallible!(Server), name: rejection!(String)) -> reply!
 
     async fn handle(
         server: Server,
-        name: String,
+        user_id: UserId,
         request: Request,
     ) -> Result<impl Reply, Infallible> {
         let Request { rules } = request;
-        let id = server.new_game(&name, rules).await;
-        Ok(warp::reply::json(&id))
+        let game_id = server.new_game(user_id, rules).await;
+        Ok(warp::reply::json(&game_id))
     }
 
     warp::path!("lobby" / "new")
         .and(warp::post())
         .and(server)
-        .and(name)
+        .and(user_id)
         .and(warp::body::json())
         .and_then(handle)
 }
 
-pub fn join_game(server: infallible!(Server), name: rejection!(String)) -> reply!() {
+pub fn join_game(server: infallible!(Server), user_id: rejection!(UserId)) -> reply!() {
     #[derive(Debug, Deserialize)]
     struct Request {
-        id: GameId,
+        game_id: GameId,
         rules: ChargingRules,
     }
 
     async fn handle(
         server: Server,
-        name: String,
+        user_id: UserId,
         request: Request,
     ) -> Result<impl Reply, Rejection> {
-        let Request { id, rules } = request;
-        let players = server.join_game(id, Player::Human { name }, rules).await?;
+        let Request { game_id, rules } = request;
+        let players = server
+            .join_game(game_id, Player::Human { user_id }, rules)
+            .await?;
         Ok(warp::reply::json(&players))
     }
 
     warp::path!("lobby" / "join")
         .and(warp::post())
         .and(server)
-        .and(name)
+        .and(user_id)
         .and(warp::body::json())
         .and_then(handle)
 }
 
-pub fn leave_game(server: infallible!(Server), name: rejection!(String)) -> reply!() {
+pub fn leave_game(server: infallible!(Server), user_id: rejection!(UserId)) -> reply!() {
     #[derive(Debug, Deserialize)]
     struct Request {
-        id: GameId,
+        game_id: GameId,
     }
 
     async fn handle(
         server: Server,
-        name: String,
+        user_id: UserId,
         request: Request,
     ) -> Result<impl Reply, Infallible> {
-        let Request { id } = request;
-        server.leave_game(id, name).await;
+        let Request { game_id } = request;
+        server.leave_game(game_id, user_id).await;
         Ok(warp::reply())
     }
 
     warp::path!("lobby" / "leave")
         .and(warp::post())
         .and(server)
-        .and(name)
+        .and(user_id)
         .and(warp::body::json())
         .and_then(handle)
 }
@@ -104,24 +106,24 @@ pub fn leave_game(server: infallible!(Server), name: rejection!(String)) -> repl
 pub fn add_bot(server: infallible!(Server)) -> reply!() {
     #[derive(Debug, Deserialize)]
     struct Request {
-        id: GameId,
+        game_id: GameId,
         rules: ChargingRules,
         algorithm: String,
     }
 
     async fn handle(server: Server, request: Request) -> Result<impl Reply, Rejection> {
         let Request {
-            id,
+            game_id,
             rules,
             algorithm,
         } = request;
-        let name = bot::name();
+        let bot_id = UserId::new();
         let player = Player::Bot {
-            name: name.clone(),
+            user_id: bot_id,
             algorithm,
         };
-        let _ = server.join_game(id, player, rules).await?;
-        Ok(warp::reply::json(&name))
+        let _ = server.join_game(game_id, player, rules).await?;
+        Ok(warp::reply::json(&bot_id))
     }
 
     warp::path!("lobby" / "add_bot")
@@ -134,13 +136,13 @@ pub fn add_bot(server: infallible!(Server)) -> reply!() {
 pub fn remove_bot(server: infallible!(Server)) -> reply!() {
     #[derive(Debug, Deserialize)]
     struct Request {
-        id: GameId,
-        name: String,
+        game_id: GameId,
+        user_id: UserId,
     }
 
     async fn handle(server: Server, request: Request) -> Result<impl Reply, Infallible> {
-        let Request { id, name } = request;
-        server.leave_game(id, name).await;
+        let Request { game_id, user_id } = request;
+        server.leave_game(game_id, user_id).await;
         Ok(warp::reply())
     }
 
@@ -151,7 +153,7 @@ pub fn remove_bot(server: infallible!(Server)) -> reply!() {
         .and_then(handle)
 }
 
-pub fn chat(server: infallible!(Server), name: rejection!(String)) -> reply!() {
+pub fn chat(server: infallible!(Server), user_id: rejection!(UserId)) -> reply!() {
     #[derive(Debug, Deserialize)]
     struct Request {
         message: String,
@@ -159,18 +161,18 @@ pub fn chat(server: infallible!(Server), name: rejection!(String)) -> reply!() {
 
     async fn handle(
         server: Server,
-        name: String,
+        user_id: UserId,
         request: Request,
     ) -> Result<impl Reply, Rejection> {
         let Request { message } = request;
-        server.lobby_chat(name, message).await;
+        server.lobby_chat(user_id, message).await;
         Ok(warp::reply())
     }
 
     warp::path!("lobby" / "chat")
         .and(warp::post())
         .and(server)
-        .and(name)
+        .and(user_id)
         .and(warp::body::json())
         .and_then(handle)
 }

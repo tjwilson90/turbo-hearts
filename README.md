@@ -27,6 +27,27 @@ The `port` is the port the backend should serve from.
 
 ## Endpoints
 
+### `POST /users`
+
+Takes a set of user ids and returns a corresponding set of users.
+
+Request:
+```json
+[
+  "38009247-c85b-4ca1-8e59-cf626ea565f7",
+  "d33b08ca-4d34-44f8-8643-cbf7fce5a91c"
+]
+```
+
+Response:
+[{
+  "id": "38009247-c85b-4ca1-8e59-cf626ea565f7",
+  "name": "carrino"
+}, {
+  "id": "d33b08ca-4d34-44f8-8643-cbf7fce5a91c",
+  "name": "twilson"
+}]
+
 ### `GET /lobby`
 
 Returns an html page for the game lobby displaying the live refreshing set of current set of
@@ -46,7 +67,7 @@ in the lobby.
 ```json
 {
   "type": "join_lobby",
-  "player": "twilson"
+  "user_id": "38009247-c85b-4ca1-8e59-cf626ea565f7"
 }
 ```
 
@@ -58,9 +79,12 @@ containing the list of all active subscribers, as well as all incomplete games.
 ```json
 {
   "type": "lobby_state",
-  "subscribers": ["tslatcher","twilson"],
+  "subscribers": ["d33b08ca-4d34-44f8-8643-cbf7fce5a91c", "38009247-c85b-4ca1-8e59-cf626ea565f7"],
   "games": {
-    "8c9e2ff7-dcf3-49be-86f0-315f469840bc": ["carrino"]
+    "8c9e2ff7-dcf3-49be-86f0-315f469840bc": [{
+      "type": "human",
+      "user_id": "17b5876b-30f7-460f-beb4-a54cc114dcf2"
+    }]
   }
 }
 ```
@@ -68,39 +92,43 @@ containing the list of all active subscribers, as well as all incomplete games.
 #### NewGame
 
 Whenever a new game is created, a `new_game` message is sent to all active subscribers containg the
-id of the game and the name of the player who created the game.
+id of the game and the id of the player who created the game.
 
 ```json
 {
   "type": "new_game",
-  "id": "8c9e2ff7-dcf3-49be-86f0-315f469840bc",
-  "player": "carrino"
+  "game_id": "8c9e2ff7-dcf3-49be-86f0-315f469840bc",
+  "user_id": "17b5876b-30f7-460f-beb4-a54cc114dcf2"
 }
 ```
 
 #### JoinGame
 
 Whenever a player joins an existing game, a `join_game` message is sent to all active subscribers
-containing the id of the game and the name of the player who joined the game.
+containing the id of the game and the player who joined the game.
 
 ```json
 {
   "type": "join_game",
-  "id": "8c9e2ff7-dcf3-49be-86f0-315f469840bc",
-  "player": "dcervelli"
+  "game_id": "8c9e2ff7-dcf3-49be-86f0-315f469840bc",
+  "player": {
+    "type": "bot",
+    "user_id": "d33b08ca-4d34-44f8-8643-cbf7fce5a91c",
+    "algorithm": "duck"
+  }
 }
 ```
 
 #### LeaveGame
 
 Whenever a player leaves an existing game, a `leave_game` message is sent to all active subscribers
-containing the id of the game and the name of the player who left.
+containing the id of the game and the id of the player who left.
 
 ```json
 {
   "type": "leave_game",
-  "id": "8c9e2ff7-dcf3-49be-86f0-315f469840bc",
-  "player": "carrino"
+  "game_id": "8c9e2ff7-dcf3-49be-86f0-315f469840bc",
+  "user_id": "d33b08ca-4d34-44f8-8643-cbf7fce5a91c"
 }
 ```
 
@@ -111,7 +139,7 @@ When the last play is made in a game a `finish_game` event is sent to all subscr
 ```json
 {
   "type": "finish_game",
-  "id": "8c9e2ff7-dcf3-49be-86f0-315f469840bc"
+  "game_id": "8c9e2ff7-dcf3-49be-86f0-315f469840bc"
 }
 ```
 
@@ -122,7 +150,7 @@ When a chat message is sent to the lobby a `chat` event is sent to all subscribe
 ```json
 {
   "type": "chat",
-  "name": "twilson",
+  "user_id": "38009247-c85b-4ca1-8e59-cf626ea565f7",
   "message": "Anyone here?"
 }
 ```
@@ -135,7 +163,7 @@ other active subscribers.
 ```json
 {
   "type": "leave_lobby",
-  "player": "carrino"
+  "user_id": "38009247-c85b-4ca1-8e59-cf626ea565f7"
 }
 ```
 
@@ -165,17 +193,21 @@ four players.
 Request:
 ```json
 {
-  "id": "8c9e2ff7-dcf3-49be-86f0-315f469840bc",
+  "game_id": "8c9e2ff7-dcf3-49be-86f0-315f469840bc",
   "rules": "chain"
 }
 ```
 
 Response:
 ```json
-[
-  "carrino",
-  "dcervelli"
-]
+[{
+  "type": "human",
+  "user_id": "38009247-c85b-4ca1-8e59-cf626ea565f7"
+}, {
+  "type": "bot",
+  "user_id": "71b4acdd-51e2-4e7d-9f29-76d511db9060",
+  "algorithm": "random"
+}]
 ```
 
 ### `POST /lobby/add_bot`
@@ -185,7 +217,7 @@ Add a bot to an existing game and propose charging rules. Returns the name of th
 Request:
 ```json
 {
-  "id": "8c9e2ff7-dcf3-49be-86f0-315f469840bc",
+  "game_id": "8c9e2ff7-dcf3-49be-86f0-315f469840bc",
   "rules": "chain",
   "algorithm": "random"
 }
@@ -193,7 +225,7 @@ Request:
 
 Response:
 ```json
-"dharper (bot)"
+"71b4acdd-51e2-4e7d-9f29-76d511db9060"
 ```
 
 ### `POST /lobby/leave`
@@ -203,7 +235,7 @@ Leave an existing game.
 Request:
 ```json
 {
-  "id": "8c9e2ff7-dcf3-49be-86f0-315f469840bc"
+  "game_id": "8c9e2ff7-dcf3-49be-86f0-315f469840bc"
 }
 ```
 
@@ -250,7 +282,7 @@ When a chat message is sent to a game a `chat` event is sent to all subscribers.
 ```json
 {
   "type": "chat",
-  "name": "twilson",
+  "user_id": "723fc477-75d3-4fef-a672-20ac6e54bdba",
   "message": "carrino, it's your play"
 }
 ```
@@ -264,10 +296,10 @@ seat.
 ```json
 {
   "type": "sit",
-  "north": {"type": "human", "name": "carrino"},
-  "east": {"type": "human", "name": "tslatcher"},
-  "south": {"type": "human", "name": "twilson"},
-  "west": {"type": "bot", "name": "hjarvis (bot)", "algorithm": "random"},
+  "north": {"type": "human", "user_id": "723fc477-75d3-4fef-a672-20ac6e54bdba"},
+  "east": {"type": "human", "user_id": "56da6b82-ff02-4c53-be8f-773dc2931df0"},
+  "south": {"type": "human", "user_id": "c34f709e-97b4-4bce-946e-fafe0005276b"},
+  "west": {"type": "bot", "user_id": "723fc477-75d3-4fef-a672-20ac6e54bdba", "algorithm": "random"},
   "rules": "blind"
 }
 ```
@@ -542,7 +574,7 @@ Pass cards.
 Request:
 ```json
 {
-  "id": "8c9e2ff7-dcf3-49be-86f0-315f469840bc",
+  "game_id": "8c9e2ff7-dcf3-49be-86f0-315f469840bc",
   "cards": ["QH", "AC", "TD"]
 }
 ```
@@ -556,7 +588,7 @@ non-empty charge must make a final empty charge to complete the charging phase.
 Request:
 ```json
 {
-  "id": "8c9e2ff7-dcf3-49be-86f0-315f469840bc",
+  "game_id": "8c9e2ff7-dcf3-49be-86f0-315f469840bc",
   "cards": ["QS", "AH"]
 }
 ```
@@ -568,7 +600,7 @@ Play a card.
 Request:
 ```json
 {
-  "id": "8c9e2ff7-dcf3-49be-86f0-315f469840bc",
+  "game_id": "8c9e2ff7-dcf3-49be-86f0-315f469840bc",
   "card": "8D"
 }
 ```
@@ -582,7 +614,7 @@ will continue.
 Request:
 ```json
 {
-  "id": "8c9e2ff7-dcf3-49be-86f0-315f469840bc"
+  "game_id": "8c9e2ff7-dcf3-49be-86f0-315f469840bc"
 }
 ```
 
@@ -594,7 +626,7 @@ otherwise play will continue.
 Request:
 ```json
 {
-  "id": "8c9e2ff7-dcf3-49be-86f0-315f469840bc",
+  "game_id": "8c9e2ff7-dcf3-49be-86f0-315f469840bc",
   "claimer": "west"
 }
 ```
@@ -607,7 +639,7 @@ all players will know the hand of the player who claimed).
 Request:
 ```json
 {
-  "id": "8c9e2ff7-dcf3-49be-86f0-315f469840bc",
+  "game_id": "8c9e2ff7-dcf3-49be-86f0-315f469840bc",
   "claimer": "west"
 }
 ```
@@ -619,7 +651,7 @@ Send a chat message to all subscribers watching a game.
 Request:
 ```json
 {
-  "id": "8c9e2ff7-dcf3-49be-86f0-315f469840bc",
+  "game_id": "8c9e2ff7-dcf3-49be-86f0-315f469840bc",
   "message": "carrino, it's your play"
 }
 ```

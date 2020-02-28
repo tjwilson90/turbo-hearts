@@ -2,7 +2,7 @@ use crate::{
     cards::{Card, Cards, GamePhase, GameState, PassDirection},
     db::Database,
     error::CardsError,
-    types::{ChargingRules, Event, GameId, Participant, Player, Seat},
+    types::{ChargingRules, Event, GameId, Participant, Player, Seat, UserId},
 };
 use rand::seq::SliceRandom;
 use rusqlite::{
@@ -37,25 +37,25 @@ impl Games {
     pub async fn ping(&self) {
         let mut inner = self.inner.lock().await;
         let mut unwatched = Vec::new();
-        for (id, game) in inner.iter_mut() {
+        for (game_id, game) in inner.iter_mut() {
             let mut game = game.lock().await;
             game.broadcast(&GameEvent::Ping);
             if game.subscribers.is_empty() {
-                unwatched.push(*id);
+                unwatched.push(*game_id);
             }
         }
-        for id in unwatched {
-            inner.remove(&id);
+        for game_id in unwatched {
+            inner.remove(&game_id);
         }
     }
 
-    async fn with_game<F, T>(&self, id: GameId, f: F) -> Result<T, CardsError>
+    async fn with_game<F, T>(&self, game_id: GameId, f: F) -> Result<T, CardsError>
     where
         F: FnOnce(&mut Game) -> Result<T, CardsError>,
     {
         let game = {
             let mut inner = self.inner.lock().await;
-            match inner.entry(id) {
+            match inner.entry(game_id) {
                 Entry::Occupied(entry) => entry.get().clone(),
                 Entry::Vacant(entry) => {
                     let game = Arc::new(Mutex::new(Game::new()));
@@ -66,9 +66,9 @@ impl Games {
         };
         let mut game = game.lock().await;
         self.db
-            .run_read_only(|tx| hydrate_events(&tx, id, &mut game))?;
+            .run_read_only(|tx| hydrate_events(&tx, game_id, &mut game))?;
         if game.events.is_empty() {
-            Err(CardsError::UnknownGame(id))
+            Err(CardsError::UnknownGame(game_id))
         } else {
             f(&mut game)
         }
@@ -76,7 +76,7 @@ impl Games {
 
     pub fn start_game(
         &self,
-        id: GameId,
+        game_id: GameId,
         participants: &HashSet<Participant>,
     ) -> Result<(), CardsError> {
         let mut participants = participants.iter().cloned().collect::<Vec<_>>();
@@ -84,7 +84,7 @@ impl Games {
         self.db.run_with_retry(|tx| {
             persist_events(
                 &tx,
-                id,
+                game_id,
                 0,
                 &[
                     GameEvent::Sit {
@@ -103,12 +103,12 @@ impl Games {
 
     pub async fn subscribe(
         &self,
-        id: GameId,
-        name: String,
+        game_id: GameId,
+        user_id: UserId,
     ) -> Result<UnboundedReceiver<GameEvent>, CardsError> {
         let (tx, rx) = unbounded_channel();
-        self.with_game(id, |game| {
-            let seat = game.seat(&name);
+        self.with_game(game_id, |game| {
+            let seat = game.seat(user_id);
             let mut copy = Game::new();
             for event in &game.events {
                 copy.apply(event, |g, e| {
@@ -123,11 +123,16 @@ impl Games {
         Ok(rx)
     }
 
-    pub async fn pass_cards(&self, id: GameId, name: &str, cards: Cards) -> Result<(), CardsError> {
-        self.with_game(id, |game| match game.seat(&name) {
-            None => Err(CardsError::InvalidPlayer(name.to_string(), id)),
+    pub async fn pass_cards(
+        &self,
+        game_id: GameId,
+        user_id: UserId,
+        cards: Cards,
+    ) -> Result<(), CardsError> {
+        self.with_game(game_id, |game| match game.seat(user_id) {
+            None => Err(CardsError::InvalidPlayer(user_id, game_id)),
             Some(seat) => {
-                game.verify_pass(id, seat, cards)?;
+                game.verify_pass(game_id, seat, cards)?;
                 let mut events = vec![GameEvent::SendPass { from: seat, cards }];
                 if game.state.phase != GamePhase::PassKeeper {
                     let sender = game.state.phase.pass_sender(seat);
@@ -174,8 +179,9 @@ impl Games {
                         cards: passes[9..12].iter().cloned().collect(),
                     });
                 }
-                self.db
-                    .run_with_retry(|tx| persist_events(&tx, id, game.events.len(), &events))?;
+                self.db.run_with_retry(|tx| {
+                    persist_events(&tx, game_id, game.events.len(), &events)
+                })?;
                 for event in events {
                     game.apply(&event, |g, e| g.broadcast(e));
                 }
@@ -187,17 +193,17 @@ impl Games {
 
     pub async fn charge_cards(
         &self,
-        id: GameId,
-        name: &str,
+        game_id: GameId,
+        user_id: UserId,
         cards: Cards,
     ) -> Result<(), CardsError> {
-        self.with_game(id, |game| match game.seat(&name) {
-            None => Err(CardsError::InvalidPlayer(name.to_string(), id)),
+        self.with_game(game_id, |game| match game.seat(user_id) {
+            None => Err(CardsError::InvalidPlayer(user_id, game_id)),
             Some(seat) => {
-                game.verify_charge(id, seat, cards)?;
+                game.verify_charge(game_id, seat, cards)?;
                 let event = GameEvent::Charge { seat, cards };
                 self.db.run_with_retry(|tx| {
-                    persist_events(&tx, id, game.events.len(), &[event.clone()])
+                    persist_events(&tx, game_id, game.events.len(), &[event.clone()])
                 })?;
                 game.apply(&event, |g, e| g.broadcast(e));
                 Ok(())
@@ -206,11 +212,16 @@ impl Games {
         .await
     }
 
-    pub async fn play_card(&self, id: GameId, name: &str, card: Card) -> Result<bool, CardsError> {
-        self.with_game(id, |game| match game.seat(&name) {
-            None => Err(CardsError::InvalidPlayer(name.to_string(), id)),
+    pub async fn play_card(
+        &self,
+        game_id: GameId,
+        user_id: UserId,
+        card: Card,
+    ) -> Result<bool, CardsError> {
+        self.with_game(game_id, |game| match game.seat(user_id) {
+            None => Err(CardsError::InvalidPlayer(user_id, game_id)),
             Some(seat) => {
-                game.verify_play(id, seat, card)?;
+                game.verify_play(game_id, seat, card)?;
                 let mut events = vec![GameEvent::Play { seat, card }];
                 if game.state.played | card == Cards::ALL {
                     match game.state.phase {
@@ -223,11 +234,11 @@ impl Games {
                     };
                 }
                 self.db.run_with_retry(|tx| {
-                    persist_events(&tx, id, game.events.len(), &events)?;
+                    persist_events(&tx, game_id, game.events.len(), &events)?;
                     if game.state.played | card == Cards::ALL
                         && game.state.phase == GamePhase::PlayKeeper
                     {
-                        tx.execute("INSERT INTO game (id) VALUES (?)", &[&id])?;
+                        tx.execute("INSERT INTO game (game_id) VALUES (?)", &[&game_id])?;
                     }
                     Ok(())
                 })?;
@@ -240,17 +251,17 @@ impl Games {
         .await
     }
 
-    pub async fn claim(&self, id: GameId, name: &str) -> Result<(), CardsError> {
-        self.with_game(id, |game| match game.seat(&name) {
-            None => Err(CardsError::InvalidPlayer(name.to_string(), id)),
+    pub async fn claim(&self, game_id: GameId, user_id: UserId) -> Result<(), CardsError> {
+        self.with_game(game_id, |game| match game.seat(user_id) {
+            None => Err(CardsError::InvalidPlayer(user_id, game_id)),
             Some(seat) => {
-                game.verify_claim(id, seat)?;
+                game.verify_claim(game_id, seat)?;
                 let event = GameEvent::Claim {
                     seat,
                     hand: game.post_pass_hand[seat.idx()] - game.state.played,
                 };
                 self.db.run_with_retry(|tx| {
-                    persist_events(&tx, id, game.events.len(), &[event.clone()])
+                    persist_events(&tx, game_id, game.events.len(), &[event.clone()])
                 })?;
                 game.apply(&event, |g, e| g.broadcast(e));
                 Ok(())
@@ -261,20 +272,20 @@ impl Games {
 
     pub async fn accept_claim(
         &self,
-        id: GameId,
-        name: &str,
+        game_id: GameId,
+        user_id: UserId,
         claimer: Seat,
     ) -> Result<(), CardsError> {
-        self.with_game(id, |game| match game.seat(&name) {
-            None => Err(CardsError::InvalidPlayer(name.to_string(), id)),
+        self.with_game(game_id, |game| match game.seat(user_id) {
+            None => Err(CardsError::InvalidPlayer(user_id, game_id)),
             Some(seat) => {
-                game.verify_accept_claim(id, claimer, seat)?;
+                game.verify_accept_claim(game_id, claimer, seat)?;
                 let event = GameEvent::AcceptClaim {
                     claimer,
                     acceptor: seat,
                 };
                 self.db.run_with_retry(|tx| {
-                    persist_events(&tx, id, game.events.len(), &[event.clone()])
+                    persist_events(&tx, game_id, game.events.len(), &[event.clone()])
                 })?;
                 game.apply(&event, |g, e| g.broadcast(e));
                 Ok(())
@@ -285,20 +296,20 @@ impl Games {
 
     pub async fn reject_claim(
         &self,
-        id: GameId,
-        name: &str,
+        game_id: GameId,
+        user_id: UserId,
         claimer: Seat,
     ) -> Result<(), CardsError> {
-        self.with_game(id, |game| match game.seat(&name) {
-            None => Err(CardsError::InvalidPlayer(name.to_string(), id)),
+        self.with_game(game_id, |game| match game.seat(user_id) {
+            None => Err(CardsError::InvalidPlayer(user_id, game_id)),
             Some(seat) => {
-                game.verify_reject_claim(id, claimer)?;
+                game.verify_reject_claim(game_id, claimer)?;
                 let event = GameEvent::RejectClaim {
                     claimer,
                     rejector: seat,
                 };
                 self.db.run_with_retry(|tx| {
-                    persist_events(&tx, id, game.events.len(), &[event.clone()])
+                    persist_events(&tx, game_id, game.events.len(), &[event.clone()])
                 })?;
                 game.apply(&event, |g, e| g.broadcast(e));
                 Ok(())
@@ -307,11 +318,16 @@ impl Games {
         .await
     }
 
-    pub async fn chat(&self, id: GameId, name: String, message: String) -> Result<(), CardsError> {
-        self.with_game(id, |game| {
-            let event = GameEvent::Chat { name, message };
+    pub async fn chat(
+        &self,
+        game_id: GameId,
+        user_id: UserId,
+        message: String,
+    ) -> Result<(), CardsError> {
+        self.with_game(game_id, |game| {
+            let event = GameEvent::Chat { user_id, message };
             self.db.run_with_retry(|tx| {
-                persist_events(&tx, id, game.events.len(), &[event.clone()])
+                persist_events(&tx, game_id, game.events.len(), &[event.clone()])
             })?;
             game.apply(&event, |g, e| g.broadcast(e));
             Ok(())
@@ -355,11 +371,11 @@ impl Game {
             .retain(|(seat, tx)| tx.send(event.redact(*seat, rules)).is_ok());
     }
 
-    fn seat(&self, name: &str) -> Option<Seat> {
+    fn seat(&self, user_id: UserId) -> Option<Seat> {
         self.state
             .players
             .iter()
-            .position(|p| p == name)
+            .position(|id| *id == user_id)
             .map(|idx| Seat::VALUES[idx])
     }
 
@@ -470,9 +486,9 @@ impl Game {
         }
     }
 
-    fn verify_pass(&self, id: GameId, seat: Seat, cards: Cards) -> Result<(), CardsError> {
+    fn verify_pass(&self, game_id: GameId, seat: Seat, cards: Cards) -> Result<(), CardsError> {
         if self.state.phase.is_complete() {
-            return Err(CardsError::GameComplete(id));
+            return Err(CardsError::GameComplete(game_id));
         }
         if !self.state.phase.is_passing() {
             return Err(CardsError::IllegalAction("pass", self.state.phase));
@@ -492,9 +508,14 @@ impl Game {
         Ok(())
     }
 
-    fn verify_charge(&mut self, id: GameId, seat: Seat, cards: Cards) -> Result<(), CardsError> {
+    fn verify_charge(
+        &mut self,
+        game_id: GameId,
+        seat: Seat,
+        cards: Cards,
+    ) -> Result<(), CardsError> {
         if self.state.phase.is_complete() {
-            return Err(CardsError::GameComplete(id));
+            return Err(CardsError::GameComplete(game_id));
         }
         if !self.state.phase.is_charging() {
             return Err(CardsError::IllegalAction("charge", self.state.phase));
@@ -513,16 +534,16 @@ impl Game {
         }
         if !self.state.can_charge(seat) {
             return Err(CardsError::NotYourTurn(
-                self.state.players[self.state.next_charger.unwrap().idx()].clone(),
+                self.state.players[self.state.next_charger.unwrap().idx()],
                 "charge",
             ));
         }
         Ok(())
     }
 
-    fn verify_play(&mut self, id: GameId, seat: Seat, card: Card) -> Result<(), CardsError> {
+    fn verify_play(&mut self, game_id: GameId, seat: Seat, card: Card) -> Result<(), CardsError> {
         if self.state.phase.is_complete() {
-            return Err(CardsError::GameComplete(id));
+            return Err(CardsError::GameComplete(game_id));
         }
         if !self.state.phase.is_playing() {
             return Err(CardsError::IllegalAction("play", self.state.phase));
@@ -533,7 +554,7 @@ impl Game {
         }
         if seat != self.state.next_player.unwrap() {
             return Err(CardsError::NotYourTurn(
-                self.state.players[self.state.next_player.unwrap().idx()].clone(),
+                self.state.players[self.state.next_player.unwrap().idx()],
                 "play",
             ));
         }
@@ -588,58 +609,52 @@ impl Game {
         Ok(())
     }
 
-    fn verify_claim(&mut self, id: GameId, seat: Seat) -> Result<(), CardsError> {
+    fn verify_claim(&mut self, game_id: GameId, seat: Seat) -> Result<(), CardsError> {
         if self.state.phase.is_complete() {
-            return Err(CardsError::GameComplete(id));
+            return Err(CardsError::GameComplete(game_id));
         }
         if !self.state.phase.is_playing() {
             return Err(CardsError::IllegalAction("claim", self.state.phase));
         }
         if self.state.claims.is_claiming(seat) {
-            return Err(CardsError::AlreadyClaiming(
-                self.state.players[seat.idx()].clone(),
-            ));
+            return Err(CardsError::AlreadyClaiming(self.state.players[seat.idx()]));
         }
         Ok(())
     }
 
     fn verify_accept_claim(
         &mut self,
-        id: GameId,
+        game_id: GameId,
         claimer: Seat,
         acceptor: Seat,
     ) -> Result<(), CardsError> {
         if self.state.phase.is_complete() {
-            return Err(CardsError::GameComplete(id));
+            return Err(CardsError::GameComplete(game_id));
         }
         if !self.state.phase.is_playing() {
             return Err(CardsError::IllegalAction("accept claim", self.state.phase));
         }
         if !self.state.claims.is_claiming(claimer) {
-            return Err(CardsError::NotClaiming(
-                self.state.players[claimer.idx()].clone(),
-            ));
+            return Err(CardsError::NotClaiming(self.state.players[claimer.idx()]));
         }
         if self.state.claims.has_accepted(claimer, acceptor) {
             return Err(CardsError::AlreadyAcceptedClaim(
-                self.state.players[acceptor.idx()].clone(),
-                self.state.players[claimer.idx()].clone(),
+                self.state.players[acceptor.idx()],
+                self.state.players[claimer.idx()],
             ));
         }
         Ok(())
     }
 
-    fn verify_reject_claim(&mut self, id: GameId, claimer: Seat) -> Result<(), CardsError> {
+    fn verify_reject_claim(&mut self, game_id: GameId, claimer: Seat) -> Result<(), CardsError> {
         if self.state.phase.is_complete() {
-            return Err(CardsError::GameComplete(id));
+            return Err(CardsError::GameComplete(game_id));
         }
         if !self.state.phase.is_playing() {
             return Err(CardsError::IllegalAction("reject claim", self.state.phase));
         }
         if !self.state.claims.is_claiming(claimer) {
-            return Err(CardsError::NotClaiming(
-                self.state.players[claimer.idx()].clone(),
-            ));
+            return Err(CardsError::NotClaiming(self.state.players[claimer.idx()]));
         }
         Ok(())
     }
@@ -651,7 +666,7 @@ pub enum GameEvent {
     Ping,
     EndReplay,
     Chat {
-        name: String,
+        user_id: UserId,
         message: String,
     },
     Sit {
@@ -849,7 +864,7 @@ impl FromSql for GameEvent {
 
 pub fn persist_events(
     tx: &Transaction,
-    id: GameId,
+    game_id: GameId,
     event_id: usize,
     events: &[GameEvent],
 ) -> Result<(), CardsError> {
@@ -861,16 +876,16 @@ pub fn persist_events(
         .as_millis() as i64;
     let mut event_id = event_id as isize;
     for event in events {
-        stmt.execute::<&[&dyn ToSql]>(&[&id, &event_id, &timestamp, &event])?;
+        stmt.execute::<&[&dyn ToSql]>(&[&game_id, &event_id, &timestamp, &event])?;
         event_id += 1;
     }
     Ok(())
 }
 
-fn hydrate_events(tx: &Transaction, id: GameId, game: &mut Game) -> Result<(), CardsError> {
+fn hydrate_events(tx: &Transaction, game_id: GameId, game: &mut Game) -> Result<(), CardsError> {
     let mut stmt = tx
         .prepare("SELECT event FROM event WHERE game_id = ? AND event_id >= ? ORDER BY event_id")?;
-    let mut rows = stmt.query::<&[&dyn ToSql]>(&[&id, &(game.events.len() as i64)])?;
+    let mut rows = stmt.query::<&[&dyn ToSql]>(&[&game_id, &(game.events.len() as i64)])?;
     while let Some(row) = rows.next()? {
         let event = serde_json::from_str(&row.get::<_, String>(0)?)?;
         game.apply(&event, |_, _| {});
