@@ -4,26 +4,15 @@ use crate::{
     error::CardsError,
     game::GameEvent,
     server::Server,
-    types::{GameId, Seat},
+    types::{GameId, Seat, UserId},
 };
 use log::info;
-use rand::{distributions::Distribution, Rng};
+use rand::distributions::Distribution;
 use tokio::{sync::mpsc::error::TryRecvError, time, time::Duration};
 
 mod duck;
 mod gottatry;
 mod random;
-
-static NAMES: &[&str] = &include!("../data/names.json");
-
-pub fn name() -> String {
-    let mut rng = rand::thread_rng();
-    let initial = ('a' as u8 + rng.gen_range(0, 26)) as char;
-    let mut name = initial.to_string();
-    name.push_str(NAMES[rng.gen_range(0, NAMES.len())]);
-    name.push_str(" (bot)");
-    name
-}
 
 pub struct Bot {
     state: BotState,
@@ -31,7 +20,7 @@ pub struct Bot {
 }
 
 pub struct BotState {
-    name: String,
+    user_id: UserId,
     seat: Seat,
     pre_pass_hand: Cards,
     post_pass_hand: Cards,
@@ -39,7 +28,7 @@ pub struct BotState {
 }
 
 impl Bot {
-    pub fn new(name: String, algorithm: &str) -> Self {
+    pub fn new(user_id: UserId, algorithm: &str) -> Self {
         let algorithm: Box<dyn Algorithm + Send + Sync> = match algorithm {
             Duck::NAME => Box::new(Duck::new()),
             GottaTry::NAME => Box::new(GottaTry::new()),
@@ -48,7 +37,7 @@ impl Bot {
         };
         Self {
             state: BotState {
-                name,
+                user_id,
                 seat: Seat::North,
                 pre_pass_hand: Cards::NONE,
                 post_pass_hand: Cards::NONE,
@@ -58,8 +47,8 @@ impl Bot {
         }
     }
 
-    pub async fn run(mut self, server: Server, id: GameId) -> Result<(), CardsError> {
-        let mut rx = server.subscribe_game(id, self.state.name.clone()).await?;
+    pub async fn run(mut self, server: Server, game_id: GameId) -> Result<(), CardsError> {
+        let mut rx = server.subscribe_game(game_id, self.state.user_id).await?;
         let mut action = None;
         loop {
             loop {
@@ -78,18 +67,24 @@ impl Bot {
                 }
             }
             match action {
-                Some(Action::Pass(cards)) => server.pass_cards(id, &self.state.name, cards).await?,
+                Some(Action::Pass(cards)) => {
+                    server
+                        .pass_cards(game_id, self.state.user_id, cards)
+                        .await?
+                }
                 Some(Action::Charge(cards)) => {
-                    server.charge_cards(id, &self.state.name, cards).await?
+                    server
+                        .charge_cards(game_id, self.state.user_id, cards)
+                        .await?
                 }
                 Some(Action::Play(card)) => {
-                    let complete = server.play_card(id, &self.state.name, card).await?;
+                    let complete = server.play_card(game_id, self.state.user_id, card).await?;
                     if complete {
                         return Ok(());
                     }
                 }
                 Some(Action::RejectClaim(seat)) => {
-                    let _ = server.reject_claim(id, &self.state.name, seat).await;
+                    let _ = server.reject_claim(game_id, self.state.user_id, seat).await;
                 }
                 None => {}
             }
@@ -105,7 +100,7 @@ impl Bot {
     }
 
     fn handle(&mut self, event: GameEvent) -> Option<Action> {
-        info!("{} handling event {:?}", self.state.name, event);
+        info!("Bot {} handling event {:?}", self.state.user_id, event);
         self.state.game.apply(&event);
         match &event {
             GameEvent::Sit {
@@ -115,16 +110,16 @@ impl Bot {
                 west,
                 ..
             } => {
-                self.state.seat = if &self.state.name == north.name() {
+                self.state.seat = if self.state.user_id == north.user_id() {
                     Seat::North
-                } else if &self.state.name == east.name() {
+                } else if self.state.user_id == east.user_id() {
                     Seat::East
-                } else if &self.state.name == south.name() {
+                } else if self.state.user_id == south.user_id() {
                     Seat::South
-                } else if &self.state.name == west.name() {
+                } else if self.state.user_id == west.user_id() {
                     Seat::West
                 } else {
-                    panic!("{} is not a player in the game", self.state.name);
+                    panic!("Bot {} is not a player in the game", self.state.user_id);
                 };
             }
             GameEvent::Deal {

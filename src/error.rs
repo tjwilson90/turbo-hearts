@@ -1,7 +1,7 @@
 use crate::{
     auth::AuthFlow,
     cards::{Cards, GamePhase},
-    types::GameId,
+    types::{GameId, UserId},
 };
 use http::{Response, StatusCode};
 use rusqlite::ErrorCode;
@@ -12,11 +12,11 @@ use warp::{reject::Reject, Rejection, Reply};
 #[derive(Debug, Error)]
 pub enum CardsError {
     #[error("{0} has already accepted the claim from {1}")]
-    AlreadyAcceptedClaim(String, String),
+    AlreadyAcceptedClaim(UserId, UserId),
     #[error("{0} has already been charged")]
     AlreadyCharged(Cards),
     #[error("{0} has already made a claim")]
-    AlreadyClaiming(String),
+    AlreadyClaiming(UserId),
     #[error("{0} has already been passed")]
     AlreadyPassed(Cards),
     #[error("game {0} is already complete")]
@@ -29,20 +29,18 @@ pub enum CardsError {
     IllegalAction(&'static str, GamePhase),
     #[error("{0} is not a legal pass, passes must have 3 cards")]
     IllegalPassSize(Cards),
-    #[error("{0} is not a valid name for a human player")]
-    InvalidName(String),
     #[error("{0} is not a member of game {1}")]
-    InvalidPlayer(String, GameId),
+    InvalidPlayer(UserId, GameId),
     #[error("charged cards cannot be played on the first trick of their suit")]
     NoChargeOnFirstTrickOfSuit,
     #[error("points cannot be played on the first trick")]
     NoPointsOnFirstTrick,
     #[error("{0} is not claiming, or their claim has been rejected")]
-    NotClaiming(String),
+    NotClaiming(UserId),
     #[error("your hand does not contain {0}")]
     NotYourCards(Cards),
     #[error("player {0} makes the next {1}")]
-    NotYourTurn(String, &'static str),
+    NotYourTurn(UserId, &'static str),
     #[error("api endpoints require a \"name\" cookie identifying the caller")]
     MissingNameCookie,
     #[error("on the first trick if you have nothing but points, you must play the jack of diamonds if you have it")]
@@ -65,10 +63,10 @@ pub enum CardsError {
     },
     #[error("the cards {0} cannot be charged")]
     Unchargeable(Cards),
+    #[error("{0} is not a known auth token")]
+    UnknownAuthToken(String),
     #[error("{0} is not a known game id")]
     UnknownGame(GameId),
-    #[error("{0} is not a known player")]
-    UnknownPlayer(String),
 }
 
 impl CardsError {

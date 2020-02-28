@@ -1,4 +1,4 @@
-use crate::{auth::User, config::CONFIG};
+use crate::{config::CONFIG, types::UserId, user::User};
 use reqwest::{Client, Url};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -37,7 +37,12 @@ impl Google {
         let response = response.json::<AuthResponse>().await.unwrap();
         let jwt = base64::decode(response.id_token.split(".").nth(1).unwrap()).unwrap();
         let Jwt { sub, name } = serde_json::from_slice::<Jwt>(&jwt).unwrap();
-        User { id: sub, name }
+        User {
+            id: UserId::new(),
+            name,
+            realm: "google".to_string(),
+            external_id: sub,
+        }
     }
 }
 
