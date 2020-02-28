@@ -161,6 +161,19 @@ export type EventData =
   | EndTrickEventData
   | GameCompleteEventData;
 
+export interface Animation {
+  start(): void;
+  isFinished(): boolean;
+}
+
+export interface PlayerSpriteCards {
+  hand: SpriteCard[];
+  limbo: SpriteCard[];
+  charged: SpriteCard[];
+  plays: SpriteCard[];
+  pile: SpriteCard[];
+}
+
 export type Card =
   | "BACK"
   | "2C"

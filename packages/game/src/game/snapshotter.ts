@@ -15,14 +15,14 @@ import { EventEmitter } from "eventemitter3";
 
 export const SEATS: Seat[] = ["north", "east", "south", "west"];
 
-const PASS_POSITION_OFFSETS: { [pass in Pass]: number } = {
+export const PASS_POSITION_OFFSETS: { [pass in Pass]: number } = {
   left: 1,
   right: -1,
   across: 2,
   keeper: 0
 };
 
-function addToSeat(seat: Seat, n: number): Seat {
+export function addToSeat(seat: Seat, n: number): Seat {
   let i = SEATS.indexOf(seat) + n;
   if (i < 0) {
     i += SEATS.length;
@@ -152,6 +152,7 @@ export class Snapshotter {
         this.snapshots.push({
           ...previous,
           index: previous.index + 1,
+          playNumber: previous.playNumber + 1,
           event,
           [event.seat]: withPlay(player, event.card)
         });
@@ -169,6 +170,8 @@ export class Snapshotter {
         this.snapshots.push({
           ...previous,
           index: previous.index + 1,
+          trickNumber: previous.trickNumber + 1,
+          playNumber: 0,
           event,
           north: withEndTrick(previous.north, allPlays, previous.north === winner),
           east: withEndTrick(previous.east, allPlays, previous.east === winner),
