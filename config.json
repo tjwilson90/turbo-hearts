@@ -1,6 +1,10 @@
 {
   "db_path": "turbo_hearts.db",
   "external_uri": "http://localhost:7380",
+  "fusion": {
+    "client_id": "36306d88-169e-4bc0-bda1-22e5c73ef498",
+    "client_secret": "zRW5D14f07bCedx9FdJhr8CId3hjlXJAz_-aJn_jcZ4"
+  },
   "github": {
     "client_id": "Iv1.fda3e556e72da25a",
     "client_secret": "e495478c673a45323d26efe1923c3c37fddc2738"

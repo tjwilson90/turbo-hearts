@@ -1,6 +1,7 @@
 use warp::{reject, reject::Reject, Filter, Rejection};
 
 mod endpoints;
+pub mod fusion;
 pub mod github;
 pub mod google;
 

@@ -1,5 +1,5 @@
 use crate::{
-    auth::{github, google},
+    auth::{fusion, github, google},
     config::CONFIG,
     user::Users,
 };
@@ -12,7 +12,7 @@ use warp::{Filter, Rejection, Reply};
 
 pub fn router(users: infallible!(Users), http_client: infallible!(Client)) -> reply!() {
     redirect(users, http_client)
-        .or(warp::path("auth").and(html().or(github()).or(google())))
+        .or(warp::path("auth").and(html().or(fusion()).or(github()).or(google())))
         .boxed()
 }
 
@@ -20,6 +20,24 @@ fn html() -> reply!() {
     warp::path::end()
         .and(warp::get())
         .and(warp::fs::file("auth.html"))
+}
+
+fn fusion() -> reply!() {
+    async fn handle() -> Result<impl Reply, Infallible> {
+        let state = Uuid::new_v4().to_string();
+        let redirect = fusion::auth_url(&state);
+        Ok(Response::builder()
+            .status(StatusCode::SEE_OTHER)
+            .header(header::LOCATION, redirect.to_string())
+            .header(
+                header::SET_COOKIE,
+                format!("STATE=fusion:{}; Path=/; HttpOnly; Max-Age=600", state),
+            )
+            .body("")
+            .unwrap())
+    }
+
+    warp::path!("fusion").and(warp::get()).and_then(handle)
 }
 
 fn github() -> reply!() {
@@ -79,6 +97,7 @@ fn redirect(users: infallible!(Users), http_client: infallible!(Client)) -> repl
         }
 
         let user = match provider {
+            "fusion" => fusion::exchange_code(&http_client, &query.code).await,
             "github" => github::exchange_code(&http_client, &query.code, &query.state).await,
             "google" => google::exchange_code(&http_client, &query.code).await,
             _ => panic!("Unknown provider: {}", provider),
