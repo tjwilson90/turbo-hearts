@@ -30,6 +30,8 @@ export function notCardsOf(cards: Card[], rawCards: Card[]) {
   return cards.filter(c => !set.has(c));
 }
 
+export type Action = "none" | "pass" | "charge" | "play";
+
 export namespace TurboHearts {
   export interface Player {
     type: "bot" | "human";
@@ -40,7 +42,7 @@ export namespace TurboHearts {
     limbo: Card[];
     charged: Card[];
     legalPlays: Card[];
-    toPlay: boolean;
+    action: Action;
   }
 
   export interface StateSnapshot {
@@ -73,7 +75,7 @@ export function newPlayer(type: "bot" | "human", name: string): TurboHearts.Play
     limbo: emptyArray(),
     charged: emptyArray(),
     legalPlays: emptyArray(),
-    toPlay: false
+    action: "none"
   };
 }
 
@@ -88,10 +90,10 @@ export function withDeal(player: TurboHearts.Player, cards: Card[]): TurboHearts
   };
 }
 
-export function withToPlay(player: TurboHearts.Player, toPlay: boolean, legalPlays?: Card[]): TurboHearts.Player {
+export function withAction(player: TurboHearts.Player, action: Action, legalPlays?: Card[]): TurboHearts.Player {
   return {
     ...player,
-    toPlay,
+    action,
     legalPlays: legalPlays ?? emptyArray()
   };
 }
@@ -168,14 +170,19 @@ export function withCharge(player: TurboHearts.Player, cards: Card[]) {
 export function withPlay(player: TurboHearts.Player, card: Card) {
   const plays = [...player.plays, card];
   let hand = notCardsOf(player.hand, [card]);
+  let charged = player.charged;
   if (hand.length === player.hand.length) {
-    hand = [...player.hand];
-    hand.splice(0, 1);
+    charged = notCardsOf(player.charged, [card]);
+    if (charged.length === player.charged.length) {
+      hand = [...player.hand];
+      hand.splice(0, 1);
+    }
   }
   return {
     ...player,
     plays,
     hand,
+    charged,
     legalPlays: emptyArray()
   };
 }

@@ -22,7 +22,7 @@ export class StartPassingEvent implements Event {
 
   public begin() {
     const player = getPlayerAccessor(this.th.bottomSeat, this.th.bottomSeat)(this.th);
-    this.cardPickSupport = new CardPickSupport(player.cards, this.setButtonEnabled);
+    this.cardPickSupport = new CardPickSupport(player.cards, "pass", this.setButtonEnabled);
     this.button = new Button(
       "Pass 3 Cards " + directionText[this.th.pass],
       TABLE_SIZE - CARD_DISPLAY_HEIGHT - CARD_MARGIN * 3,

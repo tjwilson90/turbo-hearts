@@ -29,7 +29,7 @@ import {
 } from "../const";
 import { groupCards } from "../events/groupCards";
 import { PlaySubmitter } from "../game/PlaySubmitter";
-import { TurboHearts } from "../game/stateSnapshot";
+import { TurboHearts, Action } from "../game/stateSnapshot";
 import {
   Animation,
   Card,
@@ -40,9 +40,12 @@ import {
   PointWithRotation,
   SpriteCard,
   PlayerSpriteCards,
-  Position
+  Position,
+  EventData
 } from "../types";
 import { StepAnimation } from "./StepAnimation";
+import { spriteCardsOf } from "../events/helpers";
+import { CardPickSupport } from "../events/animations/CardPickSupport";
 
 export function createSpriteCard(resources: PIXI.IResourceDictionary, card: Card, hidden: boolean): SpriteCard {
   const sprite = new PIXI.Sprite(hidden ? resources["BACK"].texture : resources[card].texture);
@@ -118,8 +121,18 @@ function emptyPlayerSpriteCards() {
   };
 }
 
-export class TurboHeartsAnimator {
+export type Mode = "live" | "review";
+
+interface InputParams {
+  action: Action;
+  legalPlays: Card[];
+}
+
+export class TurboHeartsStage {
   public app: PIXI.Application;
+
+  private replay = true;
+  private mode = "live";
 
   private background: PIXI.Sprite | undefined;
   private snapshots: TurboHearts.StateSnapshot[] = [];
@@ -134,6 +147,8 @@ export class TurboHeartsAnimator {
   private right: PlayerSpriteCards = emptyPlayerSpriteCards();
   private bottom: PlayerSpriteCards = emptyPlayerSpriteCards();
   private left: PlayerSpriteCards = emptyPlayerSpriteCards();
+
+  private input: CardPickSupport | undefined = undefined;
 
   constructor(
     private canvas: HTMLCanvasElement,
@@ -154,6 +169,68 @@ export class TurboHeartsAnimator {
     this.canvas.style.width = TABLE_SIZE + "px";
     this.canvas.style.height = TABLE_SIZE + "px";
     this.loadCards();
+  }
+
+  public endReplay = () => {
+    this.replay = false;
+    this.currentSnapshotIndex = this.snapshots.length - 1;
+    const state = this.snapshots[this.currentSnapshotIndex];
+    this.snapToState(state);
+    this.trackInput();
+  };
+
+  public trackInput = () => {
+    if (this.mode !== "live" || this.replay || this.currentSnapshotIndex < 0) {
+      return;
+    }
+    const state = this.snapshots[this.snapshots.length - 1];
+    const bottomSeat = this.getBottomSeat(state);
+    const player = state[bottomSeat];
+    const action = player.action;
+    console.log(this.currentSnapshotIndex, action, JSON.stringify(state[bottomSeat].legalPlays));
+    if (this.input !== undefined) {
+      if (this.input.action !== action || this.input.rawCards !== player.legalPlays) {
+        console.log("CLEAN");
+        this.input.cleanUp();
+        this.input = undefined;
+      } else {
+        console.log("ALREADY GOOD");
+      }
+    }
+    if (action !== "none" && this.input === undefined) {
+      console.log("BEGIN");
+      this.beginInput(player);
+    }
+  };
+
+  private beginInput(player: TurboHearts.Player) {
+    switch (player.action) {
+      case "pass": {
+        break;
+      }
+      case "charge": {
+        break;
+      }
+      case "play": {
+        const playableCards = [...this.bottom.hand, ...this.bottom.charged];
+        const legalPlays = spriteCardsOf(playableCards, player.legalPlays);
+        const picker = new CardPickSupport(
+          legalPlays,
+          "play",
+          () => {
+            const cards = Array.from(picker.picked.values());
+            if (cards.length !== 1) {
+              return;
+            }
+            picker.cleanUp();
+            this.submitter.playCard(cards[0].card);
+          },
+          player.legalPlays
+        );
+        this.input = picker;
+        break;
+      }
+    }
   }
 
   public acceptSnapshot = (event: { next: TurboHearts.StateSnapshot; previous: TurboHearts.StateSnapshot }) => {
@@ -343,7 +420,7 @@ export class TurboHeartsAnimator {
 
   private gameLoop = () => {
     TWEEN.update();
-    if (this.runningAnimation !== undefined && !this.runningAnimation.isFinished()) {
+    if (this.replay || (this.runningAnimation !== undefined && !this.runningAnimation.isFinished())) {
       return;
     }
 
@@ -367,6 +444,7 @@ export class TurboHeartsAnimator {
       const animation = this.getAnimation(current, next);
       this.animations.push(animation);
       this.currentSnapshotIndex++;
+      this.trackInput();
     }
   };
 }

@@ -38,7 +38,7 @@ import {
 } from "../types";
 import { pushAll, removeAll } from "../util/array";
 import { PASS_POSITION_OFFSETS, addToSeat } from "../game/snapshotter";
-import { LIMBO_POSITIONS_FOR_BOTTOM_SEAT } from "./TurboHeartsAnimator";
+import { LIMBO_POSITIONS_FOR_BOTTOM_SEAT } from "./TurboHeartsStage";
 
 const TRUE_SEAT_ORDER_FOR_BOTTOM_SEAT: { [bottomSeat in Seat]: Seat[] } = {
   // [top, right, bottom, left]
@@ -246,12 +246,12 @@ export class StepAnimation implements Animation {
       if (fromLimbo.card === "BACK" && received.length > 0) {
         fromLimbo.card = received.pop()!;
         fromLimbo.sprite.texture = this.cardTextures[fromLimbo.card].texture;
-        // fromLimbo.hidden = false;
       } else if (fromLimbo.card !== "BACK" && received.length === 0) {
         // Passing known cards into another hand
         fromLimbo.card = "BACK";
         fromLimbo.sprite.texture = this.cardTextures["BACK"].texture;
-        // fromLimbo.hidden = true;
+      } else {
+        // TODO: receiving own cards back, reveal
       }
       toPlayer.sprites.hand.push(fromLimbo);
     }
@@ -400,12 +400,6 @@ export class StepAnimation implements Animation {
           .to(cardDests[i], FAST_ANIMATION_DURATION)
           .easing(TWEEN.Easing.Quadratic.Out)
           .onComplete(() => {
-            // if (card.hidden && card.sprite.texture !== backTexture) {
-            //   card.sprite.texture = backTexture;
-            // }
-            // if (!card.hidden && card.sprite.texture === backTexture) {
-            //   card.sprite.texture = this.cardTextures[card.card].texture;
-            // }
             finished++;
             if (finished === started) {
               resolve();

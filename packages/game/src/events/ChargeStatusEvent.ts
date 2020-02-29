@@ -20,7 +20,7 @@ export class ChargeStatusEvent implements Event {
     }
     const player = getPlayerAccessor(this.th.bottomSeat, this.th.bottomSeat)(this.th);
     const chargeableCards = spriteCardsOf(player.cards, ["TC", "JD", "AH", "QS"]);
-    this.cardPickSupport = new CardPickSupport(chargeableCards);
+    this.cardPickSupport = new CardPickSupport(chargeableCards, "charge");
     this.button = new Button("Charge Cards", TABLE_SIZE - CARD_DISPLAY_HEIGHT * 1.5, this.submitCharge);
     this.button.setEnabled(true);
     this.th.app.stage.addChild(this.button.container);

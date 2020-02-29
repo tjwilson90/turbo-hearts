@@ -20,7 +20,7 @@ export class PlayStatusEvent implements Event {
     const player = getPlayerAccessor(this.th.bottomSeat, this.th.bottomSeat)(this.th);
     const playableCards = [...player.cards, ...player.chargedCards];
     const legalPlays = spriteCardsOf(playableCards, this.event.legalPlays);
-    this.cardPickSupport = new CardPickSupport(legalPlays, this.onPick);
+    this.cardPickSupport = new CardPickSupport(legalPlays, "play", this.onPick);
   }
 
   private onPick = async () => {

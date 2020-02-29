@@ -1,7 +1,8 @@
 import TWEEN from "@tweenjs/tween.js";
 import * as PIXI from "pixi.js";
-import { SpriteCard, Point } from "../../types";
+import { SpriteCard, Point, Card } from "../../types";
 import { FASTER_ANIMATION_DURATION, CARD_DISPLAY_HEIGHT } from "../../const";
+import { Action } from "../../game/stateSnapshot";
 
 export class CardPickSupport {
   public picked: Set<SpriteCard> = new Set();
@@ -10,7 +11,12 @@ export class CardPickSupport {
   private cardMap: Map<PIXI.Sprite, SpriteCard> = new Map();
   private cardTweens: Map<PIXI.Sprite, TWEEN.Tween> = new Map();
 
-  constructor(private cards: SpriteCard[], private onPick?: () => void) {
+  constructor(
+    public cards: SpriteCard[],
+    public action: Action,
+    private onPick?: () => void,
+    public rawCards: Card[] = []
+  ) {
     for (const card of this.cards) {
       this.cardMap.set(card.sprite, card);
       this.initialPosition.set(card, card.sprite.position.y);

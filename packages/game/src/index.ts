@@ -21,7 +21,7 @@ import { PlayEvent } from "./events/PlayEvent";
 import { EndTrickEvent } from "./events/EndTrickEvent";
 import { GameCompleteEvent } from "./events/GameCompleteEvent";
 import { Snapshotter } from "./game/snapshotter";
-import { TurboHeartsAnimator } from "./view/TurboHeartsAnimator";
+import { TurboHeartsStage } from "./view/TurboHeartsStage";
 
 document.addEventListener("DOMContentLoaded", () => {
   const userId = cookie.parse(document.cookie)["NAME"];
@@ -106,17 +106,24 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const snapshotter = new Snapshotter(userId);
   eventSource.on("event", snapshotter.onEvent);
+  snapshotter.on("snapshot", e => console.log(e));
 
   function start() {
     eventSource.connect();
   }
 
-  const animator = new TurboHeartsAnimator(
+  const animator = new TurboHeartsStage(
     document.getElementById("turbo-hearts-new") as HTMLCanvasElement,
     userId,
     submitter,
     start
   );
   snapshotter.on("snapshot", animator.acceptSnapshot);
+  eventSource.once("end_replay", () => {
+    animator.endReplay();
+    // eventSource.on("pass_status", animator.trackInput);
+    // eventSource.on("charge_status", animator.trackInput);
+    // eventSource.on("play_status", animator.trackInput);
+  });
   new ChatInput(document.getElementById("chat-input") as HTMLTextAreaElement, gameId);
 });

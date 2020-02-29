@@ -9,7 +9,7 @@ import {
   withPlay,
   withReceivePass,
   withSentPass,
-  withToPlay
+  withAction
 } from "./stateSnapshot";
 import { EventEmitter } from "eventemitter3";
 
@@ -74,10 +74,10 @@ export class Snapshotter {
           ...previous,
           index: previous.index + 1,
           event,
-          north: withToPlay(previous.north, !event.northDone),
-          east: withToPlay(previous.east, !event.eastDone),
-          south: withToPlay(previous.south, !event.southDone),
-          west: withToPlay(previous.west, !event.westDone)
+          north: withAction(previous.north, event.northDone ? "none" : "pass"),
+          east: withAction(previous.east, event.eastDone ? "none" : "pass"),
+          south: withAction(previous.south, event.southDone ? "none" : "pass"),
+          west: withAction(previous.west, event.westDone ? "none" : "pass")
         });
         break;
       }
@@ -113,10 +113,10 @@ export class Snapshotter {
           ...previous,
           index: previous.index + 1,
           event,
-          north: withToPlay(previous.north, !event.northDone),
-          east: withToPlay(previous.east, !event.eastDone),
-          south: withToPlay(previous.south, !event.southDone),
-          west: withToPlay(previous.west, !event.westDone)
+          north: withAction(previous.north, event.northDone ? "none" : "charge"),
+          east: withAction(previous.east, event.eastDone ? "none" : "charge"),
+          south: withAction(previous.south, event.southDone ? "none" : "charge"),
+          west: withAction(previous.west, event.westDone ? "none" : "charge")
         });
         break;
       }
@@ -138,11 +138,11 @@ export class Snapshotter {
           ...previous,
           index: previous.index + 1,
           event,
-          north: withToPlay(previous.north, false),
-          east: withToPlay(previous.east, false),
-          south: withToPlay(previous.south, false),
-          west: withToPlay(previous.west, false),
-          [event.nextPlayer]: withToPlay(player, true, event.legalPlays)
+          north: withAction(previous.north, "none"),
+          east: withAction(previous.east, "none"),
+          south: withAction(previous.south, "none"),
+          west: withAction(previous.west, "none"),
+          [event.nextPlayer]: withAction(player, "play", event.legalPlays)
         });
         break;
       }

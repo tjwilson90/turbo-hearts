@@ -69,6 +69,10 @@ export class TurboHeartsEventSource {
     this.emitter.off(event, fn);
   }
 
+  public once(event: EventType, fn: (event: EventData) => void) {
+    this.emitter.once(event, fn);
+  }
+
   private handleEvent = (event: MessageEvent) => {
     const rawEvent: EventData = unrustify(JSON.parse(event.data) as EventData);
     this.emitter.emit("event", rawEvent);
