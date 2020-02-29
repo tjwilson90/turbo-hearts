@@ -14,6 +14,7 @@ pub static CONFIG: Lazy<Config> = Lazy::new(|| {
 pub struct Config {
     pub db_path: String,
     pub external_uri: String,
+    pub fusion: OAuthCredentials,
     pub github: OAuthCredentials,
     pub google: OAuthCredentials,
     pub port: u16,
