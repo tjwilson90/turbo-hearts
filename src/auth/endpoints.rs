@@ -19,7 +19,7 @@ pub fn router(users: infallible!(Users), http_client: infallible!(Client)) -> re
 fn html() -> reply!() {
     warp::path::end()
         .and(warp::get())
-        .and(warp::fs::file("auth.html"))
+        .and(warp::fs::file("./assets/auth/index.html"))
 }
 
 fn fusion() -> reply!() {
