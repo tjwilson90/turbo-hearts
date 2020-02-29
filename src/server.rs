@@ -3,15 +3,15 @@ use crate::{
     cards::{Card, Cards},
     db::Database,
     error::CardsError,
-    game::{GameEvent, Games},
-    lobby::{Lobby, LobbyEvent},
+    game::{event::GameEvent, Games},
+    lobby::{event::LobbyEvent, Lobby},
     types::{ChargingRules, GameId, Participant, Player, Seat, UserId},
 };
 use log::info;
 use rand_distr::Gamma;
 use rusqlite::{Transaction, NO_PARAMS};
 use std::collections::{HashMap, HashSet};
-use tokio::{sync::mpsc::UnboundedReceiver, task};
+use tokio::{stream::StreamExt, sync::mpsc::UnboundedReceiver, task, time, time::Duration};
 
 #[derive(Clone)]
 pub struct Server {
@@ -56,6 +56,15 @@ impl Server {
                 task::spawn(bot.run(self.clone(), game_id));
             }
         }
+    }
+
+    pub fn start_background_pings(self) {
+        tokio::task::spawn(async move {
+            let mut stream = time::interval(Duration::from_secs(15));
+            while let Some(_) = stream.next().await {
+                self.ping_event_streams().await;
+            }
+        });
     }
 
     pub async fn ping_event_streams(&self) {

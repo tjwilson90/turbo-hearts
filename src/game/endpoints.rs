@@ -1,4 +1,5 @@
 use crate::{
+    auth,
     cards::{Card, Cards},
     endpoint,
     server::Server,
@@ -7,15 +8,31 @@ use crate::{
 use serde::Deserialize;
 use warp::{sse, Filter, Rejection, Reply};
 
-pub fn html() -> reply!() {
-    warp::path!("game")
+pub fn router(server: infallible!(Server), user_id: rejection!(UserId)) -> reply!() {
+    warp::path("game")
+        .and(
+            html()
+                .or(subscribe(server.clone(), user_id.clone()))
+                .or(pass_cards(server.clone(), user_id.clone()))
+                .or(charge_cards(server.clone(), user_id.clone()))
+                .or(play_card(server.clone(), user_id.clone()))
+                .or(claim(server.clone(), user_id.clone()))
+                .or(accept_claim(server.clone(), user_id.clone()))
+                .or(reject_claim(server.clone(), user_id.clone()))
+                .or(chat(server, user_id)),
+        )
+        .boxed()
+}
+
+fn html() -> reply!() {
+    warp::path::end()
         .and(warp::get())
-        .and(crate::auth_flow())
+        .and(auth::redirect_if_necessary())
         .untuple_one()
         .and(warp::fs::file("game.html"))
 }
 
-pub fn subscribe(server: infallible!(Server), user_id: rejection!(UserId)) -> reply!() {
+fn subscribe(server: infallible!(Server), user_id: rejection!(UserId)) -> reply!() {
     async fn handle(
         game_id: GameId,
         server: Server,
@@ -25,14 +42,14 @@ pub fn subscribe(server: infallible!(Server), user_id: rejection!(UserId)) -> re
         Ok(sse::reply(endpoint::as_stream(rx)))
     }
 
-    warp::path!("game" / "subscribe" / GameId)
+    warp::path!("subscribe" / GameId)
         .and(warp::get())
         .and(server)
         .and(user_id)
         .and_then(handle)
 }
 
-pub fn pass_cards(server: infallible!(Server), user_id: rejection!(UserId)) -> reply!() {
+fn pass_cards(server: infallible!(Server), user_id: rejection!(UserId)) -> reply!() {
     #[derive(Debug, Deserialize)]
     struct Request {
         game_id: GameId,
@@ -49,7 +66,7 @@ pub fn pass_cards(server: infallible!(Server), user_id: rejection!(UserId)) -> r
         Ok(warp::reply())
     }
 
-    warp::path!("game" / "pass")
+    warp::path!("pass")
         .and(warp::post())
         .and(server)
         .and(user_id)
@@ -57,7 +74,7 @@ pub fn pass_cards(server: infallible!(Server), user_id: rejection!(UserId)) -> r
         .and_then(handle)
 }
 
-pub fn charge_cards(server: infallible!(Server), user_id: rejection!(UserId)) -> reply!() {
+fn charge_cards(server: infallible!(Server), user_id: rejection!(UserId)) -> reply!() {
     #[derive(Debug, Deserialize)]
     struct Request {
         game_id: GameId,
@@ -74,7 +91,7 @@ pub fn charge_cards(server: infallible!(Server), user_id: rejection!(UserId)) ->
         Ok(warp::reply())
     }
 
-    warp::path!("game" / "charge")
+    warp::path!("charge")
         .and(warp::post())
         .and(server)
         .and(user_id)
@@ -82,7 +99,7 @@ pub fn charge_cards(server: infallible!(Server), user_id: rejection!(UserId)) ->
         .and_then(handle)
 }
 
-pub fn play_card(server: infallible!(Server), user_id: rejection!(UserId)) -> reply!() {
+fn play_card(server: infallible!(Server), user_id: rejection!(UserId)) -> reply!() {
     #[derive(Debug, Deserialize)]
     struct Request {
         game_id: GameId,
@@ -99,7 +116,7 @@ pub fn play_card(server: infallible!(Server), user_id: rejection!(UserId)) -> re
         Ok(warp::reply())
     }
 
-    warp::path!("game" / "play")
+    warp::path!("play")
         .and(warp::post())
         .and(server)
         .and(user_id)
@@ -107,7 +124,7 @@ pub fn play_card(server: infallible!(Server), user_id: rejection!(UserId)) -> re
         .and_then(handle)
 }
 
-pub fn claim(server: infallible!(Server), user_id: rejection!(UserId)) -> reply!() {
+fn claim(server: infallible!(Server), user_id: rejection!(UserId)) -> reply!() {
     #[derive(Debug, Deserialize)]
     struct Request {
         game_id: GameId,
@@ -123,7 +140,7 @@ pub fn claim(server: infallible!(Server), user_id: rejection!(UserId)) -> reply!
         Ok(warp::reply())
     }
 
-    warp::path!("game" / "claim")
+    warp::path!("claim")
         .and(warp::post())
         .and(server)
         .and(user_id)
@@ -131,7 +148,7 @@ pub fn claim(server: infallible!(Server), user_id: rejection!(UserId)) -> reply!
         .and_then(handle)
 }
 
-pub fn accept_claim(server: infallible!(Server), user_id: rejection!(UserId)) -> reply!() {
+fn accept_claim(server: infallible!(Server), user_id: rejection!(UserId)) -> reply!() {
     #[derive(Debug, Deserialize)]
     struct Request {
         game_id: GameId,
@@ -148,7 +165,7 @@ pub fn accept_claim(server: infallible!(Server), user_id: rejection!(UserId)) ->
         Ok(warp::reply())
     }
 
-    warp::path!("game" / "accept_claim")
+    warp::path!("accept_claim")
         .and(warp::post())
         .and(server)
         .and(user_id)
@@ -156,7 +173,7 @@ pub fn accept_claim(server: infallible!(Server), user_id: rejection!(UserId)) ->
         .and_then(handle)
 }
 
-pub fn reject_claim(server: infallible!(Server), user_id: rejection!(UserId)) -> reply!() {
+fn reject_claim(server: infallible!(Server), user_id: rejection!(UserId)) -> reply!() {
     #[derive(Debug, Deserialize)]
     struct Request {
         game_id: GameId,
@@ -173,7 +190,7 @@ pub fn reject_claim(server: infallible!(Server), user_id: rejection!(UserId)) ->
         Ok(warp::reply())
     }
 
-    warp::path!("game" / "reject_claim")
+    warp::path!("reject_claim")
         .and(warp::post())
         .and(server)
         .and(user_id)
@@ -181,7 +198,7 @@ pub fn reject_claim(server: infallible!(Server), user_id: rejection!(UserId)) ->
         .and_then(handle)
 }
 
-pub fn chat(server: infallible!(Server), user_id: rejection!(UserId)) -> reply!() {
+fn chat(server: infallible!(Server), user_id: rejection!(UserId)) -> reply!() {
     #[derive(Debug, Deserialize)]
     struct Request {
         game_id: GameId,
@@ -198,7 +215,7 @@ pub fn chat(server: infallible!(Server), user_id: rejection!(UserId)) -> reply!(
         Ok(warp::reply())
     }
 
-    warp::path!("game" / "chat")
+    warp::path!("chat")
         .and(warp::post())
         .and(server)
         .and(user_id)

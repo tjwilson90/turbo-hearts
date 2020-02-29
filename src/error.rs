@@ -1,9 +1,10 @@
 use crate::{
     auth::RedirectToAuthChooser,
     cards::{Cards, GamePhase},
+    config::CONFIG,
     types::{GameId, UserId},
 };
-use http::{Response, StatusCode};
+use http::{header, Response, StatusCode};
 use rusqlite::ErrorCode;
 use std::convert::Infallible;
 use thiserror::Error;
@@ -98,31 +99,27 @@ impl From<CardsError> for Rejection {
     }
 }
 
-pub async fn handle_rejection(err: Rejection) -> Result<Box<dyn Reply>, Infallible> {
-    Ok(
-        if let Some(redirect) = err.find::<RedirectToAuthChooser>() {
-            Box::new(redirect.to_reply())
-        } else if let Some(error) = err.find::<CardsError>() {
-            Box::new(
-                Response::builder()
-                    .status(error.status_code())
-                    .body(error.to_string())
-                    .unwrap(),
-            )
-        } else if err.is_not_found() {
-            Box::new(
-                Response::builder()
-                    .status(StatusCode::NOT_FOUND)
-                    .body("")
-                    .unwrap(),
-            )
-        } else {
-            Box::new(
-                Response::builder()
-                    .status(StatusCode::INTERNAL_SERVER_ERROR)
-                    .body(format!("{:?}", err))
-                    .unwrap(),
-            )
-        },
-    )
+pub async fn handle_rejection(err: Rejection) -> Result<impl Reply, Infallible> {
+    Ok(if let Some(_) = err.find::<RedirectToAuthChooser>() {
+        Response::builder()
+            .status(StatusCode::SEE_OTHER)
+            .header(header::LOCATION, format!("{}/auth", &CONFIG.external_uri))
+            .body(String::new())
+            .unwrap()
+    } else if let Some(error) = err.find::<CardsError>() {
+        Response::builder()
+            .status(error.status_code())
+            .body(error.to_string())
+            .unwrap()
+    } else if err.is_not_found() {
+        Response::builder()
+            .status(StatusCode::NOT_FOUND)
+            .body(String::new())
+            .unwrap()
+    } else {
+        Response::builder()
+            .status(StatusCode::INTERNAL_SERVER_ERROR)
+            .body(format!("{:?}", err))
+            .unwrap()
+    })
 }

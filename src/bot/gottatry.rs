@@ -1,7 +1,7 @@
 use crate::{
     bot::{duck::Duck, random::Random, Algorithm, BotState},
     cards::{Card, Cards},
-    game::GameEvent,
+    game::event::GameEvent,
 };
 
 pub struct GottaTry;
