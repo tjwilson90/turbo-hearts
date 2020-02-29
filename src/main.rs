@@ -1,6 +1,6 @@
 use crate::{
-    auth::AuthFlow, config::CONFIG, db::Database, error::CardsError, server::Server, types::UserId,
-    user::Users,
+    auth::RedirectToAuthChooser, config::CONFIG, db::Database, error::CardsError, server::Server,
+    types::UserId, user::Users,
 };
 use r2d2_sqlite::SqliteConnectionManager;
 use rand_distr::Gamma;
@@ -37,7 +37,7 @@ pub fn auth_flow() -> rejection!(()) {
     async fn handle(path: FullPath, auth_token: Option<String>) -> Result<(), Rejection> {
         match auth_token {
             Some(_) => Ok(()),
-            None => Err(AuthFlow(path).into()),
+            None => Err(RedirectToAuthChooser(path).into()),
         }
     }
 
@@ -99,7 +99,9 @@ async fn main() -> Result<(), CardsError> {
         .or(endpoint::assets())
         .boxed()
         .or(endpoint::users(users.clone()))
-        .or(auth::auth_redirect(users, http_client))
+        .or(auth::html())
+        .or(auth::google())
+        .or(auth::redirect(users, http_client))
         .recover(error::handle_rejection);
     warp::serve(app).run(([127, 0, 0, 1], CONFIG.port)).await;
     Ok(())

@@ -31,6 +31,7 @@ impl Database {
                 external_id TEXT NOT NULL,
                 PRIMARY KEY (user_id)
             );
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_user ON user (realm, external_id);
             CREATE TABLE IF NOT EXISTS auth_token (
                 token TEXT NOT NULL,
                 user_id TEXT NOT NULL,

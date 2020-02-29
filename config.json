@@ -1,7 +1,13 @@
 {
-  "client_id": "73789288273-d4mup4ub4lta3viufh68q4bsqldmu4lf.apps.googleusercontent.com",
-  "client_secret": "YQDwB6gLVXT3Q_pBBihCuZCj",
   "db_path": "turbo_hearts.db",
   "external_uri": "http://localhost:7380",
+  "github": {
+    "client_id": "foo",
+    "client_secret": "bar"
+  },
+  "google": {
+    "client_id": "73789288273-d4mup4ub4lta3viufh68q4bsqldmu4lf.apps.googleusercontent.com",
+    "client_secret": "YQDwB6gLVXT3Q_pBBihCuZCj"
+  },
   "port": 7380
 }
