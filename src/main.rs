@@ -47,9 +47,9 @@ async fn main() -> Result<(), CardsError> {
     let user_id = user_id(users.clone());
 
     let app = endpoint::assets()
-        .or(game::endpoints::router(server.clone(), user_id.clone()))
-        .or(lobby::endpoints::router(server, user_id))
-        .or(auth::endpoints::router(users.clone(), http_client))
+        .or(game::router(server.clone(), user_id.clone()))
+        .or(lobby::router(server, user_id))
+        .or(auth::router(users.clone(), http_client))
         .or(endpoint::users(users))
         .recover(error::handle_rejection);
     warp::serve(app).run(([127, 0, 0, 1], CONFIG.port)).await;

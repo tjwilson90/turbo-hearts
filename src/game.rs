@@ -2,7 +2,6 @@ use crate::{
     cards::{Card, Cards, GamePhase, GameState, PassDirection},
     db::Database,
     error::CardsError,
-    game::event::GameEvent,
     types::{GameId, Participant, Seat, UserId},
 };
 use rand::seq::SliceRandom;
@@ -17,8 +16,11 @@ use tokio::sync::{
     Mutex,
 };
 
-pub mod endpoints;
-pub mod event;
+mod endpoints;
+mod event;
+
+pub use endpoints::*;
+pub use event::*;
 
 #[derive(Clone)]
 pub struct Games {

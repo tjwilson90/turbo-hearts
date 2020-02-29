@@ -2,7 +2,7 @@ use crate::{
     bot::{duck::Duck, gottatry::GottaTry, random::Random},
     cards::{Card, Cards, GameState},
     error::CardsError,
-    game::event::GameEvent,
+    game::GameEvent,
     server::Server,
     types::{GameId, Seat, UserId},
 };
