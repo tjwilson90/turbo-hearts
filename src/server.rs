@@ -3,8 +3,8 @@ use crate::{
     cards::{Card, Cards},
     db::Database,
     error::CardsError,
-    game::{event::GameEvent, Games},
-    lobby::{event::LobbyEvent, Lobby},
+    game::{GameEvent, Games},
+    lobby::{Lobby, LobbyEvent},
     types::{ChargingRules, GameId, Participant, Player, Seat, UserId},
 };
 use log::info;
@@ -21,6 +21,7 @@ pub struct Server {
 }
 
 impl Server {
+    #[cfg(test)]
     pub fn with_fast_bots(db: Database) -> Result<Self, CardsError> {
         Server::new(db, None)
     }

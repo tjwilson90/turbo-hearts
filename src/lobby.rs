@@ -1,6 +1,5 @@
 use crate::{
     error::CardsError,
-    lobby::event::LobbyEvent,
     types::{ChargingRules, GameId, Participant, Player, UserId},
 };
 use std::{
@@ -12,8 +11,11 @@ use tokio::sync::{
     Mutex,
 };
 
-pub mod endpoints;
-pub mod event;
+mod endpoints;
+mod event;
+
+pub use endpoints::*;
+pub use event::*;
 
 #[derive(Clone)]
 pub struct Lobby {

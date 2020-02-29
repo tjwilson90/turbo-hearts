@@ -1,5 +1,5 @@
 use crate::{
-    game::event::GameEvent,
+    game::GameEvent,
     types::{ChargingRules, Seat, UserId},
 };
 use serde::{

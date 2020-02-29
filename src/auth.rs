@@ -1,7 +1,10 @@
 use warp::{reject, reject::Reject, Filter, Rejection};
 
-pub mod endpoints;
+mod endpoints;
+pub mod github;
 pub mod google;
+
+pub use endpoints::*;
 
 #[derive(Debug)]
 pub struct RedirectToAuthChooser;
