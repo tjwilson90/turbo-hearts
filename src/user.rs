@@ -17,6 +17,13 @@ pub struct User {
     pub external_id: String,
 }
 
+#[derive(Debug)]
+pub struct ExternalUser {
+    pub name: String,
+    pub realm: String,
+    pub external_id: String,
+}
+
 struct Cache {
     auth_tokens: HashMap<String, UserId>,
     users: HashMap<UserId, User>,
@@ -139,22 +146,41 @@ impl Users {
         Ok(cached)
     }
 
-    pub async fn insert(&self, auth_token: String, user: User) -> Result<(), CardsError> {
-        self.db.run_with_retry(|tx| {
+    pub async fn insert(&self, auth_token: String, user: ExternalUser) -> Result<User, CardsError> {
+        let id = self.db.run_with_retry(|tx| {
+            let mut id = UserId::new();
+            let edits = tx.execute::<&[&dyn ToSql]>(
+                "INSERT INTO user (user_id, name, realm, external_id)
+                    VALUES (?, ?, ?, ?) ON CONFLICT DO NOTHING",
+                &[&id, &user.name, &user.realm, &user.external_id],
+            )?;
+            if edits == 0 {
+                id = tx.query_row_and_then(
+                    "SELECT user_id FROM user WHERE realm = ? and external_id = ?",
+                    &[&user.realm, &user.external_id],
+                    |row| row.get::<_, UserId>(0),
+                )?;
+            }
             tx.execute::<&[&dyn ToSql]>(
                 "INSERT INTO auth_token (token, user_id)
                     VALUES (?, ?) ON CONFLICT DO NOTHING",
-                &[&auth_token, &user.id],
+                &[&auth_token, &id],
             )?;
-            tx.execute::<&[&dyn ToSql]>(
-                "INSERT INTO user (user_id, name, realm, external_id)
-                    VALUES (?, ?, ?, ?) ON CONFLICT DO NOTHING",
-                &[&user.id, &user.name, &user.realm, &user.external_id],
-            )?;
-            Ok(())
+            Ok(id)
         })?;
         let mut cache = self.cache.lock().await;
-        cache.insert_with_token(auth_token, user);
-        Ok(())
+        let ExternalUser {
+            name,
+            realm,
+            external_id,
+        } = user;
+        let user = User {
+            id,
+            name,
+            realm,
+            external_id,
+        };
+        cache.insert_with_token(auth_token, user.clone());
+        Ok(user)
     }
 }
