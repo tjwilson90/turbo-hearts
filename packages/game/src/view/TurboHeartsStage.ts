@@ -25,11 +25,13 @@ import {
   LIMBO_LEFT,
   LIMBO_TOP_RIGHT,
   LIMBO_BOTTOM,
-  CARD_DROP_SHADOW
+  CARD_DROP_SHADOW,
+  CARD_DISPLAY_HEIGHT,
+  CARD_MARGIN
 } from "../const";
 import { groupCards } from "../events/groupCards";
 import { PlaySubmitter } from "../game/PlaySubmitter";
-import { TurboHearts, Action } from "../game/stateSnapshot";
+import { TurboHearts, Action, cardsOf } from "../game/stateSnapshot";
 import {
   Animation,
   Card,
@@ -46,6 +48,9 @@ import {
 import { StepAnimation } from "./StepAnimation";
 import { spriteCardsOf } from "../events/helpers";
 import { CardPickSupport } from "../events/animations/CardPickSupport";
+import { Button } from "../ui/Button";
+
+const CHARGEABLE_CARDS: Card[] = ["TC", "JD", "AH", "QS"];
 
 export function createSpriteCard(resources: PIXI.IResourceDictionary, card: Card, hidden: boolean): SpriteCard {
   const sprite = new PIXI.Sprite(hidden ? resources["BACK"].texture : resources[card].texture);
@@ -111,6 +116,13 @@ export const LIMBO_POSITIONS_FOR_BOTTOM_SEAT: {
   }
 };
 
+const directionText: { [P in Pass]: string } = {
+  left: "Left",
+  right: "Right",
+  across: "Across",
+  keeper: "In"
+};
+
 function emptyPlayerSpriteCards() {
   return {
     hand: [],
@@ -149,6 +161,7 @@ export class TurboHeartsStage {
   private left: PlayerSpriteCards = emptyPlayerSpriteCards();
 
   private input: CardPickSupport | undefined = undefined;
+  private button: Button | undefined = undefined;
 
   constructor(
     private canvas: HTMLCanvasElement,
@@ -189,10 +202,10 @@ export class TurboHeartsStage {
     const action = player.action;
     console.log(this.currentSnapshotIndex, action, JSON.stringify(state[bottomSeat].legalPlays));
     if (this.input !== undefined) {
+      // TODO: player.legalPlays isn't sufficient for pass/charge
       if (this.input.action !== action || this.input.rawCards !== player.legalPlays) {
         console.log("CLEAN");
-        this.input.cleanUp();
-        this.input = undefined;
+        this.endInput();
       } else {
         console.log("ALREADY GOOD");
       }
@@ -203,12 +216,50 @@ export class TurboHeartsStage {
     }
   };
 
+  private endInput() {
+    if (this.input !== undefined) {
+      this.input.cleanUp();
+      this.input = undefined;
+    }
+    if (this.button !== undefined) {
+      this.app.stage.removeChild(this.button.container);
+      this.button = undefined;
+    }
+  }
+
   private beginInput(player: TurboHearts.Player) {
+    const state = this.snapshots[this.snapshots.length - 1];
     switch (player.action) {
       case "pass": {
+        this.button = new Button(
+          "Pass 3 Cards " + directionText[state.pass],
+          TABLE_SIZE - CARD_DISPLAY_HEIGHT - CARD_MARGIN * 3,
+          () => {
+            this.submitter.passCards([...this.input!.picked.values()].map(c => c.card));
+          }
+        );
+        this.button.setEnabled(false);
+        const picker = new CardPickSupport(
+          this.bottom.hand,
+          "pass",
+          () => {
+            this.button?.setEnabled(picker.picked.size === 3);
+          },
+          player.hand
+        );
+        this.input = picker;
+        this.app.stage.addChild(this.button.container);
         break;
       }
       case "charge": {
+        this.button = new Button("Charge Cards", TABLE_SIZE - CARD_DISPLAY_HEIGHT * 1.5, () => {
+          this.submitter.chargeCards([...this.input!.picked.values()].map(c => c.card));
+        });
+        this.button.setEnabled(true);
+        const chargeableCards = spriteCardsOf(this.bottom.hand, CHARGEABLE_CARDS);
+        const legalCharges = cardsOf(player.hand, CHARGEABLE_CARDS);
+        this.input = new CardPickSupport(chargeableCards, "charge", () => {}, legalCharges);
+        this.app.stage.addChild(this.button.container);
         break;
       }
       case "play": {
