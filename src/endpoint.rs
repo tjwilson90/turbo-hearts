@@ -1,4 +1,5 @@
 use crate::{
+    auth,
     types::{Event, UserId},
     user::{User, Users},
 };
@@ -10,12 +11,9 @@ use tokio::{
 };
 use warp::{sse, sse::ServerSentEvent, Filter, Rejection, Reply};
 
-pub mod game;
-pub mod lobby;
-
 pub fn assets() -> reply!() {
     warp::path("assets")
-        .and(crate::auth_flow())
+        .and(auth::redirect_if_necessary())
         .untuple_one()
         .and(warp::fs::dir("./assets"))
 }
@@ -44,7 +42,7 @@ pub fn users(users: infallible!(Users)) -> reply!() {
         .and_then(handle)
 }
 
-fn as_stream<E>(
+pub fn as_stream<E>(
     rx: UnboundedReceiver<E>,
 ) -> impl Stream<Item = Result<impl ServerSentEvent, warp::Error>>
 where

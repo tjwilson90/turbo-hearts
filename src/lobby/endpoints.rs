@@ -1,5 +1,5 @@
 use crate::{
-    endpoint,
+    auth, endpoint,
     server::Server,
     types::{ChargingRules, GameId, Player, UserId},
 };
@@ -7,28 +7,43 @@ use serde::Deserialize;
 use std::convert::Infallible;
 use warp::{sse, Filter, Rejection, Reply};
 
-pub fn html() -> reply!() {
-    warp::path!("lobby")
+pub fn router(server: infallible!(Server), user_id: rejection!(UserId)) -> reply!() {
+    warp::path("lobby")
+        .and(
+            html()
+                .or(subscribe(server.clone(), user_id.clone()))
+                .or(new_game(server.clone(), user_id.clone()))
+                .or(join_game(server.clone(), user_id.clone()))
+                .or(leave_game(server.clone(), user_id.clone()))
+                .or(add_bot(server.clone()))
+                .or(remove_bot(server.clone()))
+                .or(chat(server, user_id)),
+        )
+        .boxed()
+}
+
+fn html() -> reply!() {
+    warp::path::end()
         .and(warp::get())
-        .and(crate::auth_flow())
+        .and(auth::redirect_if_necessary())
         .untuple_one()
         .and(warp::fs::file("lobby.html"))
 }
 
-pub fn subscribe(server: infallible!(Server), user_id: rejection!(UserId)) -> reply!() {
+fn subscribe(server: infallible!(Server), user_id: rejection!(UserId)) -> reply!() {
     async fn handle(server: Server, user_id: UserId) -> Result<impl Reply, Infallible> {
         let rx = server.subscribe_lobby(user_id).await;
         Ok(sse::reply(endpoint::as_stream(rx)))
     }
 
-    warp::path!("lobby" / "subscribe")
+    warp::path!("subscribe")
         .and(warp::get())
         .and(server)
         .and(user_id)
         .and_then(handle)
 }
 
-pub fn new_game(server: infallible!(Server), user_id: rejection!(UserId)) -> reply!() {
+fn new_game(server: infallible!(Server), user_id: rejection!(UserId)) -> reply!() {
     #[derive(Debug, Deserialize)]
     struct Request {
         rules: ChargingRules,
@@ -44,7 +59,7 @@ pub fn new_game(server: infallible!(Server), user_id: rejection!(UserId)) -> rep
         Ok(warp::reply::json(&game_id))
     }
 
-    warp::path!("lobby" / "new")
+    warp::path!("new")
         .and(warp::post())
         .and(server)
         .and(user_id)
@@ -52,7 +67,7 @@ pub fn new_game(server: infallible!(Server), user_id: rejection!(UserId)) -> rep
         .and_then(handle)
 }
 
-pub fn join_game(server: infallible!(Server), user_id: rejection!(UserId)) -> reply!() {
+fn join_game(server: infallible!(Server), user_id: rejection!(UserId)) -> reply!() {
     #[derive(Debug, Deserialize)]
     struct Request {
         game_id: GameId,
@@ -71,7 +86,7 @@ pub fn join_game(server: infallible!(Server), user_id: rejection!(UserId)) -> re
         Ok(warp::reply::json(&players))
     }
 
-    warp::path!("lobby" / "join")
+    warp::path!("join")
         .and(warp::post())
         .and(server)
         .and(user_id)
@@ -79,7 +94,7 @@ pub fn join_game(server: infallible!(Server), user_id: rejection!(UserId)) -> re
         .and_then(handle)
 }
 
-pub fn leave_game(server: infallible!(Server), user_id: rejection!(UserId)) -> reply!() {
+fn leave_game(server: infallible!(Server), user_id: rejection!(UserId)) -> reply!() {
     #[derive(Debug, Deserialize)]
     struct Request {
         game_id: GameId,
@@ -95,7 +110,7 @@ pub fn leave_game(server: infallible!(Server), user_id: rejection!(UserId)) -> r
         Ok(warp::reply())
     }
 
-    warp::path!("lobby" / "leave")
+    warp::path!("leave")
         .and(warp::post())
         .and(server)
         .and(user_id)
@@ -103,7 +118,7 @@ pub fn leave_game(server: infallible!(Server), user_id: rejection!(UserId)) -> r
         .and_then(handle)
 }
 
-pub fn add_bot(server: infallible!(Server)) -> reply!() {
+fn add_bot(server: infallible!(Server)) -> reply!() {
     #[derive(Debug, Deserialize)]
     struct Request {
         game_id: GameId,
@@ -126,14 +141,14 @@ pub fn add_bot(server: infallible!(Server)) -> reply!() {
         Ok(warp::reply::json(&bot_id))
     }
 
-    warp::path!("lobby" / "add_bot")
+    warp::path!("add_bot")
         .and(warp::post())
         .and(server)
         .and(warp::body::json())
         .and_then(handle)
 }
 
-pub fn remove_bot(server: infallible!(Server)) -> reply!() {
+fn remove_bot(server: infallible!(Server)) -> reply!() {
     #[derive(Debug, Deserialize)]
     struct Request {
         game_id: GameId,
@@ -146,14 +161,14 @@ pub fn remove_bot(server: infallible!(Server)) -> reply!() {
         Ok(warp::reply())
     }
 
-    warp::path!("lobby" / "remove_bot")
+    warp::path!("remove_bot")
         .and(warp::post())
         .and(server)
         .and(warp::body::json())
         .and_then(handle)
 }
 
-pub fn chat(server: infallible!(Server), user_id: rejection!(UserId)) -> reply!() {
+fn chat(server: infallible!(Server), user_id: rejection!(UserId)) -> reply!() {
     #[derive(Debug, Deserialize)]
     struct Request {
         message: String,
@@ -169,7 +184,7 @@ pub fn chat(server: infallible!(Server), user_id: rejection!(UserId)) -> reply!(
         Ok(warp::reply())
     }
 
-    warp::path!("lobby" / "chat")
+    warp::path!("chat")
         .and(warp::post())
         .and(server)
         .and(user_id)
