@@ -1,5 +1,5 @@
 import { Card, EventData, Pass } from "../types";
-import { emptyArray } from "../util/array";
+import { emptyArray, pushAll } from "../util/array";
 import { sortCards } from "./sortCards";
 
 export const EMPTY_HAND: Card[] = [
@@ -121,7 +121,8 @@ export function withReceivePass(
   passCards: Card[]
 ): { from: TurboHearts.Player; to: TurboHearts.Player } {
   if (fromPlayer === toPlayer) {
-    const combined = [...toPlayer.hand, ...passCards];
+    const actualPassCards = passCards.length === 0 ? EMPTY_PASS : passCards;
+    const combined = [...toPlayer.hand, ...actualPassCards];
     sortCards(combined);
     const self: TurboHearts.Player = {
       ...toPlayer,

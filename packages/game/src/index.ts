@@ -103,12 +103,12 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   const animator = new TurboHeartsStage(
-    document.getElementById("turbo-hearts-new") as HTMLCanvasElement,
+    document.getElementById("turbo-hearts") as HTMLCanvasElement,
     userId,
     submitter,
     start
   );
   snapshotter.on("snapshot", animator.acceptSnapshot);
-  eventSource.once("end_replay", () => animator.endReplay);
+  eventSource.once("end_replay", animator.endReplay);
   new ChatInput(document.getElementById("chat-input") as HTMLTextAreaElement, gameId);
 });
