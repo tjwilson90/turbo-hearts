@@ -324,6 +324,7 @@ export class TurboHeartsStage {
         next.event.type === "send_pass" ||
         next.event.type === "charge"
       ) {
+        console.log("STEP");
         return new StepAnimation(
           this.app.loader.resources,
           this.createCard,
@@ -342,6 +343,7 @@ export class TurboHeartsStage {
       return noopAnimation();
     }
     if (next.event.type === "sit") {
+      console.log("SNAP");
       return snapAnimation();
     }
     throw new Error("");
@@ -410,6 +412,7 @@ export class TurboHeartsStage {
       }
 
       const pileCards = state[seat].pile.map(c => createSpriteCard(this.app.loader.resources, c, true));
+      console.log("SNAP PILE CARDS", pileCards.length);
       this[position].pile = pileCards;
       for (let i = 0; i < pileCards.length; i++) {
         const card = pileCards[i];

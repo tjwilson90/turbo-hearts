@@ -130,6 +130,7 @@ export class StepAnimation implements Animation {
     for (let i = 0; i < 4; i++) {
       const spriteCards = this[POSITION_ORDER[i]];
       pushAll(deckCards, spriteCards.pile);
+      spriteCards.pile = [];
     }
     if (deckCards.length === 0) {
       for (let i = 0; i < 52; i++) {

@@ -35,8 +35,6 @@ document.addEventListener("DOMContentLoaded", () => {
     return;
   }
   const submitter = new PlaySubmitter(gameId);
-  const th = new TurboHearts(document.getElementById("turbo-hearts") as HTMLCanvasElement, userId, submitter);
-  // (window as any).th = th;
   const chatLog = document.getElementById("chat-log")!;
   const chatAppender = (message: ChatEvent) => {
     const div = document.createElement("div");
@@ -96,14 +94,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  eventSource.on("event", event => {
-    const realEvent = convertEvent(th, event);
-    if (realEvent === undefined) {
-      return;
-    }
-    th.pushEvent(realEvent);
-  });
-
   const snapshotter = new Snapshotter(userId);
   eventSource.on("event", snapshotter.onEvent);
   snapshotter.on("snapshot", e => console.log(e));
@@ -119,11 +109,6 @@ document.addEventListener("DOMContentLoaded", () => {
     start
   );
   snapshotter.on("snapshot", animator.acceptSnapshot);
-  eventSource.once("end_replay", () => {
-    animator.endReplay();
-    // eventSource.on("pass_status", animator.trackInput);
-    // eventSource.on("charge_status", animator.trackInput);
-    // eventSource.on("play_status", animator.trackInput);
-  });
+  eventSource.once("end_replay", () => animator.endReplay);
   new ChatInput(document.getElementById("chat-input") as HTMLTextAreaElement, gameId);
 });
