@@ -11,6 +11,48 @@ use std::{
 use uuid::Uuid;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash, Serialize, Deserialize)]
+pub struct UserId(Uuid);
+
+impl UserId {
+    pub fn null() -> UserId {
+        UserId(Uuid::nil())
+    }
+
+    pub fn new() -> UserId {
+        UserId(Uuid::new_v4())
+    }
+}
+
+impl Display for UserId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
+        Display::fmt(&self.0, f)
+    }
+}
+
+impl FromStr for UserId {
+    type Err = <Uuid as FromStr>::Err;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(UserId(s.parse()?))
+    }
+}
+
+impl ToSql for UserId {
+    fn to_sql(&self) -> Result<ToSqlOutput<'_>, rusqlite::Error> {
+        Ok(ToSqlOutput::Owned(Value::Text(self.0.to_string())))
+    }
+}
+
+impl FromSql for UserId {
+    fn column_result(value: ValueRef<'_>) -> Result<Self, FromSqlError> {
+        match value.as_str() {
+            Ok(value) => Ok(value.parse().unwrap()),
+            Err(e) => Err(e),
+        }
+    }
+}
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash, Serialize, Deserialize)]
 pub struct GameId(Uuid);
 
 impl GameId {
@@ -57,15 +99,15 @@ pub struct Participant {
 #[serde(tag = "type", rename_all = "snake_case")]
 #[derive(Clone, Debug, Eq, PartialEq, Hash, Serialize, Deserialize)]
 pub enum Player {
-    Human { name: String },
-    Bot { name: String, algorithm: String },
+    Human { user_id: UserId },
+    Bot { user_id: UserId, algorithm: String },
 }
 
 impl Player {
-    pub fn name(&self) -> &str {
+    pub fn user_id(&self) -> UserId {
         match self {
-            Player::Human { name } => name,
-            Player::Bot { name, .. } => name,
+            Player::Human { user_id } => *user_id,
+            Player::Bot { user_id, .. } => *user_id,
         }
     }
 }

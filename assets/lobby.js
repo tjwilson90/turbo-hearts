@@ -6,25 +6,25 @@ function onEvent(event) {
   console.log("Event: %o", data);
   switch (data.type) {
     case "join_lobby":
-      onJoinLobby(data.name);
+      onJoinLobby(data.user_id);
       break;
     case "new_game":
-      onNewGame(data.id, data.name);
+      onNewGame(data.game_id, data.user_id);
       break;
     case "lobby_state":
       onLobbyState(data.subscribers, data.games);
       break;
     case "join_game":
-      onJoinGame(data.id, data.player);
+      onJoinGame(data.game_id, data.player);
       break;
     case "leave_game":
-      onLeaveGame(data.id, data.name);
+      onLeaveGame(data.game_id, data.user_id);
       break;
     case "finish_game":
-      onFinishGame(data.id);
+      onFinishGame(data.game_id);
       break;
     case "leave_lobby":
-      onLeaveLobby(data.name);
+      onLeaveLobby(data.user_id);
       break;
     default:
       console.log("Unknown lobby event: %o", data);
@@ -32,94 +32,94 @@ function onEvent(event) {
   }
 }
 
-function onJoinLobby(name) {
-  if (document.querySelector("#players > ." + name) == null) {
+function onJoinLobby(user_id) {
+  if (document.querySelector("#players > ." + user_id) == null) {
     let playerList = document.getElementById("players");
-    playerList.appendChild(createPlayerElement(name));
+    playerList.appendChild(createPlayerElement(user_id));
   }
 }
 
-function onNewGame(id, name) {
+function onNewGame(game_id, user_id) {
   let gamesList = document.getElementById("games");
-  gamesList.appendChild(createGameElement(id, [name]));
+  gamesList.appendChild(createGameElement(game_id, [user_id]));
 }
 
 function onLobbyState(subscribers, games) {
   let playerList = document.getElementById("players");
   playerList.innerHTML = "";
-  for (let name of subscribers) {
-    playerList.appendChild(createPlayerElement(name));
+  for (let user_id of subscribers) {
+    playerList.appendChild(createPlayerElement(user_id));
   }
   let gamesList = document.getElementById("games");
   gamesList.innerHTML = "";
-  for (let id in games) {
-    let names = games[id].map(player => player.name);
-    gamesList.appendChild(createGameElement(id, names));
+  for (let game_id in games) {
+    let user_ids = games[game_id].map(player => player.user_id);
+    gamesList.appendChild(createGameElement(game_id, user_ids));
   }
 }
 
-function onJoinGame(id, player) {
-  let gameNode = document.getElementById(id);
+function onJoinGame(game_id, player) {
+  let gameNode = document.getElementById(game_id);
   let playerList = gameNode.firstElementChild;
-  playerList.appendChild(createPlayerElement(player.name));
+  playerList.appendChild(createPlayerElement(player.user_id));
   if (playerList.childElementCount >= 4) {
     gameNode.removeChild(gameNode.lastElementChild);
     gameNode.appendChild(createOpenButton());
-  } else if (player.name === getName()) {
+  } else if (player.user_id === getUserId()) {
     gameNode.removeChild(gameNode.lastElementChild);
     gameNode.appendChild(createLeaveButton());
   }
 }
 
-function onLeaveGame(id, name) {
-  let gameNode = document.getElementById(id);
+function onLeaveGame(game_id, user_id) {
+  let gameNode = document.getElementById(game_id);
   let playerList = gameNode.firstElementChild;
-  for (playerNode of playerList.getElementsByClassName(name)) {
+  for (playerNode of playerList.getElementsByClassName(user_id)) {
     playerNode.remove();
   }
   if (!playerList.hasChildNodes()) {
     gameNode.remove();
-  } else if (name === getName()) {
+  } else if (user_id === getUserId()) {
     gameNode.removeChild(gameNode.lastElementChild);
     gameNode.appendChild(createJoinButton());
   }
 }
 
-function onFinishGame(id) {
-  let gameNode = document.getElementById(id);
+function onFinishGame(game_id) {
+  let gameNode = document.getElementById(game_id);
   if (gameNode != null) {
     gameNode.remove();
   }
 }
 
-function onLeaveLobby(name) {
-  let playerNode = document.querySelector("#players" + "." + name);
+function onLeaveLobby(user_id) {
+  let playerNode = document.querySelector("#players" + "." + user_id);
   if (playerNode != null) {
     playerNode.remove();
   }
 }
 
-function createPlayerElement(name) {
+function createPlayerElement(user_id) {
   let li = document.createElement("li");
-  li.className = name;
-  li.textContent = name;
+  li.className = user_id;
+  li.textContent = user_id;
   return li;
 }
 
-function createGameElement(id, names) {
+function createGameElement(game_id, user_ids) {
   let ul = document.createElement("ul");
-  for (let name of names) {
-    ul.appendChild(createPlayerElement(name));
+  for (let user_id of user_ids) {
+    ul.appendChild(createPlayerElement(user_id));
   }
   let li = document.createElement("li");
-  li.id = id;
+  li.id = game_id;
   li.appendChild(ul);
-  if (names.length >= 4) {
+  if (user_ids.length >= 4) {
     li.appendChild(createOpenButton());
     return li;
   }
   li.appendChild(createAddBotButton());
-  if (names.includes(getName())) {
+  if (user_ids.includes(getUserId())) {
     li.appendChild(createLeaveButton());
   } else {
     li.appendChild(createJoinButton());
@@ -159,9 +159,9 @@ function createOpenButton() {
   return button;
 }
 
-function getName() {
+function getUserId() {
   return document.cookie.replace(
-    /(?:(?:^|.*;\s*)NAME\s*\=\s*([^;]*).*$)|^.*$/,
+    /(?:(?:^|.*;\s*)USER_ID\s*\=\s*([^;]*).*$)|^.*$/,
     "$1"
   );
 }
@@ -190,54 +190,58 @@ function newGame(event) {
 }
 
 function addBot(event) {
-  let id = event.target.parentNode.id;
+  let game_id = event.target.parentNode.id;
   let rules = document.querySelector('input[name="rules"]:checked').value;
-  console.log("addBot: %s, %s", id, rules);
+  console.log("addBot: %s, %s", game_id, rules);
   fetch("/lobby/add_bot", {
     method: "POST",
     headers: {
       "Content-Type": "application/json"
     },
-    body: JSON.stringify({ id: id, rules: rules, algorithm: algorithms[Math.floor(Math.random() * algorithms.length)] })
+    body: JSON.stringify({
+      game_id: game_id,
+      rules: rules,
+      algorithm: algorithms[Math.floor(Math.random() * algorithms.length)]
+    })
   })
-    .then(response => response.json())
-    .then(data => console.log("Add bot: %o", data));
+  .then(response => response.json())
+  .then(data => console.log("Add bot: %o", data));
 }
 
 function joinGame(event) {
-  let id = event.target.parentNode.id;
+  let game_id = event.target.parentNode.id;
   let rules = document.querySelector('input[name="rules"]:checked').value;
-  console.log("joinGame: %s, %s", id, rules);
+  console.log("joinGame: %s, %s", game_id, rules);
   fetch("/lobby/join", {
     method: "POST",
     headers: {
       "Content-Type": "application/json"
     },
-    body: JSON.stringify({ id: id, rules: rules })
+    body: JSON.stringify({ game_id: game_id, rules: rules })
   })
-    .then(response => response.json())
-    .then(data => console.log("Joined game: %o", data));
+  .then(response => response.json())
+  .then(data => console.log("Joined game: %o", data));
 }
 
 function leaveGame(event) {
-  let id = event.target.parentNode.id;
-  console.log("leaveGame: %s", id);
+  let game_id = event.target.parentNode.id;
+  console.log("leaveGame: %s", game_id);
   fetch("/lobby/leave", {
     method: "POST",
     headers: {
       "Content-Type": "application/json"
     },
-    body: JSON.stringify({ id: id })
+    body: JSON.stringify({ game_id: game_id })
   });
 }
 
 function openGame(event) {
-  let id = event.target.parentNode.id;
-  console.log("openGame: %s", id);
+  let game_id = event.target.parentNode.id;
+  console.log("openGame: %s", game_id);
   if (window.location.host.indexOf("localhost") !== -1) {
-    window.open("http://localhost:8080#" + id);
+    window.open("http://localhost:8080#" + game_id);
   } else {
-    window.open("https://play.anti.run/assets/dist/#" + id);
+    window.open("https://play.anti.run/assets/dist/#" + game_id);
   }
 }
 

@@ -25,13 +25,21 @@ impl Database {
             "PRAGMA journal_mode = WAL;
             BEGIN;
             CREATE TABLE IF NOT EXISTS user (
-                id TEXT NOT NULL,
+                user_id TEXT NOT NULL,
                 name TEXT NOT NULL,
-                PRIMARY KEY (id)
+                realm TEXT NOT NULL,
+                external_id TEXT NOT NULL,
+                PRIMARY KEY (user_id)
+            );
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_user ON user (realm, external_id);
+            CREATE TABLE IF NOT EXISTS auth_token (
+                token TEXT NOT NULL,
+                user_id TEXT NOT NULL,
+                PRIMARY KEY (token)
             );
             CREATE TABLE IF NOT EXISTS game (
-                id TEXT NOT NULL,
-                PRIMARY KEY (id)
+                game_id TEXT NOT NULL,
+                PRIMARY KEY (game_id)
             );
             CREATE TABLE IF NOT EXISTS event (
                 game_id TEXT NOT NULL,

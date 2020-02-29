@@ -1,6 +1,6 @@
 use crate::{
     game::GameEvent,
-    types::{ChargingRules, Seat},
+    types::{ChargingRules, Seat, UserId},
 };
 use serde::{
     de::{SeqAccess, Visitor},
@@ -728,7 +728,7 @@ impl ClaimState {
 
 #[derive(Debug)]
 pub struct GameState {
-    pub players: [String; 4],
+    pub players: [UserId; 4],
     pub rules: ChargingRules,
     pub phase: GamePhase,
     pub sent_pass: [bool; 4],
@@ -748,7 +748,7 @@ pub struct GameState {
 impl GameState {
     pub fn new() -> Self {
         Self {
-            players: [String::new(), String::new(), String::new(), String::new()],
+            players: [UserId::null(); 4],
             rules: ChargingRules::Classic,
             phase: GamePhase::PassLeft,
             sent_pass: [false; 4],
@@ -846,10 +846,10 @@ impl GameState {
                 west,
                 rules,
             } => {
-                self.players[0] = north.name().to_string();
-                self.players[1] = east.name().to_string();
-                self.players[2] = south.name().to_string();
-                self.players[3] = west.name().to_string();
+                self.players[0] = north.user_id();
+                self.players[1] = east.user_id();
+                self.players[2] = south.user_id();
+                self.players[3] = west.user_id();
                 self.rules = *rules;
             }
             GameEvent::Deal { .. } => {
