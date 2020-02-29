@@ -5,13 +5,13 @@ use crate::{
     error::CardsError,
     game::{GameEvent, Games},
     lobby::{Lobby, LobbyEvent},
-    types::{ChargingRules, GameId, Participant, Player, Seat},
+    types::{ChargingRules, GameId, Participant, Player, Seat, UserId},
 };
 use log::info;
 use rand_distr::Gamma;
 use rusqlite::{Transaction, NO_PARAMS};
 use std::collections::{HashMap, HashSet};
-use tokio::{sync::mpsc::UnboundedReceiver, task};
+use tokio::{stream::StreamExt, sync::mpsc::UnboundedReceiver, task, time, time::Duration};
 
 #[derive(Clone)]
 pub struct Server {
@@ -21,6 +21,7 @@ pub struct Server {
 }
 
 impl Server {
+    #[cfg(test)]
     pub fn with_fast_bots(db: Database) -> Result<Self, CardsError> {
         Server::new(db, None)
     }
@@ -36,23 +37,35 @@ impl Server {
             lobby: Lobby::new(partial_games.clone()),
             games: Games::new(db),
         };
-        for (id, participants) in &partial_games {
-            server.start_bots(*id, participants);
+        for (game_id, participants) in &partial_games {
+            server.start_bots(*game_id, participants);
         }
         Ok(server)
     }
 
-    fn start_bots(&self, id: GameId, participants: &HashSet<Participant>) {
+    fn start_bots(&self, game_id: GameId, participants: &HashSet<Participant>) {
         if participants.len() < 4 {
             return;
         }
         for participant in participants {
-            if let Player::Bot { name, algorithm } = &participant.player {
-                info!("Starting {} with algorithm {}", name, algorithm);
-                let bot = Bot::new(name.clone(), algorithm);
-                task::spawn(bot.run(self.clone(), id));
+            if let Player::Bot { user_id, algorithm } = &participant.player {
+                info!(
+                    "Starting bot {} with algorithm {} in game {}",
+                    user_id, algorithm, game_id
+                );
+                let bot = Bot::new(*user_id, algorithm);
+                task::spawn(bot.run(self.clone(), game_id));
             }
         }
+    }
+
+    pub fn start_background_pings(self) {
+        tokio::task::spawn(async move {
+            let mut stream = time::interval(Duration::from_secs(15));
+            while let Some(_) = stream.next().await {
+                self.ping_event_streams().await;
+            }
+        });
     }
 
     pub async fn ping_event_streams(&self) {
@@ -60,37 +73,40 @@ impl Server {
         self.games.ping().await;
     }
 
-    pub async fn subscribe_lobby(&self, name: String) -> UnboundedReceiver<LobbyEvent> {
-        info!("{} joined the lobby", name);
-        self.lobby.subscribe(name).await
+    pub async fn subscribe_lobby(&self, user_id: UserId) -> UnboundedReceiver<LobbyEvent> {
+        info!("User {} joined the lobby", user_id);
+        self.lobby.subscribe(user_id).await
     }
 
-    pub async fn new_game(&self, name: &str, rules: ChargingRules) -> GameId {
-        let id = self.lobby.new_game(name.to_string(), rules).await;
-        info!("{} started game {}", name, id);
-        id
+    pub async fn new_game(&self, user_id: UserId, rules: ChargingRules) -> GameId {
+        let game_id = self.lobby.new_game(user_id, rules).await;
+        info!("User {} started game {}", user_id, game_id);
+        game_id
     }
 
     pub async fn join_game(
         &self,
-        id: GameId,
+        game_id: GameId,
         player: Player,
         rules: ChargingRules,
     ) -> Result<HashSet<Player>, CardsError> {
-        let participants = match self.lobby.join_game(id, player.clone(), rules).await {
+        let participants = match self.lobby.join_game(game_id, player.clone(), rules).await {
             Ok(participants) => {
-                info!("{:?} joined game {}", player, id);
+                info!("{:?} joined game {}", player, game_id);
                 participants
             }
             Err(e) => {
-                info!("{:?} failed to join game {} with error {}", player, id, e);
+                info!(
+                    "{:?} failed to join game {} with error {}",
+                    player, game_id, e
+                );
                 return Err(e);
             }
         };
         if participants.len() == 4 {
-            info!("starting game {}", id);
-            self.games.start_game(id, &participants)?;
-            self.start_bots(id, &participants);
+            info!("starting game {}", game_id);
+            self.games.start_game(game_id, &participants)?;
+            self.start_bots(game_id, &participants);
         }
         Ok(participants
             .into_iter()
@@ -98,31 +114,39 @@ impl Server {
             .collect())
     }
 
-    pub async fn leave_game(&self, id: GameId, name: String) {
-        info!("{} left game {}", name, id);
-        self.lobby.leave_game(id, name).await
+    pub async fn leave_game(&self, game_id: GameId, user_id: UserId) {
+        info!("{:?} left game {}", user_id, game_id);
+        self.lobby.leave_game(game_id, user_id).await
     }
 
-    pub async fn lobby_chat(&self, name: String, message: String) {
-        self.lobby.chat(name, message).await
+    pub async fn lobby_chat(&self, user_id: UserId, message: String) {
+        self.lobby.chat(user_id, message).await
     }
 
     pub async fn subscribe_game(
         &self,
-        id: GameId,
-        name: String,
+        game_id: GameId,
+        user_id: UserId,
     ) -> Result<UnboundedReceiver<GameEvent>, CardsError> {
-        info!("{} subscribed to game {}", name, id);
-        self.games.subscribe(id, name).await
+        info!("User {} subscribed to game {}", user_id, game_id);
+        self.games.subscribe(game_id, user_id).await
     }
 
-    pub async fn pass_cards(&self, id: GameId, name: &str, cards: Cards) -> Result<(), CardsError> {
-        let result = self.games.pass_cards(id, &name, cards).await;
+    pub async fn pass_cards(
+        &self,
+        game_id: GameId,
+        user_id: UserId,
+        cards: Cards,
+    ) -> Result<(), CardsError> {
+        let result = self.games.pass_cards(game_id, user_id, cards).await;
         match &result {
-            Ok(_) => info!("{} passed {} in game {} successfully", name, cards, id),
+            Ok(_) => info!(
+                "User {} passed {} in game {} successfully",
+                user_id, cards, game_id
+            ),
             Err(e) => info!(
-                "{} failed to pass {} in game {} with error {}",
-                name, cards, id, e
+                "User {} failed to pass {} in game {} with error {}",
+                user_id, cards, game_id, e
             ),
         }
         result
@@ -130,63 +154,80 @@ impl Server {
 
     pub async fn charge_cards(
         &self,
-        id: GameId,
-        name: &str,
+        game_id: GameId,
+        user_id: UserId,
         cards: Cards,
     ) -> Result<(), CardsError> {
-        let result = self.games.charge_cards(id, &name, cards).await;
+        let result = self.games.charge_cards(game_id, user_id, cards).await;
         match &result {
-            Ok(_) => info!("{} charged {} in game {} successfully", name, cards, id),
+            Ok(_) => info!(
+                "User {} charged {} in game {} successfully",
+                user_id, cards, game_id
+            ),
             Err(e) => info!(
-                "{} failed to charge {} in game {} with error {}",
-                name, cards, id, e
+                "User {} failed to charge {} in game {} with error {}",
+                user_id, cards, game_id, e
             ),
         }
         result
     }
 
-    pub async fn play_card(&self, id: GameId, name: &str, card: Card) -> Result<bool, CardsError> {
-        let result = self.games.play_card(id, &name, card).await;
+    pub async fn play_card(
+        &self,
+        game_id: GameId,
+        user_id: UserId,
+        card: Card,
+    ) -> Result<bool, CardsError> {
+        let result = self.games.play_card(game_id, user_id, card).await;
         match &result {
             Ok(complete) => {
-                info!("{} played {} in game {} successfully", name, card, id);
+                info!(
+                    "User {} played {} in game {} successfully",
+                    user_id, card, game_id
+                );
                 if *complete {
-                    self.lobby.remove_game(id).await;
-                    info!("Removed completed game {} from the lobby", id);
+                    self.lobby.remove_game(game_id).await;
+                    info!("Removed completed game {} from the lobby", game_id);
                 }
             }
             Err(e) => info!(
-                "{} failed to play {} in game {} with error {}",
-                name, card, id, e
+                "User {} failed to play {} in game {} with error {}",
+                user_id, card, game_id, e
             ),
         }
         result
     }
 
-    pub async fn claim(&self, id: GameId, name: &str) -> Result<(), CardsError> {
-        let result = self.games.claim(id, name).await;
+    pub async fn claim(&self, game_id: GameId, user_id: UserId) -> Result<(), CardsError> {
+        let result = self.games.claim(game_id, user_id).await;
         match &result {
-            Ok(()) => info!("{} made a claim in game {} successfully", name, id),
-            Err(e) => info!("{} failed to claim in game {} with error {}", name, id, e),
+            Ok(()) => info!(
+                "User {} made a claim in game {} successfully",
+                user_id, game_id
+            ),
+            Err(e) => info!(
+                "User {} failed to claim in game {} with error {}",
+                user_id, game_id, e
+            ),
         }
         result
     }
 
     pub async fn accept_claim(
         &self,
-        id: GameId,
-        name: &str,
+        game_id: GameId,
+        user_id: UserId,
         claimer: Seat,
     ) -> Result<(), CardsError> {
-        let result = self.games.accept_claim(id, name, claimer).await;
+        let result = self.games.accept_claim(game_id, user_id, claimer).await;
         match &result {
             Ok(()) => info!(
-                "{} accepted the claim from {} in game {} successfully",
-                name, claimer, id
+                "User {} accepted the claim from {} in game {} successfully",
+                user_id, claimer, game_id
             ),
             Err(e) => info!(
-                "{} failed to accept the claim from {} in game {} with error {}",
-                name, claimer, id, e
+                "User {} failed to accept the claim from {} in game {} with error {}",
+                user_id, claimer, game_id, e
             ),
         }
         result
@@ -194,19 +235,19 @@ impl Server {
 
     pub async fn reject_claim(
         &self,
-        id: GameId,
-        name: &str,
+        game_id: GameId,
+        user_id: UserId,
         claimer: Seat,
     ) -> Result<(), CardsError> {
-        let result = self.games.reject_claim(id, name, claimer).await;
+        let result = self.games.reject_claim(game_id, user_id, claimer).await;
         match &result {
             Ok(()) => info!(
-                "{} rejected the claim from {} in game {} successfully",
-                name, claimer, id
+                "User {} rejected the claim from {} in game {} successfully",
+                user_id, claimer, game_id
             ),
             Err(e) => info!(
-                "{} failed to reject the claim from {} in game {} with error {}",
-                name, claimer, id, e
+                "User {} failed to reject the claim from {} in game {} with error {}",
+                user_id, claimer, game_id, e
             ),
         }
         result
@@ -214,23 +255,23 @@ impl Server {
 
     pub async fn game_chat(
         &self,
-        id: GameId,
-        name: String,
+        game_id: GameId,
+        user_id: UserId,
         message: String,
     ) -> Result<(), CardsError> {
-        self.games.chat(id, name, message).await
+        self.games.chat(game_id, user_id, message).await
     }
 }
 
 fn hydrate_games(tx: &Transaction) -> Result<HashMap<GameId, HashSet<Participant>>, CardsError> {
     let mut stmt = tx.prepare(
         "SELECT game_id, event FROM event
-            WHERE event_id = 0 AND game_id NOT IN (SELECT id FROM game)",
+            WHERE event_id = 0 AND game_id NOT IN (SELECT game_id FROM game)",
     )?;
     let mut rows = stmt.query(NO_PARAMS)?;
     let mut games = HashMap::new();
     while let Some(row) = rows.next()? {
-        let id = row.get(0)?;
+        let game_id = row.get(0)?;
         if let GameEvent::Sit {
             north,
             east,
@@ -256,7 +297,7 @@ fn hydrate_games(tx: &Transaction) -> Result<HashMap<GameId, HashSet<Participant
                 player: west,
                 rules,
             });
-            games.insert(id, participants);
+            games.insert(game_id, participants);
         }
     }
     Ok(games)

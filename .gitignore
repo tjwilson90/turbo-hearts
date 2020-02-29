@@ -1,4 +1,6 @@
 /target
 .idea
-turbo-hearts.db*
+*.db
+*.db-shm
+*.db-wal
 .DS_Store

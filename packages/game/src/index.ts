@@ -7,7 +7,7 @@ import { ChatInput } from "./chat/ChatInput";
 import { ChatEvent } from "./types";
 
 document.addEventListener("DOMContentLoaded", () => {
-  const userId = cookie.parse(document.cookie)["NAME"];
+  const userId = cookie.parse(document.cookie)["USER_ID"];
   if (userId?.length === 0) {
     document.body.innerHTML = "Missing user id";
     return;
