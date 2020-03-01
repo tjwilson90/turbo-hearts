@@ -53,7 +53,7 @@ jobs:
           script_stop: true
           script: |
             cd /opt
-            rm -r turbo-hearts
+            rm -rf turbo-hearts
             tar xvf turbo-hearts.tgz
             rm turbo-hearts.tgz
             cd turbo-hearts
