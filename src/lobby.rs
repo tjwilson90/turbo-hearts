@@ -69,7 +69,8 @@ impl Lobby {
                 .map(|(game_id, lobby)| {
                     (
                         *game_id,
-                        lobby.participants
+                        lobby
+                            .participants
                             .iter()
                             .map(|participant| &participant.player)
                             .cloned()
