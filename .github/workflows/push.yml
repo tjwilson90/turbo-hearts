@@ -23,7 +23,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-yarn-
 
-      - name: Cache cargo build
+      - name: Cache target
         uses: actions/cache@v1
         with:
           path: target
@@ -31,7 +31,13 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-build-target-
 
-      - name: Install Pax
+      - name: Cache .cargo
+        uses: actions/cache@v1
+        with:
+          path: ~/.cargo
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Install pax
         run: cargo install pax
 
       - name: Yarn install
@@ -47,3 +53,6 @@ jobs:
 
       - name: Cargo test
         run: cargo test --verbose
+
+      - name: Workaround cache issues
+        run: chmod -R 755 ~/.cargo
