@@ -25,6 +25,7 @@ warp = { version = "*", default-features = false }
 
 [dev-dependencies]
 tempfile = "*"
+pax = "*"
 
 [profile.release]
 lto = "thin"

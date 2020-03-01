@@ -3,7 +3,6 @@ import { ChatInput } from "./chat/ChatInput";
 import { TurboHeartsService } from "./game/TurboHeartsService";
 import { Snapshotter } from "./game/snapshotter";
 import { TurboHeartsEventSource } from "./game/TurboHeartsEventSource";
-import "./styles/style.scss";
 import { ChatEvent } from "./types";
 import { TurboHeartsStage } from "./view/TurboHeartsStage";
 

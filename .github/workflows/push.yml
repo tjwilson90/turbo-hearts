@@ -23,14 +23,6 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-yarn-
 
-      - name: Yarn install
-        run: yarn install
-        working-directory: packages/game
-
-      - name: Yarn build
-        run: yarn build:prod
-        working-directory: packages/game
-
       - name: Cache cargo build
         uses: actions/cache@v1
         with:
@@ -44,3 +36,11 @@ jobs:
 
       - name: Cargo test
         run: cargo test --verbose
+
+      - name: Yarn install
+        run: yarn install
+        working-directory: packages/game
+
+      - name: Yarn build
+        run: yarn build:prod
+        working-directory: packages/game
