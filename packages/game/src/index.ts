@@ -1,6 +1,6 @@
 import * as cookie from "cookie";
 import { ChatInput } from "./chat/ChatInput";
-import { PlaySubmitter } from "./game/PlaySubmitter";
+import { TurboHeartsService } from "./game/TurboHeartsService";
 import { Snapshotter } from "./game/snapshotter";
 import { TurboHeartsEventSource } from "./game/TurboHeartsEventSource";
 import "./styles/style.scss";
@@ -18,14 +18,17 @@ document.addEventListener("DOMContentLoaded", () => {
     document.body.innerHTML = "Missing game id";
     return;
   }
-  const submitter = new PlaySubmitter(gameId);
+  const service = new TurboHeartsService(gameId);
   const chatLog = document.getElementById("chat-log")!;
-  const chatAppender = (message: ChatEvent) => {
+  const chatAppender = async (message: ChatEvent) => {
+    // TODO: fix race
+    console.log(message);
+    const users = await service.getUsers([message.userId]);
     const div = document.createElement("div");
     div.classList.add("chat-message-container");
     const nameSpan = document.createElement("span");
     nameSpan.classList.add("chat-user");
-    nameSpan.textContent = message.name;
+    nameSpan.textContent = users[message.userId];
     div.appendChild(nameSpan);
     const messageSpan = document.createElement("span");
     messageSpan.classList.add("chat-message");
@@ -49,10 +52,10 @@ document.addEventListener("DOMContentLoaded", () => {
   const animator = new TurboHeartsStage(
     document.getElementById("turbo-hearts") as HTMLCanvasElement,
     userId,
-    submitter,
+    service,
     start
   );
   snapshotter.on("snapshot", animator.acceptSnapshot);
   eventSource.once("end_replay", animator.endReplay);
-  new ChatInput(document.getElementById("chat-input") as HTMLTextAreaElement, gameId);
+  new ChatInput(document.getElementById("chat-input") as HTMLTextAreaElement, service);
 });

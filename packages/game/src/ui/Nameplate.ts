@@ -1,5 +1,5 @@
 import * as PIXI from "pixi.js";
-import { Z_NAMEPLATE, TABLE_CENTER_X, TABLE_CENTER_Y } from "../const";
+import { Z_NAMEPLATE } from "../const";
 
 export class Nameplate {
   public container: PIXI.Container = new PIXI.Container();

@@ -24,6 +24,7 @@ function unrustify(event: EventData): EventData {
       renameProp(event.east, "user_id", "userId");
       renameProp(event.south, "user_id", "userId");
       renameProp(event.west, "user_id", "userId");
+      return event;
     case "end_replay":
     case "deal":
     case "start_passing":
@@ -35,7 +36,9 @@ function unrustify(event: EventData): EventData {
     case "play":
     case "end_trick":
     case "game_complete":
+      return event;
     case "chat":
+      renameProp(event, "user_id", "userId");
       return event;
     case "play_status":
       renameProp(event, "legal_plays", "legalPlays");
