@@ -8,7 +8,7 @@ const { selectedPreprocessor } = require("./loader");
 
 module.exports = {
   entry: {
-    main: "./" + src_Path + "/index.ts"
+    main: "./" + src_Path + "/index.tsx"
   },
   resolve: {
     extensions: [".ts", ".tsx", ".js", ".jsx"]

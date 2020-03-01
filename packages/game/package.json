@@ -13,6 +13,7 @@
     "@types/cookie": "^0.3.3",
     "@types/react": "^16.9.19",
     "@types/react-dom": "^16.9.5",
+    "@types/react-redux": "^7.1.7",
     "@types/tween.js": "^17.2.0",
     "autoprefixer": "^8.6.0",
     "awesome-typescript-loader": "^5.2.0",
@@ -43,7 +44,12 @@
     "eventemitter3": "^4.0.0",
     "normalize.css": "^8.0.1",
     "pixi-filters": "^3.0.3",
-    "pixi.js": "^5.2.1"
+    "pixi.js": "^5.2.1",
+    "react": "^16.13.0",
+    "react-dom": "^16.13.0",
+    "react-redux": "^7.2.0",
+    "redoodle": "2.3.2",
+    "redux": "^4.0.5"
   },
   "prettier": {
     "printWidth": 120

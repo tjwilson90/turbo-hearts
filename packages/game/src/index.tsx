@@ -1,10 +1,14 @@
 import * as cookie from "cookie";
+import * as React from "react";
+import * as ReactDOM from "react-dom";
+import { Provider } from "react-redux";
 import { ChatInput } from "./chat/ChatInput";
-import { TurboHeartsService } from "./game/TurboHeartsService";
 import { Snapshotter } from "./game/snapshotter";
 import { TurboHeartsEventSource } from "./game/TurboHeartsEventSource";
+import { createGameAppStore } from "./state/createStore";
 import "./styles/style.scss";
 import { ChatEvent } from "./types";
+import { GameApp } from "./ui/GameApp";
 import { TurboHeartsStage } from "./view/TurboHeartsStage";
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -18,12 +22,14 @@ document.addEventListener("DOMContentLoaded", () => {
     document.body.innerHTML = "Missing game id";
     return;
   }
-  const service = new TurboHeartsService(gameId);
+
+  const store = createGameAppStore(gameId);
+
   const chatLog = document.getElementById("chat-log")!;
   const chatAppender = async (message: ChatEvent) => {
     // TODO: fix race
     console.log(message);
-    const users = await service.getUsers([message.userId]);
+    const users = await store.getState().context.service.getUsers([message.userId]);
     const div = document.createElement("div");
     div.classList.add("chat-message-container");
     const nameSpan = document.createElement("span");
@@ -52,10 +58,17 @@ document.addEventListener("DOMContentLoaded", () => {
   const animator = new TurboHeartsStage(
     document.getElementById("turbo-hearts") as HTMLCanvasElement,
     userId,
-    service,
+    store.getState().context.service,
     start
   );
   snapshotter.on("snapshot", animator.acceptSnapshot);
   eventSource.once("end_replay", animator.endReplay);
-  new ChatInput(document.getElementById("chat-input") as HTMLTextAreaElement, service);
+  new ChatInput(document.getElementById("chat-input") as HTMLTextAreaElement, store.getState().context.service);
+
+  ReactDOM.render(
+    <Provider store={store}>
+      <GameApp />
+    </Provider>,
+    document.getElementById("app-container")!
+  );
 });
