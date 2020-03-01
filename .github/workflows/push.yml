@@ -42,5 +42,5 @@ jobs:
         working-directory: packages/game
 
       - name: Yarn build
-        run: yarn build:prod
+        run: yarn build
         working-directory: packages/game
