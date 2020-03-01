@@ -8,15 +8,37 @@ jobs:
   run:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Repository
+      - name: Checkout repository
         uses: actions/checkout@v2
-      - name: Install Frontend Dependencies
+
+      - name: Cache cargo registry
+        uses: actions/cache@v1
+        with:
+          path: ~/.cargo/registry
+        key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Cache cargo index
+        uses: actions/cache@v1
+        with:
+          path: ~/.cargo/git
+        key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Cache cargo build
+        uses: actions/cache@v1
+        with:
+          path: target
+        key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Yarn install
         run: yarn install
         working-directory: packages/game
-      - name: Build Frontend
+
+      - name: Yarn build
         run: yarn build:prod
         working-directory: packages/game
-      - name: Build Backend
+
+      - name: Cargo build
         run: cargo build --verbose
-      - name: Test Backend
+
+      - name: Cargo test
         run: cargo test --verbose

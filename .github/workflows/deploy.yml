@@ -1,8 +1,6 @@
-name: Release
+name: Deploy
 
-on:
-  release:
-    types: [published]
+on: [deploy]
 
 jobs:
   run:
@@ -49,12 +47,30 @@ jobs:
       - name: Make dist
         run: ./scripts/make-dist.sh
 
-      - name: Upload release
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Deploy release
+        uses: appleboy/scp-action@master
         with:
-          upload_url: ${{ github.event.release.upload_url }}
-          asset_path: ./turbo-hearts.tgz
-          asset_name: turbo-hearts.tgz
-          asset_content_type: application/gzip
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          passphrase: ${{ secrets.SSH_PASSPHRASE }}
+          port: ${{ secrets.SSH_PORT }}
+          source: turbo-hearts.tgz
+          target: /opt/turbo-hearts.tgz
+
+      - name: Run release
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          passphrase: ${{ secrets.SSH_PASSPHRASE }}
+          port: ${{ secrets.SSH_PORT }}
+          script_stop: true
+          script: |
+            cd /opt
+            rm -r turbo-hearts
+            tar xvf turbo-hearts.tgz
+            cd turbo-hearts
+            pkill turbo-hearts
+            nohup ./turbo-hearts /etc/turbo-hearts.json &
