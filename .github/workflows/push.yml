@@ -23,14 +23,6 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-yarn-
 
-      - name: Yarn install
-        run: yarn install
-        working-directory: packages/game
-
-      - name: Yarn build
-        run: yarn build:prod
-        working-directory: packages/game
-
       - name: Cache cargo build
         uses: actions/cache@v1
         with:
@@ -38,6 +30,17 @@ jobs:
           key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-cargo-build-target-
+
+      - name: Install Pax
+        run: cargo install pax
+
+      - name: Yarn install
+        run: yarn install
+        working-directory: packages/game
+
+      - name: Yarn build
+        run: yarn build
+        working-directory: packages/game
 
       - name: Cargo build
         run: cargo build --verbose

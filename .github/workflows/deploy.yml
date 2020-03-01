@@ -10,12 +10,15 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v2
 
+      - name: Install Pax
+        run: cargo install pax
+
       - name: Yarn install
         run: yarn install
         working-directory: packages/game
 
       - name: Yarn build
-        run: yarn build:prod
+        run: yarn build
         working-directory: packages/game
 
       - name: Install musl
