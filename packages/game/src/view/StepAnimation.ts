@@ -244,15 +244,14 @@ export class StepAnimation implements Animation {
     while (fromPlayer.sprites.limbo.length > 0) {
       // Note: this is mutating both hand and limbo arrays
       const fromLimbo = fromPlayer.sprites.limbo.pop()!;
-      if (fromLimbo.card === "BACK" && received.length > 0) {
+      if (received.length > 0) {
+        // Receiving
         fromLimbo.card = received.pop()!;
         fromLimbo.sprite.texture = this.cardTextures[fromLimbo.card].texture;
-      } else if (fromLimbo.card !== "BACK" && received.length === 0) {
+      } else {
         // Passing known cards into another hand
         fromLimbo.card = "BACK";
         fromLimbo.sprite.texture = this.cardTextures["BACK"].texture;
-      } else {
-        // TODO: receiving own cards back, reveal
       }
       toPlayer.sprites.hand.push(fromLimbo);
     }
