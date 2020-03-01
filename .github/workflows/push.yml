@@ -31,11 +31,8 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-build-target-
 
-      - name: Cargo build
-        run: cargo build --verbose
-
-      - name: Cargo test
-        run: cargo test --verbose
+      - name: Install Pax
+        run: cargo install pax
 
       - name: Yarn install
         run: yarn install
@@ -44,3 +41,9 @@ jobs:
       - name: Yarn build
         run: yarn build
         working-directory: packages/game
+
+      - name: Cargo build
+        run: cargo build --verbose
+
+      - name: Cargo test
+        run: cargo test --verbose
