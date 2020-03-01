@@ -69,12 +69,11 @@ impl Lobby {
                 .map(|(game_id, lobby)| {
                     (
                         *game_id,
-                        lobby
-                            .participants
-                            .clone()
-                            .into_iter()
-                            .map(|participant| participant.player.clone())
-                            .collect(),
+                        lobby.participants
+                            .iter()
+                            .map(|participant| &participant.player)
+                            .cloned()
+                            .collect()
                     )
                 })
                 .collect(),
