@@ -25,7 +25,7 @@ export interface SitEventData {
 
 export interface ChatEvent {
   type: "chat";
-  name: string;
+  userId: string;
   message: string;
 }
 

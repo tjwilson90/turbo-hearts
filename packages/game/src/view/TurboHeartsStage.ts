@@ -30,7 +30,7 @@ import {
   CARD_MARGIN
 } from "../const";
 import { groupCards } from "../events/groupCards";
-import { PlaySubmitter } from "../game/PlaySubmitter";
+import { TurboHeartsService } from "../game/TurboHeartsService";
 import { TurboHearts, Action, cardsOf } from "../game/stateSnapshot";
 import {
   Animation,
@@ -135,11 +135,6 @@ function emptyPlayerSpriteCards() {
 
 export type Mode = "live" | "review";
 
-interface InputParams {
-  action: Action;
-  legalPlays: Card[];
-}
-
 export class TurboHeartsStage {
   public app: PIXI.Application;
 
@@ -166,7 +161,7 @@ export class TurboHeartsStage {
   constructor(
     private canvas: HTMLCanvasElement,
     public userId: string,
-    public submitter: PlaySubmitter,
+    public service: TurboHeartsService,
     private onReady: () => void
   ) {
     const dpr = window.devicePixelRatio;
@@ -228,9 +223,9 @@ export class TurboHeartsStage {
       case "pass": {
         this.button = new Button(
           "Pass 3 Cards " + directionText[state.pass],
-          TABLE_SIZE - CARD_DISPLAY_HEIGHT - CARD_MARGIN * 3,
+          TABLE_SIZE - CARD_DISPLAY_HEIGHT * 1.5,
           () => {
-            this.submitter.passCards([...this.input!.picked.values()].map(c => c.card));
+            this.service.passCards([...this.input!.picked.values()].map(c => c.card));
           }
         );
         this.button.setEnabled(false);
@@ -248,7 +243,7 @@ export class TurboHeartsStage {
       }
       case "charge": {
         this.button = new Button("Charge Cards", TABLE_SIZE - CARD_DISPLAY_HEIGHT * 1.5, () => {
-          this.submitter.chargeCards([...this.input!.picked.values()].map(c => c.card));
+          this.service.chargeCards([...this.input!.picked.values()].map(c => c.card));
         });
         this.button.setEnabled(true);
         const chargeableCards = spriteCardsOf(this.bottom.hand, CHARGEABLE_CARDS);
@@ -269,7 +264,7 @@ export class TurboHeartsStage {
               return;
             }
             picker.cleanUp();
-            this.submitter.playCard(cards[0].card);
+            this.service.playCard(cards[0].card);
           },
           player.legalPlays
         );

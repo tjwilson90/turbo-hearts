@@ -24,6 +24,10 @@ module.exports = {
       "/game": {
         target: "http://localhost:7380",
         secure: false
+      },
+      "/users": {
+        target: "http://localhost:7380",
+        secure: false
       }
     }
   },
