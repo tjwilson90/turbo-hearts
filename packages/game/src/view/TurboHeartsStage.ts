@@ -447,9 +447,9 @@ export class TurboHeartsStage {
 
   private loadCards() {
     for (const card of CARDS) {
-      this.app.loader.add(card, `assets/cards/${card}.svg`);
+      this.app.loader.add(card, `/assets/img/cards/${card}.svg`);
     }
-    this.app.loader.add("background", `assets/fabric@2x.jpg`);
+    this.app.loader.add("background", `/assets/img/fabric@2x.jpg`);
     this.app.loader.load(this.initTable);
   }
 
