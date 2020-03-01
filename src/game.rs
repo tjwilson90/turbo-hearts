@@ -80,7 +80,7 @@ impl Games {
         &self,
         game_id: GameId,
         participants: &HashSet<Participant>,
-        created_at: &i64,
+        created_at_time: i64,
     ) -> Result<(), CardsError> {
         let mut participants = participants.iter().cloned().collect::<Vec<_>>();
         participants.shuffle(&mut rand::thread_rng());
@@ -96,7 +96,7 @@ impl Games {
                         south: participants[2].player.clone(),
                         west: participants[3].player.clone(),
                         rules: participants[0].rules,
-                        created_at: created_at.clone(),
+                        created_at_time,
                     },
                     GameEvent::deal(PassDirection::Left),
                 ],
