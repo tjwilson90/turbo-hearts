@@ -55,6 +55,3 @@ jobs:
 
       - name: Cargo test
         run: cargo test --verbose
-
-      - name: Workaround cache issues
-        run: sudo chmod -R 755 ~/.cargo
