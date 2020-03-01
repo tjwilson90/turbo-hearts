@@ -7,7 +7,7 @@
   "scripts": {
     "clean": "rm -rf ../../assets/game && rm -rf dist/js",
     "start": "run-s build watch",
-    "build": "mkdir -p ../../assets/game && run-p build:*",
+    "build": "mkdir -p ../../assets/game && mkdir -p dist/js/ && run-p build:*",
     "build:html": "cp src/index.html ../../assets/game/index.html",
     "build:js": "run-s build:js:*",
     "build:js:compile": "sucrase src/ -d dist/js/ --transforms typescript,imports",
