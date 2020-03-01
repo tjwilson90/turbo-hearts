@@ -51,11 +51,4 @@ jobs:
           passphrase: ${{ secrets.SSH_PASSPHRASE }}
           port: ${{ secrets.SSH_PORT }}
           script_stop: true
-          script: |
-            cd /opt
-            rm -rf turbo-hearts
-            tar xvf turbo-hearts.tgz
-            rm turbo-hearts.tgz
-            cd turbo-hearts
-            pkill turbo-hearts
-            nohup ./turbo-hearts /etc/turbo-hearts.json &
+          script: /opt/deploy-play.anti.run.sh
