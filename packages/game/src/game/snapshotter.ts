@@ -47,10 +47,10 @@ export class Snapshotter {
           ...previous,
           index: previous.index + 1,
           event,
-          north: newPlayer(event.north.type, event.north.userId, event.north.userId),
-          east: newPlayer(event.east.type, event.east.userId, event.east.userId),
-          south: newPlayer(event.south.type, event.south.userId, event.south.userId),
-          west: newPlayer(event.west.type, event.west.userId, event.west.userId)
+          north: newPlayer(event.north.type, event.north.userId),
+          east: newPlayer(event.east.type, event.east.userId),
+          south: newPlayer(event.south.type, event.south.userId),
+          west: newPlayer(event.west.type, event.west.userId)
         });
         break;
       }

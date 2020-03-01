@@ -1,6 +1,6 @@
 import TWEEN from "@tweenjs/tween.js";
 import * as PIXI from "pixi.js";
-import { SpriteCard, Point, Card } from "../../types";
+import { SpriteCard, Card } from "../../types";
 import { FASTER_ANIMATION_DURATION, CARD_DISPLAY_HEIGHT } from "../../const";
 import { Action } from "../../game/stateSnapshot";
 
