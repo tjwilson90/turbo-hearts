@@ -73,7 +73,7 @@ impl Lobby {
                             .participants
                             .clone()
                             .into_iter()
-                            .map(|participant| *participant.player)
+                            .map(|participant| participant.player.clone())
                             .collect(),
                     )
                 })
