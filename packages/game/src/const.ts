@@ -1,7 +1,8 @@
 import { DropShadowFilter } from "@pixi/filter-drop-shadow";
 import { PlayerCardPositions } from "./types";
 
-export const Z_PILE_CARDS = 0;
+export const Z_BACKGROUND = 0;
+export const Z_PILE_CARDS = 100;
 export const Z_DEALING_CARDS = 500;
 export const Z_PLAYED_CARDS = 1000;
 export const Z_CHARGED_CARDS = 2000;

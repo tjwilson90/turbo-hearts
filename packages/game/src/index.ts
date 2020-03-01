@@ -1,10 +1,11 @@
 import * as cookie from "cookie";
+import { ChatInput } from "./chat/ChatInput";
 import { PlaySubmitter } from "./game/PlaySubmitter";
-import { TurboHearts } from "./game/TurboHearts";
+import { Snapshotter } from "./game/snapshotter";
 import { TurboHeartsEventSource } from "./game/TurboHeartsEventSource";
 import "./styles/style.scss";
-import { ChatInput } from "./chat/ChatInput";
 import { ChatEvent } from "./types";
+import { TurboHeartsStage } from "./view/TurboHeartsStage";
 
 document.addEventListener("DOMContentLoaded", () => {
   const userId = cookie.parse(document.cookie)["USER_ID"];
@@ -18,8 +19,6 @@ document.addEventListener("DOMContentLoaded", () => {
     return;
   }
   const submitter = new PlaySubmitter(gameId);
-  const th = new TurboHearts(document.getElementById("turbo-hearts") as HTMLCanvasElement, userId, submitter);
-  (window as any).th = th;
   const chatLog = document.getElementById("chat-log")!;
   const chatAppender = (message: ChatEvent) => {
     const div = document.createElement("div");
@@ -35,7 +34,25 @@ document.addEventListener("DOMContentLoaded", () => {
     chatLog.appendChild(div);
     div.scrollIntoView();
   };
-  new TurboHeartsEventSource(th, gameId, chatAppender);
 
+  const eventSource = new TurboHeartsEventSource(gameId);
+  eventSource.on("chat", chatAppender);
+
+  const snapshotter = new Snapshotter(userId);
+  eventSource.on("event", snapshotter.onEvent);
+  snapshotter.on("snapshot", e => console.log(e));
+
+  function start() {
+    eventSource.connect();
+  }
+
+  const animator = new TurboHeartsStage(
+    document.getElementById("turbo-hearts") as HTMLCanvasElement,
+    userId,
+    submitter,
+    start
+  );
+  snapshotter.on("snapshot", animator.acceptSnapshot);
+  eventSource.once("end_replay", animator.endReplay);
   new ChatInput(document.getElementById("chat-input") as HTMLTextAreaElement, gameId);
 });

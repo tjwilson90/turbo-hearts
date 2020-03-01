@@ -1,94 +1,82 @@
-import { SitEvent } from "../events/SitEvent";
-import { TurboHearts } from "./TurboHearts";
-import { EventData, PassStatusEventData, ChargeStatusEventData, ChatEvent } from "../types";
-import { DealEvent } from "../events/DealEvent";
-import { StartPassingEvent } from "../events/StartPassingEvent";
-import { SendPassEvent } from "../events/SendPassEvent";
-import { ReceivePassEvent } from "../events/ReceivePassEvent";
-import { StartChargingEvent } from "../events/StartChargingEvent";
-import { ChargeEvent } from "../events/ChargeEvent";
-import { StartTrickEvent } from "../events/StartTrickEvent";
-import { PlayStatusEvent } from "../events/PlayStatusEvent";
-import { PlayEvent } from "../events/PlayEvent";
-import { EndTrickEvent } from "../events/EndTrickEvent";
-import { GameCompleteEvent } from "../events/GameCompleteEvent";
-import { ChargeStatusEvent } from "../events/ChargeStatusEvent";
-import { PassStatusEvent } from "../events/PassStatus";
-import { EndReplayEvent } from "../events/EndReplayEvent";
+import { EventEmitter, ListenerFn } from "eventemitter3";
+import { ChargeStatusEventData, EventData, PassStatusEventData } from "../types";
+
+export type EventType = "event" | EventData["type"];
+
+function renameProp(object: any, from: string, to: string) {
+  object[to] = object[from];
+  delete object[from];
+}
 
 function mutateNesw<T extends PassStatusEventData | ChargeStatusEventData>(event: T) {
   const mutEvent = event as any;
-  event.northDone = mutEvent.north_done;
-  event.eastDone = mutEvent.east_done;
-  event.southDone = mutEvent.south_done;
-  event.westDone = mutEvent.west_done;
-  delete mutEvent.north_done;
-  delete mutEvent.east_done;
-  delete mutEvent.south_done;
-  delete mutEvent.west_done;
+  renameProp(mutEvent, "north_done", "northDone");
+  renameProp(mutEvent, "east_done", "eastDone");
+  renameProp(mutEvent, "south_done", "southDone");
+  renameProp(mutEvent, "west_done", "westDone");
   return event;
+}
+
+function unrustify(event: EventData): EventData {
+  switch (event.type) {
+    case "sit":
+      renameProp(event.north, "user_id", "userId");
+      renameProp(event.east, "user_id", "userId");
+      renameProp(event.south, "user_id", "userId");
+      renameProp(event.west, "user_id", "userId");
+    case "end_replay":
+    case "deal":
+    case "start_passing":
+    case "send_pass":
+    case "recv_pass":
+    case "start_charging":
+    case "charge":
+    case "start_trick":
+    case "play":
+    case "end_trick":
+    case "game_complete":
+    case "chat":
+      return event;
+    case "play_status":
+      renameProp(event, "legal_plays", "legalPlays");
+      renameProp(event, "next_player", "nextPlayer");
+      return event;
+    case "charge_status":
+    case "pass_status":
+      return mutateNesw(event);
+    default:
+      return event;
+  }
 }
 
 export class TurboHeartsEventSource {
   private eventSource: EventSource;
+  private emitter = new EventEmitter();
 
-  constructor(private th: TurboHearts, gameId: string, private onChat: (chat: ChatEvent) => void) {
-    this.eventSource = new EventSource(`/game/subscribe/${gameId}`, {
+  constructor(private gameId: string) {}
+
+  public connect() {
+    this.eventSource = new EventSource(`/game/subscribe/${this.gameId}`, {
       withCredentials: true
     });
     this.eventSource.addEventListener("message", this.handleEvent);
   }
 
-  private convertEvent(event: EventData) {
-    switch (event.type) {
-      case "sit":
-        return new SitEvent(this.th, event);
-      case "end_replay":
-        return new EndReplayEvent(this.th, event);
-      case "deal":
-        return new DealEvent(this.th, event);
-      case "start_passing":
-        return new StartPassingEvent(this.th, event);
-      case "pass_status":
-        return new PassStatusEvent(this.th, mutateNesw(event));
-      case "send_pass":
-        return new SendPassEvent(this.th, event);
-      case "recv_pass":
-        return new ReceivePassEvent(this.th, event);
-      case "start_charging":
-        return new StartChargingEvent(this.th, event);
-      case "charge_status":
-        return new ChargeStatusEvent(this.th, mutateNesw(event));
-      case "charge":
-        return new ChargeEvent(this.th, event);
-      case "start_trick":
-        return new StartTrickEvent(this.th, event);
-      case "play_status":
-        const mutEvent = event as any;
-        event.legalPlays = mutEvent.legal_plays;
-        event.nextPlayer = mutEvent.next_player;
-        delete (event as any).legal_plays;
-        delete (event as any).next_player;
-        return new PlayStatusEvent(this.th, event);
-      case "play":
-        return new PlayEvent(this.th, event);
-      case "end_trick":
-        return new EndTrickEvent(this.th, event);
-      case "game_complete":
-        return new GameCompleteEvent(this.th, event);
-      case "chat":
-        this.onChat(event);
-      default:
-        return undefined;
-    }
+  public on(event: EventType, fn: (event: EventData) => void) {
+    this.emitter.on(event, fn);
+  }
+
+  public off(event: EventType, fn: (event: EventData) => void) {
+    this.emitter.off(event, fn);
+  }
+
+  public once(event: EventType, fn: (event: EventData) => void) {
+    this.emitter.once(event, fn);
   }
 
   private handleEvent = (event: MessageEvent) => {
-    console.log(event.data);
-    const realEvent = this.convertEvent(JSON.parse(event.data) as EventData);
-    if (realEvent === undefined) {
-      return;
-    }
-    this.th.pushEvent(realEvent);
+    const rawEvent: EventData = unrustify(JSON.parse(event.data) as EventData);
+    this.emitter.emit("event", rawEvent);
+    this.emitter.emit(rawEvent.type, rawEvent);
   };
 }
