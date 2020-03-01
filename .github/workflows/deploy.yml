@@ -10,14 +10,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v2
 
-      - name: Yarn install
-        run: yarn install
-        working-directory: packages/game
-
-      - name: Yarn build
-        run: yarn build:prod
-        working-directory: packages/game
-
       - name: Install musl
         run: sudo apt-get install musl-tools
 
@@ -26,6 +18,14 @@ jobs:
 
       - name: Cargo build
         run: cargo build --target x86_64-unknown-linux-musl --release --verbose
+
+      - name: Yarn install
+        run: yarn install
+        working-directory: packages/game
+
+      - name: Yarn build
+        run: yarn build
+        working-directory: packages/game
 
       - name: Make dist
         run: ./scripts/make-dist.sh
