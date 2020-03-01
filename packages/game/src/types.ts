@@ -4,6 +4,7 @@ export type Seat = "north" | "east" | "south" | "west";
 export type Position = "top" | "right" | "bottom" | "left";
 
 export interface SitPlayer {
+  userId: string;
   name: string;
   type: "bot" | "human";
   algorithm?: string;

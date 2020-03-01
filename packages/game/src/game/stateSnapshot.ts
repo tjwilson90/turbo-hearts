@@ -36,6 +36,7 @@ export namespace TurboHearts {
   export interface Player {
     type: "bot" | "human";
     name: string;
+    userId: string;
     hand: Card[];
     plays: Card[];
     pile: Card[];
@@ -65,10 +66,11 @@ export namespace TurboHearts {
   }
 }
 
-export function newPlayer(type: "bot" | "human", name: string): TurboHearts.Player {
+export function newPlayer(type: "bot" | "human", userId: string, name: string): TurboHearts.Player {
   return {
     type,
-    name,
+    name: "todo",
+    userId,
     hand: emptyArray(),
     plays: emptyArray(),
     pile: emptyArray(),
@@ -201,10 +203,10 @@ export function emptyStateSnapshot(userName: string): TurboHearts.StateSnapshot 
   return {
     index: 0,
     event: { type: "initial" },
-    north: newPlayer("bot", "north"),
-    east: newPlayer("bot", "east"),
-    south: newPlayer("bot", "south"),
-    west: newPlayer("bot", "west"),
+    north: newPlayer("bot", "north", "north"),
+    east: newPlayer("bot", "east", "east"),
+    south: newPlayer("bot", "south", "south"),
+    west: newPlayer("bot", "west", "west"),
     pass: "left",
     userName,
     handNumber: 0,

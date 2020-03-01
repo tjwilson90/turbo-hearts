@@ -1,25 +1,29 @@
 import { EventEmitter, ListenerFn } from "eventemitter3";
 import { ChargeStatusEventData, EventData, PassStatusEventData } from "../types";
-import { TurboHearts } from "./TurboHearts";
 
 export type EventType = "event" | EventData["type"];
 
+function renameProp(object: any, from: string, to: string) {
+  object[to] = object[from];
+  delete object[from];
+}
+
 function mutateNesw<T extends PassStatusEventData | ChargeStatusEventData>(event: T) {
   const mutEvent = event as any;
-  event.northDone = mutEvent.north_done;
-  event.eastDone = mutEvent.east_done;
-  event.southDone = mutEvent.south_done;
-  event.westDone = mutEvent.west_done;
-  delete mutEvent.north_done;
-  delete mutEvent.east_done;
-  delete mutEvent.south_done;
-  delete mutEvent.west_done;
+  renameProp(mutEvent, "north_done", "northDone");
+  renameProp(mutEvent, "east_done", "eastDone");
+  renameProp(mutEvent, "south_done", "southDone");
+  renameProp(mutEvent, "west_done", "westDone");
   return event;
 }
 
 function unrustify(event: EventData): EventData {
   switch (event.type) {
     case "sit":
+      renameProp(event.north, "user_id", "userId");
+      renameProp(event.east, "user_id", "userId");
+      renameProp(event.south, "user_id", "userId");
+      renameProp(event.west, "user_id", "userId");
     case "end_replay":
     case "deal":
     case "start_passing":
@@ -34,11 +38,8 @@ function unrustify(event: EventData): EventData {
     case "chat":
       return event;
     case "play_status":
-      const mutEvent = event as any;
-      event.legalPlays = mutEvent.legal_plays;
-      event.nextPlayer = mutEvent.next_player;
-      delete (event as any).legal_plays;
-      delete (event as any).next_player;
+      renameProp(event, "legal_plays", "legalPlays");
+      renameProp(event, "next_player", "nextPlayer");
       return event;
     case "charge_status":
     case "pass_status":

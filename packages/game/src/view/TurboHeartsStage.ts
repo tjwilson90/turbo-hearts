@@ -350,13 +350,13 @@ export class TurboHeartsStage {
   }
 
   private getBottomSeat(state: TurboHearts.StateSnapshot) {
-    if (state.north.name === this.userId) {
+    if (state.north.userId === this.userId) {
       return "north";
-    } else if (state.east.name === this.userId) {
+    } else if (state.east.userId === this.userId) {
       return "east";
-    } else if (state.south.name === this.userId) {
+    } else if (state.south.userId === this.userId) {
       return "south";
-    } else if (state.west.name === this.userId) {
+    } else if (state.west.userId === this.userId) {
       return "west";
     } else {
       return "south";
