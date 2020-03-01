@@ -33,20 +33,26 @@ Takes a set of user ids and returns a corresponding set of users.
 
 Request:
 ```json
-[
-  "38009247-c85b-4ca1-8e59-cf626ea565f7",
-  "d33b08ca-4d34-44f8-8643-cbf7fce5a91c"
-]
+{
+  "ids": [
+   "38009247-c85b-4ca1-8e59-cf626ea565f7",
+    "d33b08ca-4d34-44f8-8643-cbf7fce5a91c"
+  ]
+}
 ```
 
 Response:
-[{
-  "id": "38009247-c85b-4ca1-8e59-cf626ea565f7",
-  "name": "carrino"
-}, {
-  "id": "d33b08ca-4d34-44f8-8643-cbf7fce5a91c",
-  "name": "twilson"
-}]
+```json
+{
+  "users": [{
+    "id": "38009247-c85b-4ca1-8e59-cf626ea565f7",
+    "name": "carrino"
+  }, {
+    "id": "d33b08ca-4d34-44f8-8643-cbf7fce5a91c",
+    "name": "twilson"
+  }]
+}
+```
 
 ### `GET /lobby`
 
