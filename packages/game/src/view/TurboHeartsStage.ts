@@ -200,18 +200,13 @@ export class TurboHeartsStage {
     const bottomSeat = this.getBottomSeat(state);
     const player = state[bottomSeat];
     const action = player.action;
-    console.log(this.currentSnapshotIndex, action, JSON.stringify(state[bottomSeat].legalPlays));
     if (this.input !== undefined) {
       // TODO: player.legalPlays isn't sufficient for pass/charge
       if (this.input.action !== action || this.input.rawCards !== player.legalPlays) {
-        console.log("CLEAN");
         this.endInput();
-      } else {
-        console.log("ALREADY GOOD");
       }
     }
     if (action !== "none" && this.input === undefined) {
-      console.log("BEGIN");
       this.beginInput(player);
     }
   };
@@ -324,7 +319,6 @@ export class TurboHeartsStage {
         next.event.type === "send_pass" ||
         next.event.type === "charge"
       ) {
-        console.log("STEP");
         return new StepAnimation(
           this.app.loader.resources,
           this.createCard,
@@ -343,7 +337,6 @@ export class TurboHeartsStage {
       return noopAnimation();
     }
     if (next.event.type === "sit") {
-      console.log("SNAP");
       return snapAnimation();
     }
     throw new Error("");
@@ -412,7 +405,6 @@ export class TurboHeartsStage {
       }
 
       const pileCards = state[seat].pile.map(c => createSpriteCard(this.app.loader.resources, c, true));
-      console.log("SNAP PILE CARDS", pileCards.length);
       this[position].pile = pileCards;
       for (let i = 0; i < pileCards.length; i++) {
         const card = pileCards[i];
