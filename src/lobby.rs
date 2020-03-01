@@ -23,11 +23,11 @@ pub struct Lobby {
     inner: Arc<Mutex<Inner>>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct GameLobby {
     pub participants: HashSet<Participant>,
-    pub created_at: i64,
-    pub updated_at: i64,
+    pub created_at_time: i64,
+    pub updated_at_time: i64,
 }
 
 struct Inner {
@@ -73,7 +73,7 @@ impl Lobby {
                             .participants
                             .clone()
                             .into_iter()
-                            .map(|participant| participant.player.clone())
+                            .map(|participant| *participant.player)
                             .collect(),
                     )
                 })
@@ -97,8 +97,8 @@ impl Lobby {
             .as_millis() as i64;
         let game = GameLobby {
             participants,
-            created_at: timestamp,
-            updated_at: timestamp,
+            created_at_time: timestamp,
+            updated_at_time: timestamp,
         };
         inner.games.insert(game_id, game);
         inner.broadcast(LobbyEvent::NewGame { game_id, user_id });
@@ -120,7 +120,7 @@ impl Lobby {
                 player: player.clone(),
                 rules,
             });
-            lobby.updated_at = SystemTime::now()
+            lobby.updated_at_time = SystemTime::now()
                 .duration_since(SystemTime::UNIX_EPOCH)
                 .unwrap()
                 .as_millis() as i64;
