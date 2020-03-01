@@ -1,8 +1,7 @@
 use crate::{
     error::CardsError,
-    types::{ChargingRules, Event, GameId, Participant, Player},
+    types::{ChargingRules, GameId, Participant, Player, UserId},
 };
-use serde::{Deserialize, Serialize};
 use std::{
     collections::{hash_map::Entry, HashMap, HashSet, VecDeque},
     sync::Arc,
@@ -12,58 +11,20 @@ use tokio::sync::{
     Mutex,
 };
 
+mod endpoints;
+mod event;
+
+pub use endpoints::*;
+pub use event::*;
+
 #[derive(Clone)]
 pub struct Lobby {
     inner: Arc<Mutex<Inner>>,
 }
 
 struct Inner {
-    subscribers: HashMap<String, Vec<UnboundedSender<LobbyEvent>>>,
+    subscribers: HashMap<UserId, Vec<UnboundedSender<LobbyEvent>>>,
     games: HashMap<GameId, HashSet<Participant>>,
-}
-
-#[serde(tag = "type", rename_all = "snake_case")]
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
-pub enum LobbyEvent {
-    Ping,
-    JoinLobby {
-        name: String,
-    },
-    NewGame {
-        id: GameId,
-        name: String,
-    },
-    LobbyState {
-        subscribers: HashSet<String>,
-        games: HashMap<GameId, Vec<Player>>,
-    },
-    JoinGame {
-        id: GameId,
-        player: Player,
-    },
-    LeaveGame {
-        id: GameId,
-        name: String,
-    },
-    FinishGame {
-        id: GameId,
-    },
-    Chat {
-        name: String,
-        message: String,
-    },
-    LeaveLobby {
-        name: String,
-    },
-}
-
-impl Event for LobbyEvent {
-    fn is_ping(&self) -> bool {
-        match self {
-            LobbyEvent::Ping => true,
-            _ => false,
-        }
-    }
 }
 
 impl Lobby {
@@ -81,15 +42,15 @@ impl Lobby {
         inner.broadcast(LobbyEvent::Ping);
     }
 
-    pub async fn subscribe(&self, name: String) -> UnboundedReceiver<LobbyEvent> {
+    pub async fn subscribe(&self, user_id: UserId) -> UnboundedReceiver<LobbyEvent> {
         let (tx, rx) = unbounded_channel();
         let mut inner = self.inner.lock().await;
-        if !inner.subscribers.contains_key(&name) {
-            inner.broadcast(LobbyEvent::JoinLobby { name: name.clone() });
+        if !inner.subscribers.contains_key(&user_id) {
+            inner.broadcast(LobbyEvent::JoinLobby { user_id });
         }
         inner
             .subscribers
-            .entry(name)
+            .entry(user_id)
             .or_insert(Vec::new())
             .push(tx.clone());
         tx.send(LobbyEvent::LobbyState {
@@ -97,9 +58,9 @@ impl Lobby {
             games: inner
                 .games
                 .iter()
-                .map(|(id, players)| {
+                .map(|(game_id, players)| {
                     (
-                        *id,
+                        *game_id,
                         players
                             .into_iter()
                             .map(|participant| &participant.player)
@@ -113,68 +74,68 @@ impl Lobby {
         rx
     }
 
-    pub async fn new_game(&self, name: String, rules: ChargingRules) -> GameId {
-        let id = GameId::new();
+    pub async fn new_game(&self, user_id: UserId, rules: ChargingRules) -> GameId {
+        let game_id = GameId::new();
         let mut inner = self.inner.lock().await;
         let mut game = HashSet::new();
         game.insert(Participant {
-            player: Player::Human { name: name.clone() },
+            player: Player::Human { user_id },
             rules,
         });
-        inner.games.insert(id, game);
-        inner.broadcast(LobbyEvent::NewGame { id, name });
-        id
+        inner.games.insert(game_id, game);
+        inner.broadcast(LobbyEvent::NewGame { game_id, user_id });
+        game_id
     }
 
     pub async fn join_game(
         &self,
-        id: GameId,
+        game_id: GameId,
         player: Player,
         rules: ChargingRules,
     ) -> Result<HashSet<Participant>, CardsError> {
         let mut inner = self.inner.lock().await;
-        if let Some(players) = inner.games.get_mut(&id) {
+        if let Some(players) = inner.games.get_mut(&game_id) {
             if players.len() == 4 {
-                return Err(CardsError::GameHasStarted(id));
+                return Err(CardsError::GameHasStarted(game_id));
             }
             players.insert(Participant {
                 player: player.clone(),
                 rules,
             });
             let players = players.clone();
-            inner.broadcast(LobbyEvent::JoinGame { id, player });
+            inner.broadcast(LobbyEvent::JoinGame { game_id, player });
             Ok(players)
         } else {
-            Err(CardsError::UnknownGame(id))
+            Err(CardsError::UnknownGame(game_id))
         }
     }
 
-    pub async fn leave_game(&self, id: GameId, name: String) {
+    pub async fn leave_game(&self, game_id: GameId, user_id: UserId) {
         let mut inner = self.inner.lock().await;
         let games = &mut inner.games;
-        if let Entry::Occupied(mut entry) = games.entry(id) {
+        if let Entry::Occupied(mut entry) = games.entry(game_id) {
             let participants = entry.get_mut();
             let count = participants.len();
-            participants.retain(|participant| participant.player.name() != &name);
+            participants.retain(|participant| participant.player.user_id() != user_id);
             if participants.len() < count {
                 if participants.is_empty() {
                     entry.remove();
                 }
-                inner.broadcast(LobbyEvent::LeaveGame { id, name });
+                inner.broadcast(LobbyEvent::LeaveGame { game_id, user_id });
             }
         }
     }
 
-    pub async fn remove_game(&self, id: GameId) {
+    pub async fn remove_game(&self, game_id: GameId) {
         let mut inner = self.inner.lock().await;
-        if inner.games.remove(&id).is_some() {
-            inner.broadcast(LobbyEvent::FinishGame { id });
+        if inner.games.remove(&game_id).is_some() {
+            inner.broadcast(LobbyEvent::FinishGame { game_id });
         }
     }
 
-    pub async fn chat(&self, name: String, message: String) {
+    pub async fn chat(&self, user_id: UserId, message: String) {
         let mut inner = self.inner.lock().await;
-        inner.broadcast(LobbyEvent::Chat { name, message });
+        inner.broadcast(LobbyEvent::Chat { user_id, message });
     }
 }
 
@@ -183,10 +144,10 @@ impl Inner {
         let mut events = VecDeque::new();
         events.push_back(event);
         while let Some(event) = events.pop_front() {
-            self.subscribers.retain(|name, txs| {
+            self.subscribers.retain(|user_id, txs| {
                 txs.retain(|tx| tx.send(event.clone()).is_ok());
                 if txs.is_empty() {
-                    events.push_back(LobbyEvent::LeaveLobby { name: name.clone() });
+                    events.push_back(LobbyEvent::LeaveLobby { user_id: *user_id });
                     false
                 } else {
                     true

@@ -1,9 +1,8 @@
 use crate::{
-    bot::{Algorithm, BotState},
+    bot::{random::Random, Algorithm, BotState},
     cards::{Card, Cards},
     game::GameEvent,
 };
-use rand::Rng;
 
 pub struct Duck;
 
@@ -37,8 +36,7 @@ impl Algorithm for Duck {
     fn play(&mut self, state: &BotState) -> Card {
         let cards = state.game.legal_plays(state.post_pass_hand);
         if state.game.current_trick.is_empty() {
-            let index = rand::thread_rng().gen_range(0, cards.len());
-            return cards.into_iter().nth(index).unwrap();
+            return Random::new().play(state);
         }
         let suit = state.game.current_trick[0].suit();
         if !suit.cards().contains_any(cards) {

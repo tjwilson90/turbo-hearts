@@ -1,6 +1,6 @@
 use crate::{
     game::GameEvent,
-    types::{ChargingRules, Seat},
+    types::{ChargingRules, Seat, UserId},
 };
 use serde::{
     de::{SeqAccess, Visitor},
@@ -43,6 +43,10 @@ pub enum Rank {
 impl Rank {
     pub fn char(self) -> char {
         RANKS[self as usize]
+    }
+
+    pub fn with_suit(self, suit: Suit) -> Card {
+        Card::new(self, suit)
     }
 }
 
@@ -97,6 +101,10 @@ impl Suit {
         Cards {
             bits: 0x1fff << (16 * self as u64),
         }
+    }
+
+    pub fn with_rank(self, rank: Rank) -> Card {
+        Card::new(rank, self)
     }
 }
 
@@ -573,6 +581,14 @@ impl FromIterator<Card> for Cards {
     }
 }
 
+impl FromIterator<Cards> for Cards {
+    fn from_iter<T: IntoIterator<Item = Cards>>(iter: T) -> Self {
+        let mut cards = Cards::NONE;
+        iter.into_iter().for_each(|c| cards |= c);
+        cards
+    }
+}
+
 #[repr(u8)]
 #[serde(rename_all = "snake_case")]
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
@@ -712,7 +728,7 @@ impl ClaimState {
 
 #[derive(Debug)]
 pub struct GameState {
-    pub players: [String; 4],
+    pub players: [UserId; 4],
     pub rules: ChargingRules,
     pub phase: GamePhase,
     pub sent_pass: [bool; 4],
@@ -732,7 +748,7 @@ pub struct GameState {
 impl GameState {
     pub fn new() -> Self {
         Self {
-            players: [String::new(), String::new(), String::new(), String::new()],
+            players: [UserId::null(); 4],
             rules: ChargingRules::Classic,
             phase: GamePhase::PassLeft,
             sent_pass: [false; 4],
@@ -751,7 +767,7 @@ impl GameState {
     }
 
     pub fn charged_cards(&self) -> Cards {
-        self.charged[0] | self.charged[1] | self.charged[2] | self.charged[3]
+        self.charged.iter().cloned().collect()
     }
 
     pub fn pass_status_event(&self) -> GameEvent {
@@ -830,10 +846,10 @@ impl GameState {
                 west,
                 rules,
             } => {
-                self.players[0] = north.name().to_string();
-                self.players[1] = east.name().to_string();
-                self.players[2] = south.name().to_string();
-                self.players[3] = west.name().to_string();
+                self.players[0] = north.user_id();
+                self.players[1] = east.user_id();
+                self.players[2] = south.user_id();
+                self.players[3] = west.user_id();
                 self.rules = *rules;
             }
             GameEvent::Deal { .. } => {

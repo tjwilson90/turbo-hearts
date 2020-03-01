@@ -24,7 +24,7 @@ import { Snapshotter } from "./game/snapshotter";
 import { TurboHeartsStage } from "./view/TurboHeartsStage";
 
 document.addEventListener("DOMContentLoaded", () => {
-  const userId = cookie.parse(document.cookie)["NAME"];
+  const userId = cookie.parse(document.cookie)["USER_ID"];
   if (userId?.length === 0) {
     document.body.innerHTML = "Missing user id";
     return;
