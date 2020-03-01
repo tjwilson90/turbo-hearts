@@ -278,6 +278,7 @@ export class StepAnimation implements Animation {
       const charged = player.sprites.hand.splice(0, event.cards.length);
       for (let i = 0; i < charged.length; i++) {
         charged[i].card = event.cards[i];
+        charged[i].sprite.texture = this.cardTextures[event.cards[i]].texture;
       }
       pushAll(player.sprites.charged, charged);
     } else {
