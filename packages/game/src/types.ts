@@ -4,9 +4,14 @@ export type Seat = "north" | "east" | "south" | "west";
 export type Position = "top" | "right" | "bottom" | "left";
 
 export interface SitPlayer {
+  userId: string;
   name: string;
   type: "bot" | "human";
   algorithm?: string;
+}
+
+export interface InitialEventData {
+  type: "initial";
 }
 
 export interface SitEventData {
@@ -139,6 +144,7 @@ export interface SpriteCard {
 }
 
 export type EventData =
+  | InitialEventData
   | SitEventData
   | ChatEvent
   | EndReplayEventData
@@ -155,6 +161,19 @@ export type EventData =
   | PlayEventData
   | EndTrickEventData
   | GameCompleteEventData;
+
+export interface Animation {
+  start(): void;
+  isFinished(): boolean;
+}
+
+export interface PlayerSpriteCards {
+  hand: SpriteCard[];
+  limbo: SpriteCard[];
+  charged: SpriteCard[];
+  plays: SpriteCard[];
+  pile: SpriteCard[];
+}
 
 export type Card =
   | "BACK"

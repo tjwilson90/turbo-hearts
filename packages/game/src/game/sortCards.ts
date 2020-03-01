@@ -1,4 +1,4 @@
-import { SpriteCard } from "../types";
+import { SpriteCard, Card } from "../types";
 
 const sortOrder: { [key: string]: number } = {
   BACK: 0,
@@ -55,6 +55,12 @@ const sortOrder: { [key: string]: number } = {
   KS: 51,
   AS: 52
 };
+
+export function sortCards(cards: Card[]) {
+  cards.sort((a, b) => {
+    return sortOrder[a] - sortOrder[b];
+  });
+}
 
 export function sortSpriteCards(cards: SpriteCard[]) {
   cards.sort((a, b) => {
