@@ -10,14 +10,14 @@
     "build": "mkdir -p ../../assets/game && mkdir -p dist/js/ && run-p build:*",
     "build:html": "cp src/index.html ../../assets/game/index.html",
     "build:js": "run-s build:js:*",
-    "build:js:compile": "sucrase src/ -d dist/js/ --transforms typescript,imports",
+    "build:js:compile": "tsc -p .",
     "build:js:bundle": "px dist/js/index.js ../../assets/game/index.js",
     "build:sass": "run-p build:sass:*",
     "build:sass:compile": "sass src/styles/style.scss ../../assets/game/index.css",
     "build:sass:autoprefixer": "postcss ../../assets/game/index.css --use autoprefixer -o ../../assets/game/index.css",
     "watch": "run-p watch:*",
-    "watch:js": "chokidar 'src/**/*.ts' -c 'npm run build:js'",
-    "watch:sass": "chokidar 'src/styles/**/*.scss' -c 'npm run build:sass'"
+    "watch:js": "chokidar 'src/**/*.ts' -c 'time run-s build:js && echo \"[Done\"]'",
+    "watch:sass": "chokidar 'src/styles/**/*.scss' -c 'run-s build:sass'"
   },
   "devDependencies": {
     "@types/classnames": "^2.2.9",
@@ -30,7 +30,6 @@
     "npm-run-all": "^4.1.5",
     "postcss-cli": "^7.1.0",
     "sass": "^1.26.2",
-    "sucrase": "^3.12.1",
     "typescript": "^3.7.5"
   },
   "dependencies": {
