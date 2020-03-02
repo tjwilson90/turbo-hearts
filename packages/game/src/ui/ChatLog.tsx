@@ -12,8 +12,20 @@ export namespace ChatLog {
 }
 
 class ChatLogInternal extends React.Component<ChatLog.Props> {
+  private ref = React.createRef<HTMLDivElement>();
+
   public render() {
-    return <div className="chat-log">{this.props.messages.map(this.renderMessage)}</div>;
+    return (
+      <div className="chat-log" ref={this.ref}>
+        {this.props.messages.map(this.renderMessage)}
+      </div>
+    );
+  }
+
+  public componentDidUpdate(prevProps: ChatLog.Props) {
+    if (prevProps.messages.length !== this.props.messages.length && this.ref.current != null) {
+      this.ref.current.scrollTop = this.ref.current.scrollHeight;
+    }
   }
 
   private renderMessage = (message: ChatMessage, idx: number) => {
