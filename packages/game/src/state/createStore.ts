@@ -4,8 +4,9 @@ import { applyMiddleware, Store } from "redux";
 import { Snapshotter } from "../game/snapshotter";
 import { TurboHeartsEventSource } from "../game/TurboHeartsEventSource";
 import { TurboHeartsService } from "../game/TurboHeartsService";
-import { AppendChat, SetGameUsers, UpdateUsers, UpdateActions } from "./actions";
+import { AppendChat, SetGameUsers, UpdateUsers, UpdateActions, AppendTrick, ResetTricks } from "./actions";
 import { ChatState, GameAppState, GameContext, GameState, User, UsersState } from "./types";
+import { TrickTracker } from "../game/TrickTracker";
 
 const chatReducer = TypedReducer.builder<ChatState>()
   .withHandler(AppendChat.TYPE, (state, msg) => {
@@ -57,6 +58,18 @@ const gameReducer = TypedReducer.builder<GameState>()
       leftAction: actions.left
     };
   })
+  .withHandler(AppendTrick.TYPE, (state, trick) => {
+    return {
+      ...state,
+      tricks: [...state.tricks, trick]
+    };
+  })
+  .withHandler(ResetTricks.TYPE, state => {
+    return {
+      ...state,
+      tricks: []
+    };
+  })
   .build();
 
 const rootReducer = combineReducers({
@@ -76,6 +89,7 @@ const INITIAL_STATE: GameAppState = {
   },
   game: {
     gameId: undefined!,
+    bottomSeat: undefined!,
     top: undefined,
     right: undefined,
     bottom: undefined,
@@ -83,12 +97,14 @@ const INITIAL_STATE: GameAppState = {
     topAction: "none",
     rightAction: "none",
     bottomAction: "none",
-    leftAction: "none"
+    leftAction: "none",
+    tricks: []
   },
   context: {
     eventSource: undefined!,
     service: undefined!,
-    snapshotter: undefined!
+    snapshotter: undefined!,
+    trickTracker: undefined!
   }
 };
 
@@ -103,7 +119,12 @@ export function createGameAppStore(gameId: string) {
   initialState.context.eventSource = new TurboHeartsEventSource(gameId);
   initialState.context.service = new TurboHeartsService(gameId);
   initialState.context.snapshotter = new Snapshotter(initialState.users.me.userId);
-  initialState.context.eventSource.on("event", initialState.context.snapshotter.onEvent);
+  initialState.context.trickTracker = new TrickTracker();
+
+  initialState.context.eventSource.on("event", event => {
+    initialState.context.snapshotter.onEvent(event);
+    initialState.context.trickTracker.onEvent(event);
+  });
   return createStore(
     rootReducer,
     initialState,
