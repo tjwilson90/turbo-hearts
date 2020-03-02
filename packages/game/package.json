@@ -11,7 +11,7 @@
     "build": "mkdir -p ../../assets/game && mkdir -p dist/js/ && run-p build:*",
     "build-prod": "mkdir -p ../../assets/game && mkdir -p dist/js/ && run-p build:*",
     "build:html": "cp src/index.html ../../assets/game/index.html",
-    "build:js": "if [[ ${NODE_ENV} == \"production\" ]]; then run-s build:js-prod:*; else run-s build:js-dev:*; fi",
+    "build:js": "if [ \"${NODE_ENV}\" = 'production' ]; then run-s build:js-prod:*; else run-s build:js-dev:*; fi",
     "build:js-dev:compile": "sucrase -q src/ -d dist/js/ --transforms typescript,imports,jsx",
     "build:js-dev:bundle": "esbuild dist/js/index.js --bundle '--define:process.env.NODE_ENV=\"development\"' --minify --outfile=../../assets/game/index.js",
     "build:js-prod:compile": "tsc -p .",
