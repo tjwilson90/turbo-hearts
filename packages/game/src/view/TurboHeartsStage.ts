@@ -27,11 +27,10 @@ import {
   LIMBO_BOTTOM,
   CARD_DROP_SHADOW,
   CARD_DISPLAY_HEIGHT,
-  CARD_MARGIN
 } from "../const";
 import { groupCards } from "../events/groupCards";
 import { TurboHeartsService } from "../game/TurboHeartsService";
-import { TurboHearts, Action, cardsOf } from "../game/stateSnapshot";
+import { TurboHearts, cardsOf } from "../game/stateSnapshot";
 import {
   Animation,
   Card,
@@ -43,7 +42,6 @@ import {
   SpriteCard,
   PlayerSpriteCards,
   Position,
-  EventData
 } from "../types";
 import { StepAnimation } from "./StepAnimation";
 import { spriteCardsOf } from "../events/helpers";

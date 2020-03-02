@@ -12,8 +12,6 @@ export namespace ChatLog {
 }
 
 class ChatLogInternal extends React.Component<ChatLog.Props> {
-  private canvasRef = React.createRef<HTMLCanvasElement>();
-
   public render() {
     return <div className="chat-log">{this.props.messages.map(this.renderMessage)}</div>;
   }

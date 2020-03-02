@@ -1,7 +1,5 @@
-import { EventEmitter, ListenerFn } from "eventemitter3";
+import { EventEmitter } from "eventemitter3";
 import { ChargeStatusEventData, EventData, PassStatusEventData } from "../types";
-
-export type EventType = "event" | EventData["type"];
 
 function renameProp(object: any, from: string, to: string) {
   object[to] = object[from];
@@ -53,7 +51,7 @@ function unrustify(event: EventData): EventData {
 }
 
 export class TurboHeartsEventSource {
-  private eventSource: EventSource;
+  private eventSource: EventSource | undefined;
   private emitter = new EventEmitter();
 
   constructor(private gameId: string) {}
@@ -65,15 +63,19 @@ export class TurboHeartsEventSource {
     this.eventSource.addEventListener("message", this.handleEvent);
   }
 
-  public on(event: EventType, fn: (event: EventData) => void) {
+  public on<K extends EventData>(event: K["type"] | "event", fn: (event: K) => void) {
     this.emitter.on(event, fn);
   }
 
-  public off(event: EventType, fn: (event: EventData) => void) {
+  public onAny(fn: (event: EventData) => void) {
+    this.emitter.on("event", fn);
+  }
+
+  public off<K extends EventData>(event: K["type"], fn: (event: K) => void) {
     this.emitter.off(event, fn);
   }
 
-  public once(event: EventType, fn: (event: EventData) => void) {
+  public once<K extends EventData>(event: K["type"], fn: (event: K) => void) {
     this.emitter.once(event, fn);
   }
 

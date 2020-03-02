@@ -5,6 +5,7 @@ use crate::{
 use std::{
     collections::{hash_map::Entry, HashMap, HashSet, VecDeque},
     sync::Arc,
+    time::SystemTime,
 };
 use tokio::sync::{
     mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender},
@@ -22,13 +23,20 @@ pub struct Lobby {
     inner: Arc<Mutex<Inner>>,
 }
 
+#[derive(Clone, Debug)]
+pub struct GameLobby {
+    pub participants: HashSet<Participant>,
+    pub created_at_time: i64,
+    pub updated_at_time: i64,
+}
+
 struct Inner {
     subscribers: HashMap<UserId, Vec<UnboundedSender<LobbyEvent>>>,
-    games: HashMap<GameId, HashSet<Participant>>,
+    games: HashMap<GameId, GameLobby>,
 }
 
 impl Lobby {
-    pub fn new(games: HashMap<GameId, HashSet<Participant>>) -> Self {
+    pub fn new(games: HashMap<GameId, GameLobby>) -> Self {
         Self {
             inner: Arc::new(Mutex::new(Inner {
                 subscribers: HashMap::new(),
@@ -58,14 +66,15 @@ impl Lobby {
             games: inner
                 .games
                 .iter()
-                .map(|(game_id, players)| {
+                .map(|(game_id, lobby)| {
                     (
                         *game_id,
-                        players
-                            .into_iter()
+                        lobby
+                            .participants
+                            .iter()
                             .map(|participant| &participant.player)
                             .cloned()
-                            .collect(),
+                            .collect()
                     )
                 })
                 .collect(),
@@ -77,11 +86,20 @@ impl Lobby {
     pub async fn new_game(&self, user_id: UserId, rules: ChargingRules) -> GameId {
         let game_id = GameId::new();
         let mut inner = self.inner.lock().await;
-        let mut game = HashSet::new();
-        game.insert(Participant {
+        let mut participants = HashSet::new();
+        participants.insert(Participant {
             player: Player::Human { user_id },
             rules,
         });
+        let timestamp = SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap()
+            .as_millis() as i64;
+        let game = GameLobby {
+            participants,
+            created_at_time: timestamp,
+            updated_at_time: timestamp,
+        };
         inner.games.insert(game_id, game);
         inner.broadcast(LobbyEvent::NewGame { game_id, user_id });
         game_id
@@ -92,19 +110,23 @@ impl Lobby {
         game_id: GameId,
         player: Player,
         rules: ChargingRules,
-    ) -> Result<HashSet<Participant>, CardsError> {
+    ) -> Result<GameLobby, CardsError> {
         let mut inner = self.inner.lock().await;
-        if let Some(players) = inner.games.get_mut(&game_id) {
-            if players.len() == 4 {
+        if let Some(lobby) = inner.games.get_mut(&game_id) {
+            if lobby.participants.len() == 4 {
                 return Err(CardsError::GameHasStarted(game_id));
             }
-            players.insert(Participant {
+            lobby.participants.insert(Participant {
                 player: player.clone(),
                 rules,
             });
-            let players = players.clone();
+            lobby.updated_at_time = SystemTime::now()
+                .duration_since(SystemTime::UNIX_EPOCH)
+                .unwrap()
+                .as_millis() as i64;
+            let lobby = lobby.clone();
             inner.broadcast(LobbyEvent::JoinGame { game_id, player });
-            Ok(players)
+            Ok(lobby)
         } else {
             Err(CardsError::UnknownGame(game_id))
         }
@@ -114,7 +136,7 @@ impl Lobby {
         let mut inner = self.inner.lock().await;
         let games = &mut inner.games;
         if let Entry::Occupied(mut entry) = games.entry(game_id) {
-            let participants = entry.get_mut();
+            let participants = &mut entry.get_mut().participants;
             let count = participants.len();
             participants.retain(|participant| participant.player.user_id() != user_id);
             if participants.len() < count {

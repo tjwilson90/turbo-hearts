@@ -188,14 +188,14 @@ export class Snapshotter {
   };
 
   public on(
-    event: "snapshot",
+    _event: "snapshot",
     fn: (event: { next: TurboHearts.StateSnapshot; previous: TurboHearts.StateSnapshot }) => void
   ) {
     this.emitter.on("snapshot", fn);
   }
 
   public off(
-    event: "snapshot",
+    _event: "snapshot",
     fn: (event: { next: TurboHearts.StateSnapshot; previous: TurboHearts.StateSnapshot }) => void
   ) {
     this.emitter.off("snapshot", fn);

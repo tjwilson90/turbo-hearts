@@ -1,12 +1,11 @@
 import * as cookie from "cookie";
-import { GameAppState, ChatState, UsersState, GameState, GameContext, User } from "./types";
-import { createStore, TypedReducer, combineReducers, loggingMiddleware, StoreEnhancer } from "redoodle";
-import { Store, applyMiddleware } from "redux";
+import { combineReducers, createStore, loggingMiddleware, StoreEnhancer, TypedReducer } from "redoodle";
+import { applyMiddleware, Store } from "redux";
+import { Snapshotter } from "../game/snapshotter";
 import { TurboHeartsEventSource } from "../game/TurboHeartsEventSource";
 import { TurboHeartsService } from "../game/TurboHeartsService";
-import { Snapshotter } from "../game/snapshotter";
-import { SetGameUsers, AppendChat, UpdateUsers } from "./actions";
-import { ChatEvent } from "../types";
+import { AppendChat, SetGameUsers, UpdateUsers } from "./actions";
+import { ChatState, GameAppState, GameContext, GameState, User, UsersState } from "./types";
 
 const chatReducer = TypedReducer.builder<ChatState>()
   .withHandler(AppendChat.TYPE, (state, msg) => {
@@ -92,7 +91,9 @@ export function createGameAppStore(gameId: string) {
   initialState.context.service = new TurboHeartsService(gameId);
   initialState.context.snapshotter = new Snapshotter(initialState.users.me.userId);
   initialState.context.eventSource.on("event", initialState.context.snapshotter.onEvent);
-  return createStore(rootReducer, initialState, applyMiddleware(loggingMiddleware({})) as StoreEnhancer) as Store<
-    GameAppState
-  >;
+  return createStore(
+    rootReducer,
+    initialState,
+    (applyMiddleware(loggingMiddleware({})) as any) as StoreEnhancer
+  ) as Store<GameAppState>;
 }
