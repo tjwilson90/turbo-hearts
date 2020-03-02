@@ -1,4 +1,0 @@
-buttons:
-  - title: Deploy to play.anti.run
-    action: "deploy"
-    description: Deploy to play.anti.run

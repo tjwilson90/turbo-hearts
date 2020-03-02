@@ -1,7 +1,8 @@
 import { Card } from "../types";
+import { User } from "../state/types";
 
 export class TurboHeartsService {
-  private userNames: { [key: string]: string } = {};
+  private userNames: { [key: string]: User } = {};
   constructor(private gameId: string) {}
 
   private requestWithBody(body: any): RequestInit {
@@ -32,7 +33,7 @@ export class TurboHeartsService {
   };
 
   public getUsers = async (userIds: string[]) => {
-    const result: { [key: string]: string } = {};
+    const result: { [key: string]: User } = {};
     const toRequest: string[] = [];
     for (const userId of userIds) {
       if (this.userNames[userId] !== undefined) {
@@ -47,8 +48,12 @@ export class TurboHeartsService {
     const resp = await fetch(`/users`, this.requestWithBody({ ids: toRequest }));
     const json = (await resp.json()) as { name: string; id: string }[];
     for (const item of json) {
-      result[item.id] = item.name;
-      this.userNames[item.id] = item.name;
+      const user = {
+        userId: item.id,
+        name: item.name
+      };
+      result[item.id] = user;
+      this.userNames[item.id] = user;
     }
     return result;
   };
