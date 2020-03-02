@@ -238,7 +238,7 @@ function leaveGame(event) {
 function openGame(event) {
   let game_id = event.target.parentNode.id;
   console.log("openGame: %s", game_id);
-  window.open("/assets/game/#" + game_id);
+  window.open("/game/#" + game_id);
 }
 
 document.addEventListener("DOMContentLoaded", event => {
