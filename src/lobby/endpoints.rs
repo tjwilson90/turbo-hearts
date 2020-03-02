@@ -18,7 +18,7 @@ pub fn router(server: infallible!(Server), user_id: rejection!(UserId)) -> reply
                 .or(join_game(server.clone(), user_id.clone()))
                 .or(leave_game(server.clone(), user_id.clone()))
                 .or(add_bot(server.clone()))
-                .or(remove_bot(server.clone()))
+                .or(remove(server.clone()))
                 .or(chat(server, user_id)),
         )
         .boxed()
@@ -169,7 +169,7 @@ fn add_bot(server: infallible!(Server)) -> reply!() {
         .and_then(handle)
 }
 
-fn remove_bot(server: infallible!(Server)) -> reply!() {
+fn remove(server: infallible!(Server)) -> reply!() {
     #[derive(Debug, Deserialize)]
     struct Request {
         game_id: GameId,
@@ -182,7 +182,7 @@ fn remove_bot(server: infallible!(Server)) -> reply!() {
         Ok(warp::reply())
     }
 
-    warp::path!("remove_bot")
+    warp::path!("remove")
         .and(warp::post())
         .and(server)
         .and(warp::body::json())

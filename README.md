@@ -89,8 +89,21 @@ containing the list of all active subscribers, as well as all incomplete games.
   "subscribers": ["d33b08ca-4d34-44f8-8643-cbf7fce5a91c", "38009247-c85b-4ca1-8e59-cf626ea565f7"],
   "games": {
     "8c9e2ff7-dcf3-49be-86f0-315f469840bc": [{
-      "type": "human",
-      "user_id": "17b5876b-30f7-460f-beb4-a54cc114dcf2"
+      "players": [{
+        "player": {
+          "type": "human",
+          "user_id": "17b5876b-30f7-460f-beb4-a54cc114dcf2"
+        },
+        "rules": "blind",
+        "seat": null
+      }],
+      "seed": {
+        "type": "redacted"
+      },
+      "created_time": 1583168449628,
+      "created_by": "17b5876b-30f7-460f-beb4-a54cc114dcf2",
+      "last_updated_time": 1583168449628,
+      "last_updated_by": "17b5876b-30f7-460f-beb4-a54cc114dcf2"
     }]
   }
 }
@@ -105,7 +118,23 @@ id of the game and the id of the player who created the game.
 {
   "type": "new_game",
   "game_id": "8c9e2ff7-dcf3-49be-86f0-315f469840bc",
-  "user_id": "17b5876b-30f7-460f-beb4-a54cc114dcf2"
+  "game": {
+    "players": [{
+      "player": {
+        "type": "human",
+        "user_id": "17b5876b-30f7-460f-beb4-a54cc114dcf2"
+      },
+      "rules": "blind",
+      "seat": "east"
+    }],
+    "seed": {
+      "type": "redacted"
+    },
+    "created_time": 1583168449628,
+    "created_by": "17b5876b-30f7-460f-beb4-a54cc114dcf2",
+    "last_updated_time": 1583168449628,
+    "last_updated_by": "17b5876b-30f7-460f-beb4-a54cc114dcf2"
+  }
 }
 ```
 
@@ -119,9 +148,13 @@ containing the id of the game and the player who joined the game.
   "type": "join_game",
   "game_id": "8c9e2ff7-dcf3-49be-86f0-315f469840bc",
   "player": {
-    "type": "bot",
-    "user_id": "d33b08ca-4d34-44f8-8643-cbf7fce5a91c",
-    "algorithm": "duck"
+    "player": {
+      "type": "bot",
+      "user_id": "d33b08ca-4d34-44f8-8643-cbf7fce5a91c",
+      "strategy": "duck"
+    },
+    "rules": "classic",
+    "seat": null
   }
 }
 ```
@@ -182,7 +215,9 @@ will be selected randomly from the proposed rules of all players once the game h
 Request:
 ```json
 {
-  "rules": "blind"
+  "rules": "blind",
+  "seat": "north",
+  "seed": "my custom game seed"
 }
 ```
 
@@ -201,20 +236,20 @@ Request:
 ```json
 {
   "game_id": "8c9e2ff7-dcf3-49be-86f0-315f469840bc",
-  "rules": "chain"
+  "rules": "chain",
+  "seat": null
 }
 ```
 
-Response:
+### `POST /lobby/leave`
+
+Leave an existing game.
+
+Request:
 ```json
-[{
-  "type": "human",
-  "user_id": "38009247-c85b-4ca1-8e59-cf626ea565f7"
-}, {
-  "type": "bot",
-  "user_id": "71b4acdd-51e2-4e7d-9f29-76d511db9060",
-  "algorithm": "random"
-}]
+{
+  "game_id": "8c9e2ff7-dcf3-49be-86f0-315f469840bc"
+}
 ```
 
 ### `POST /lobby/add_bot`
@@ -226,7 +261,7 @@ Request:
 {
   "game_id": "8c9e2ff7-dcf3-49be-86f0-315f469840bc",
   "rules": "chain",
-  "algorithm": "random"
+  "strategy": "random"
 }
 ```
 
@@ -235,14 +270,15 @@ Response:
 "71b4acdd-51e2-4e7d-9f29-76d511db9060"
 ```
 
-### `POST /lobby/leave`
+### `POST /lobby/remove`
 
-Leave an existing game.
+Remove a player from an existing unstarted game.
 
 Request:
 ```json
 {
-  "game_id": "8c9e2ff7-dcf3-49be-86f0-315f469840bc"
+  "game_id": "8c9e2ff7-dcf3-49be-86f0-315f469840bc",
+  "user_id": "71b4acdd-51e2-4e7d-9f29-76d511db9060"
 }
 ```
 
