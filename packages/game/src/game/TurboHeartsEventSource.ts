@@ -63,7 +63,7 @@ export class TurboHeartsEventSource {
     this.eventSource.addEventListener("message", this.handleEvent);
   }
 
-  public on<K extends EventData>(event: K["type"], fn: (event: K) => void) {
+  public on<K extends EventData>(event: K["type"] | "event", fn: (event: K) => void) {
     this.emitter.on(event, fn);
   }
 
