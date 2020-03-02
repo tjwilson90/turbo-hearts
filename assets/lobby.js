@@ -241,7 +241,7 @@ function openGame(event) {
   if (window.location.host.indexOf("localhost") !== -1) {
     window.open("http://localhost:8080#" + game_id);
   } else {
-    window.open("https://play.anti.run/assets/dist/#" + game_id);
+    window.open("https://play.anti.run/game#" + game_id);
   }
 }
 
