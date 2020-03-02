@@ -10,7 +10,7 @@
     "build": "mkdir -p ../../assets/game && mkdir -p dist/js/ && run-p build:*",
     "build:html": "cp src/index.html ../../assets/game/index.html",
     "build:js": "run-s build:js:*",
-    "build:js:compile": "sucrase src/ -d dist/js/ --transforms typescript,imports",
+    "build:js:compile": "sucrase src/ -d dist/js/ --transforms typescript,imports,jsx",
     "build:js:bundle": "px dist/js/index.js ../../assets/game/index.js",
     "build:sass": "run-p build:sass:*",
     "build:sass:compile": "sass src/styles/style.scss ../../assets/game/index.css",
