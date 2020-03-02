@@ -1,3 +1,10 @@
+if ( typeof process === 'undefined' ) {
+  if ( typeof window === 'undefined' ) {
+    throw new Error('Ooops ...');
+  }
+  (window as any).process = { 'env': {} };
+}
+
 import * as cookie from "cookie";
 import * as React from "react";
 import * as ReactDOM from "react-dom";
