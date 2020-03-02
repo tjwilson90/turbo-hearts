@@ -443,6 +443,8 @@ impl Game {
                 broadcast(&mut *self, &charge_status);
                 if self.state.phase.is_passing() {
                     broadcast(&mut *self, &GameEvent::StartPassing);
+                    let pass_status = self.state.pass_status_event();
+                    broadcast(&mut *self, &pass_status);
                 } else if self.state.phase.is_playing() {
                     self.state.next_player = Some(self.owner(Card::TwoClubs));
                     if self.state.rules.blind() {
