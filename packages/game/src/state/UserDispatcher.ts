@@ -19,9 +19,9 @@ function getBottomSeat(event: SitEventData, myUserId: string) {
 
 const BOTTOM_SEAT_TO_POSITION_INDICES = {
   north: [2, 3, 0, 1],
-  east: [1, 2, 3, 0],
+  east: [3, 0, 1, 2],
   south: [0, 1, 2, 3],
-  west: [3, 0, 1, 2]
+  west: [1, 2, 3, 0]
 };
 
 function bot(id: string) {
