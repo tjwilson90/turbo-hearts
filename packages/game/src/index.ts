@@ -41,7 +41,7 @@ document.addEventListener("DOMContentLoaded", () => {
   eventSource.on("chat", chatAppender);
 
   const snapshotter = new Snapshotter(userId);
-  eventSource.on("event", snapshotter.onEvent);
+  eventSource.onAny(snapshotter.onEvent);
   snapshotter.on("snapshot", e => console.log(e));
 
   function start() {

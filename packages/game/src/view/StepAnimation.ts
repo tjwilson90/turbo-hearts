@@ -395,7 +395,6 @@ export class StepAnimation implements Animation {
       if (cards.length === 0) {
         resolve();
       }
-      const backTexture = this.cardTextures["BACK"].texture;
       for (const card of cards) {
         new TWEEN.Tween(card.sprite.position)
           .to(cardDests[i], FAST_ANIMATION_DURATION)

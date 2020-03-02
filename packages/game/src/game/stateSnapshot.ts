@@ -1,5 +1,5 @@
 import { Card, EventData, Pass } from "../types";
-import { emptyArray, pushAll } from "../util/array";
+import { emptyArray } from "../util/array";
 import { sortCards } from "./sortCards";
 
 export const EMPTY_HAND: Card[] = [

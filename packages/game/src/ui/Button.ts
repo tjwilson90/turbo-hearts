@@ -1,6 +1,6 @@
 import * as PIXI from "pixi.js";
 
-import { TABLE_CENTER_X, TABLE_SIZE, CARD_DISPLAY_HEIGHT, CARD_MARGIN, Z_BUTTON } from "../const";
+import { TABLE_CENTER_X, Z_BUTTON } from "../const";
 
 export class Button {
   public container: PIXI.Container = new PIXI.Container();
