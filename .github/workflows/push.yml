@@ -1,8 +1,6 @@
 name: Push
 
-on:
-  push:
-    branches:
+on: push
 
 jobs:
   run:
@@ -50,8 +48,42 @@ jobs:
         run: yarn build
         working-directory: packages/game
 
+      - name: Install musl
+        run: sudo apt-get install musl-tools
+
+      - name: Add rust target
+        run: rustup target add x86_64-unknown-linux-musl
+
       - name: Cargo build
-        run: cargo build --verbose
+        run: cargo build --target x86_64-unknown-linux-musl --release --verbose
 
       - name: Cargo test
-        run: cargo test --verbose
+        run: cargo test --target x86_64-unknown-linux-musl --release --verbose
+
+      - name: Make dist
+        run: ./scripts/make-dist.sh
+
+      - name: Deploy dist
+        if: github.ref == 'master'
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          passphrase: ${{ secrets.SSH_PASSPHRASE }}
+          port: ${{ secrets.SSH_PORT }}
+          source: turbo-hearts.tgz
+          target: /opt
+          overwrite: true
+
+      - name: Run dist
+        if: github.ref == 'master'
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          passphrase: ${{ secrets.SSH_PASSPHRASE }}
+          port: ${{ secrets.SSH_PORT }}
+          script_stop: true
+          script: /opt/deploy-play.anti.run.sh
