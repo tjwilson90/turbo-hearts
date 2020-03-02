@@ -3,6 +3,7 @@ import { TurboHeartsService } from "../game/TurboHeartsService";
 import { Snapshotter } from "../game/snapshotter";
 import { Action, TurboHearts } from "../game/stateSnapshot";
 import { TrickTracker } from "../game/TrickTracker";
+import { Seat } from "../types";
 
 export interface ChatMessage {
   userId: string;
@@ -25,6 +26,8 @@ export interface UsersState {
 
 export interface GameState {
   gameId: string;
+  bottomSeat: Seat;
+
   top: User | undefined;
   right: User | undefined;
   bottom: User | undefined;

@@ -13,7 +13,7 @@ import { createGameAppStore } from "./state/createStore";
 import { UserDispatcher } from "./state/UserDispatcher";
 import { GameApp } from "./ui/GameApp";
 import { SitEventData, ChatEvent, Seat } from "./types";
-import { AppendChat, UpdateActions } from "./state/actions";
+import { AppendChat, UpdateActions, AppendTrick, ResetTricks } from "./state/actions";
 import { getBottomSeat } from "./view/TurboHeartsStage";
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -57,7 +57,10 @@ document.addEventListener("DOMContentLoaded", () => {
     store.dispatch(UpdateActions(actions));
   });
   ctx.trickTracker.on("trick", trick => {
-    console.log(trick);
+    store.dispatch(AppendTrick(trick));
+  });
+  ctx.trickTracker.on("reset", () => {
+    store.dispatch(ResetTricks());
   });
   ReactDOM.render(
     <Provider store={store}>

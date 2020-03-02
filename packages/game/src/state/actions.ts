@@ -1,8 +1,15 @@
 import { TypedAction } from "redoodle";
 import { User, ChatMessage } from "./types";
 import { Action, TurboHearts } from "../game/stateSnapshot";
+import { Seat } from "../types";
 
-export const SetGameUsers = TypedAction.define("setGameUsers")<{ top: User; right: User; bottom: User; left: User }>();
+export const SetGameUsers = TypedAction.define("setGameUsers")<{
+  bottomSeat: Seat;
+  top: User;
+  right: User;
+  bottom: User;
+  left: User;
+}>();
 export const UpdateActions = TypedAction.define("updateActions")<{
   top: Action;
   right: Action;

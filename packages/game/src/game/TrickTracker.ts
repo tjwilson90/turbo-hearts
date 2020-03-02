@@ -38,11 +38,11 @@ export class TrickTracker {
     }
   };
 
-  public on(event: "trick" | "reset", fn: (event: { next: TurboHearts.Trick; previous: TurboHearts.Trick }) => void) {
+  public on(event: "trick" | "reset", fn: (next: TurboHearts.Trick) => void) {
     this.emitter.on(event, fn);
   }
 
-  public off(event: "trick" | "reset", fn: (event: { next: TurboHearts.Trick; previous: TurboHearts.Trick }) => void) {
+  public off(event: "trick" | "reset", fn: (next: TurboHearts.Trick) => void) {
     this.emitter.off(event, fn);
   }
 }

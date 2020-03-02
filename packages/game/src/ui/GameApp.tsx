@@ -5,6 +5,7 @@ import { Nameplate } from "./Nameplate";
 import { TurboHeartsStage } from "../view/TurboHeartsStage";
 import { UserDispatcher } from "../state/UserDispatcher";
 import { ChatLog } from "./ChatLog";
+import { TrickLog } from "./TrickLog";
 import { ChatInput } from "./ChatInput";
 
 export namespace GameApp {

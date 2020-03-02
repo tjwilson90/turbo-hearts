@@ -89,6 +89,7 @@ const INITIAL_STATE: GameAppState = {
   },
   game: {
     gameId: undefined!,
+    bottomSeat: undefined!,
     top: undefined,
     right: undefined,
     bottom: undefined,

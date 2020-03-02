@@ -1,9 +1,9 @@
 import { Dispatch } from "redoodle";
-import { SitEventData } from "../types";
+import { SitEventData, Seat } from "../types";
 import { TurboHeartsService } from "../game/TurboHeartsService";
 import { SetGameUsers, UpdateUsers } from "./actions";
 
-function getBottomSeat(event: SitEventData, myUserId: string) {
+function getBottomSeat(event: SitEventData, myUserId: string): Seat {
   if (event.north.userId === myUserId) {
     return "north";
   } else if (event.east.userId === myUserId) {
@@ -45,6 +45,7 @@ export class UserDispatcher {
     const bottomId = ids[BOTTOM_SEAT_TO_POSITION_INDICES[bottomSeat][2]];
     const leftId = ids[BOTTOM_SEAT_TO_POSITION_INDICES[bottomSeat][3]];
     const usersByPosition = {
+      bottomSeat,
       top: loadedUsers[topId] ?? bot(topId),
       right: loadedUsers[rightId] ?? bot(rightId),
       bottom: loadedUsers[bottomId] ?? bot(bottomId),
