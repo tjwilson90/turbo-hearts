@@ -29,8 +29,10 @@ pub struct Lobby {
 pub struct LobbyGame {
     pub players: HashSet<PlayerWithOptions>,
     pub seed: Seed,
-    pub created_at_time: i64,
-    pub updated_at_time: i64,
+    pub created_time: i64,
+    pub created_by: UserId,
+    pub last_updated_time: i64,
+    pub last_updated_by: UserId,
 }
 
 impl LobbyGame {
@@ -38,8 +40,10 @@ impl LobbyGame {
         LobbyGame {
             players: self.players.clone(),
             seed: self.seed.redact(),
-            created_at_time: self.created_at_time,
-            updated_at_time: self.updated_at_time,
+            created_time: self.created_time,
+            created_by: self.created_by,
+            last_updated_time: self.last_updated_time,
+            last_updated_by: self.last_updated_by,
         }
     }
 }
@@ -89,6 +93,7 @@ impl Lobby {
 
     pub async fn new_game(&self, player: PlayerWithOptions, seed: Option<String>) -> GameId {
         let game_id = GameId::new();
+        let user_id = player.player.user_id();
         let mut inner = self.inner.lock().await;
         let mut participants = HashSet::new();
         participants.insert(player);
@@ -99,8 +104,10 @@ impl Lobby {
         let game = LobbyGame {
             players: participants,
             seed: seed.map_or_else(|| Seed::random(), |value| Seed::Chosen { value }),
-            created_at_time: timestamp,
-            updated_at_time: timestamp,
+            created_time: timestamp,
+            created_by: user_id,
+            last_updated_time: timestamp,
+            last_updated_by: user_id,
         };
         let redacted = game.redact();
         inner.games.insert(game_id, game);
@@ -122,7 +129,7 @@ impl Lobby {
                 return Err(CardsError::GameHasStarted(game_id));
             }
             game.players.insert(player.clone());
-            game.updated_at_time = SystemTime::now()
+            game.last_updated_time = SystemTime::now()
                 .duration_since(SystemTime::UNIX_EPOCH)
                 .unwrap()
                 .as_millis() as i64;

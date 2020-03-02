@@ -346,7 +346,8 @@ async fn test_pass() -> Result<(), CardsError> {
                         south: h!(*TSLATCHER),
                         west: h!(*CARRINO),
                         rules: ChargingRules::Classic,
-                        created_at_time: 0,
+                        created_time: 0,
+                        created_by: *TWILSON,
                         seed: Seed::random(),
                     },
                     GameEvent::Deal {

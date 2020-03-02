@@ -2,13 +2,13 @@ use crate::{
     cards::{Card, Cards, GamePhase, GameState, PassDirection},
     db::Database,
     error::CardsError,
-    types::{GameId, PlayerWithOptions, Seat, Seed, UserId},
+    types::{GameId, Seat, UserId},
 };
 use rand::seq::SliceRandom;
 use rand_chacha::ChaCha20Rng;
 use rusqlite::{ToSql, Transaction};
 use std::{
-    collections::{hash_map::Entry, HashMap, HashSet},
+    collections::{hash_map::Entry, HashMap},
     sync::Arc,
     time::SystemTime,
 };
@@ -20,6 +20,7 @@ use tokio::sync::{
 mod endpoints;
 mod event;
 
+use crate::lobby::LobbyGame;
 pub use endpoints::*;
 pub use event::*;
 use rand::SeedableRng;
@@ -78,35 +79,30 @@ impl Games {
         }
     }
 
-    pub fn start_game(
-        &self,
-        game_id: GameId,
-        participants: &HashSet<PlayerWithOptions>,
-        created_at_time: i64,
-        seed: Seed,
-    ) -> Result<(), CardsError> {
-        let mut participants = participants.iter().cloned().collect::<Vec<_>>();
-        participants.shuffle(&mut rand::thread_rng());
+    pub fn start_game(&self, game_id: GameId, game: &LobbyGame) -> Result<(), CardsError> {
+        let mut players = game.players.iter().cloned().collect::<Vec<_>>();
+        players.shuffle(&mut rand::thread_rng());
         for seat in &Seat::VALUES {
-            if let Some(idx) = participants.iter().position(|p| p.seat == Some(*seat)) {
-                participants.swap(idx, seat.idx());
+            if let Some(idx) = players.iter().position(|p| p.seat == Some(*seat)) {
+                players.swap(idx, seat.idx());
             }
         }
         self.db.run_with_retry(|tx| {
-            let mut rng = seed.rng();
+            let mut rng = game.seed.rng();
             persist_events(
                 &tx,
                 game_id,
                 0,
                 &[
                     GameEvent::Sit {
-                        north: participants[0].player.clone(),
-                        east: participants[1].player.clone(),
-                        south: participants[2].player.clone(),
-                        west: participants[3].player.clone(),
-                        rules: participants[0].rules,
-                        created_at_time,
-                        seed: seed.clone(),
+                        north: players[0].player.clone(),
+                        east: players[1].player.clone(),
+                        south: players[2].player.clone(),
+                        west: players[3].player.clone(),
+                        rules: players[0].rules,
+                        created_time: game.created_time,
+                        created_by: game.created_by,
+                        seed: game.seed.clone(),
                     },
                     deal(&mut rng, PassDirection::Left),
                 ],

@@ -23,7 +23,8 @@ pub enum GameEvent {
         south: Player,
         west: Player,
         rules: ChargingRules,
-        created_at_time: i64,
+        created_time: i64,
+        created_by: UserId,
         seed: Seed,
     },
     Deal {
@@ -116,7 +117,8 @@ impl GameEvent {
                 south,
                 west,
                 rules,
-                created_at_time,
+                created_time,
+                created_by,
                 seed,
             } => GameEvent::Sit {
                 north: north.clone(),
@@ -124,7 +126,8 @@ impl GameEvent {
                 south: south.clone(),
                 west: west.clone(),
                 rules: *rules,
-                created_at_time: *created_at_time,
+                created_time: *created_time,
+                created_by: *created_by,
                 seed: seed.redact(),
             },
             GameEvent::Deal {

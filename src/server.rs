@@ -104,8 +104,7 @@ impl Server {
         };
         if game.players.len() == 4 {
             info!("starting game {}", game_id);
-            self.games
-                .start_game(game_id, &game.players, game.created_at_time, game.seed)?;
+            self.games.start_game(game_id, &game)?;
             self.start_bots(game_id, &game.players);
         }
         Ok(())
@@ -276,7 +275,8 @@ fn hydrate_games(tx: &Transaction) -> Result<HashMap<GameId, LobbyGame>, CardsEr
             south,
             west,
             rules,
-            created_at_time,
+            created_time,
+            created_by,
             seed,
         } = serde_json::from_str(&row.get::<_, String>(1)?)?
         {
@@ -306,8 +306,10 @@ fn hydrate_games(tx: &Transaction) -> Result<HashMap<GameId, LobbyGame>, CardsEr
                 LobbyGame {
                     players: participants,
                     seed,
-                    updated_at_time: timestamp,
-                    created_at_time,
+                    created_time,
+                    created_by,
+                    last_updated_time: timestamp,
+                    last_updated_by: north.user_id(),
                 },
             );
         }
