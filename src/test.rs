@@ -1,11 +1,12 @@
 use crate::{
+    bot::Strategy,
     cards::{Card, Cards, GamePhase, PassDirection},
     db::Database,
     error::CardsError,
     game::{persist_events, GameEvent},
     lobby::LobbyEvent,
     server::Server,
-    types::{ChargingRules, GameId, Player, UserId},
+    types::{ChargingRules, GameId, Player, PlayerWithOptions, Seed, UserId},
 };
 use log::LevelFilter;
 use once_cell::sync::Lazy;
@@ -158,7 +159,14 @@ async fn test_join_unknown_game() -> Result<(), CardsError> {
     async fn test(_: Database, server: Server) -> Result<(), CardsError> {
         let game_id = GameId::new();
         let resp = server
-            .join_game(game_id, h!(*TWILSON), ChargingRules::Classic)
+            .join_game(
+                game_id,
+                PlayerWithOptions {
+                    player: h!(*TWILSON),
+                    rules: ChargingRules::Classic,
+                    seat: None,
+                },
+            )
             .await;
         assert!(matches!(resp, Err(CardsError::UnknownGame(id)) if id == game_id));
         Ok(())
@@ -199,37 +207,51 @@ async fn test_lobby() -> Result<(), CardsError> {
             Some(LobbyEvent::LeaveLobby { user_id: *CARRINO })
         );
 
-        let game_id = server.new_game(*TSLATCHER, ChargingRules::Bridge).await;
-        assert_eq!(
-            twilson.recv().await,
-            Some(LobbyEvent::NewGame {
-                game_id,
-                user_id: *TSLATCHER,
-            })
-        );
+        let tslatcher = PlayerWithOptions {
+            player: h!(*TSLATCHER),
+            rules: ChargingRules::Bridge,
+            seat: None,
+        };
+        let game_id = server.new_game(tslatcher, None).await;
+        match twilson.recv().await {
+            Some(LobbyEvent::NewGame { game_id: id, game }) => {
+                assert_eq!(id, game_id);
+                assert_eq!(game.players, set![tslatcher]);
+                assert_eq!(game.seed, Seed::Redacted);
+            }
+            event => panic!("Unexpected event {:?}", event),
+        }
 
         drop(twilson);
         server.ping_event_streams().await;
         let mut twilson = server.subscribe_lobby(*TWILSON).await;
-        assert_eq!(
-            twilson.recv().await,
-            Some(LobbyEvent::LobbyState {
-                subscribers: set![*TWILSON],
-                games: map![game_id => vec![h!(*TSLATCHER)]],
-            })
-        );
+        match twilson.recv().await {
+            Some(LobbyEvent::LobbyState { subscribers, games }) => {
+                assert_eq!(subscribers, set![*TWILSON]);
+                assert_eq!(games.keys().cloned().collect::<Vec<_>>(), vec![game_id]);
+                let game = &games[&game_id];
+                assert_eq!(game.players, set![tslatcher]);
+                assert_eq!(game.seed, Seed::Redacted);
+            }
+            event => panic!("Unexpected event {:?}", event),
+        }
 
-        let players = server
-            .join_game(game_id, h!(*DCERVELLI), ChargingRules::Classic)
-            .await?;
-        assert_eq!(players, set![h!(*TSLATCHER), h!(*DCERVELLI)]);
-        assert_eq!(
-            twilson.recv().await,
+        let dcervelli = PlayerWithOptions {
+            player: h!(*DCERVELLI),
+            rules: ChargingRules::Classic,
+            seat: None,
+        };
+        server.join_game(game_id, dcervelli).await?;
+        match twilson.recv().await {
             Some(LobbyEvent::JoinGame {
-                game_id,
-                player: h!(*DCERVELLI),
-            })
-        );
+                game_id: id,
+                player,
+            }) => {
+                assert_eq!(id, game_id);
+                assert_eq!(player, dcervelli);
+            }
+            event => panic!("Unexpected event {:?}", event),
+        }
 
         server.leave_game(game_id, *TSLATCHER).await;
         assert_eq!(
@@ -247,15 +269,45 @@ async fn test_lobby() -> Result<(), CardsError> {
 #[tokio::test(threaded_scheduler)]
 async fn test_new_game() -> Result<(), CardsError> {
     async fn test(_: Database, server: Server) -> Result<(), CardsError> {
-        let game_id = server.new_game(*TWILSON, ChargingRules::Classic).await;
+        let game_id = server
+            .new_game(
+                PlayerWithOptions {
+                    player: h![*TWILSON],
+                    rules: ChargingRules::Classic,
+                    seat: None,
+                },
+                None,
+            )
+            .await;
         server
-            .join_game(game_id, h!(*TSLATCHER), ChargingRules::Classic)
+            .join_game(
+                game_id,
+                PlayerWithOptions {
+                    player: h![*TSLATCHER],
+                    rules: ChargingRules::Classic,
+                    seat: None,
+                },
+            )
             .await?;
         server
-            .join_game(game_id, h!(*DCERVELLI), ChargingRules::Classic)
+            .join_game(
+                game_id,
+                PlayerWithOptions {
+                    player: h![*DCERVELLI],
+                    rules: ChargingRules::Classic,
+                    seat: None,
+                },
+            )
             .await?;
         server
-            .join_game(game_id, h!(*CARRINO), ChargingRules::Classic)
+            .join_game(
+                game_id,
+                PlayerWithOptions {
+                    player: h![*CARRINO],
+                    rules: ChargingRules::Classic,
+                    seat: None,
+                },
+            )
             .await?;
 
         let mut twilson = server.subscribe_game(game_id, *TWILSON).await?;
@@ -295,6 +347,7 @@ async fn test_pass() -> Result<(), CardsError> {
                         west: h!(*CARRINO),
                         rules: ChargingRules::Classic,
                         created_at_time: 0,
+                        seed: Seed::random(),
                     },
                     GameEvent::Deal {
                         north: c!(A764S A96H AJD K863C),
@@ -343,47 +396,56 @@ async fn test_pass() -> Result<(), CardsError> {
 #[tokio::test(threaded_scheduler)]
 async fn test_bot_game() -> Result<(), CardsError> {
     async fn test(_: Database, server: Server) -> Result<(), CardsError> {
-        let fake_user = UserId::new();
-        let game_id = server.new_game(fake_user, ChargingRules::Classic).await;
-        server
-            .join_game(
-                game_id,
-                Player::Bot {
-                    user_id: *TWILSON,
-                    algorithm: "random".to_string(),
+        let game_id = server
+            .new_game(
+                PlayerWithOptions {
+                    player: Player::Bot {
+                        user_id: *TWILSON,
+                        strategy: Strategy::Random,
+                    },
+                    rules: ChargingRules::BlindChain,
+                    seat: None,
                 },
-                ChargingRules::BlindChain,
+                None,
             )
-            .await?;
-        server.leave_game(game_id, fake_user).await;
+            .await;
         server
             .join_game(
                 game_id,
-                Player::Bot {
-                    user_id: *TSLATCHER,
-                    algorithm: "duck".to_string(),
+                PlayerWithOptions {
+                    player: Player::Bot {
+                        user_id: *TSLATCHER,
+                        strategy: Strategy::Duck,
+                    },
+                    rules: ChargingRules::Classic,
+                    seat: None,
                 },
-                ChargingRules::Classic,
-            )
-            .await?;
-        server
-            .join_game(
-                game_id,
-                Player::Bot {
-                    user_id: *CARRINO,
-                    algorithm: "duck".to_string(),
-                },
-                ChargingRules::Bridge,
             )
             .await?;
         server
             .join_game(
                 game_id,
-                Player::Bot {
-                    user_id: *DCERVELLI,
-                    algorithm: "gottatry".to_string(),
+                PlayerWithOptions {
+                    player: Player::Bot {
+                        user_id: *CARRINO,
+                        strategy: Strategy::Duck,
+                    },
+                    rules: ChargingRules::Bridge,
+                    seat: None,
                 },
-                ChargingRules::Blind,
+            )
+            .await?;
+        server
+            .join_game(
+                game_id,
+                PlayerWithOptions {
+                    player: Player::Bot {
+                        user_id: *DCERVELLI,
+                        strategy: Strategy::GottaTry,
+                    },
+                    rules: ChargingRules::Blind,
+                    seat: None,
+                },
             )
             .await?;
         let mut rx = server.subscribe_game(game_id, UserId::new()).await?;
@@ -393,7 +455,7 @@ async fn test_bot_game() -> Result<(), CardsError> {
                 GameEvent::Play { .. } => {
                     plays += 1;
                 }
-                GameEvent::GameComplete => break,
+                GameEvent::GameComplete { .. } => break,
                 _ => {}
             }
         }
