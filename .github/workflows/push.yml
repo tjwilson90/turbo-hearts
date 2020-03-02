@@ -39,9 +39,6 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cache-cargo-
 
-      - name: Install pax
-        run: cargo install pax
-
       - name: Yarn install
         run: yarn install
         working-directory: packages/game

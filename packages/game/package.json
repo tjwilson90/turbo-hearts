@@ -5,13 +5,17 @@
   "main": "index.js",
   "license": "UNLICENSED",
   "scripts": {
+    "install": "node install-esbuild.js",
     "clean": "rm -rf ../../assets/game && rm -rf dist/js",
     "start": "run-s build watch",
     "build": "mkdir -p ../../assets/game && mkdir -p dist/js/ && run-p build:*",
+    "build-prod": "mkdir -p ../../assets/game && mkdir -p dist/js/ && run-p build:*",
     "build:html": "cp src/index.html ../../assets/game/index.html",
-    "build:js": "run-s build:js:*",
-    "build:js:compile": "tsc -p .",
-    "build:js:bundle": "px dist/js/index.js ../../assets/game/index.js",
+    "build:js": "if [[ ${NODE_ENV} == \"production\" ]]; then run-s build:js-prod:*; else run-s build:js-dev:*; fi",
+    "build:js-dev:compile": "sucrase src/ -d dist/js/ --transforms typescript,imports,jsx",
+    "build:js-dev:bundle": "esbuild dist/js/index.js --bundle '--define:process.env.NODE_ENV=\"development\"' --minify --outfile=../../assets/game/index.js",
+    "build:js-prod:compile": "tsc -p .",
+    "build:js-prod:bundle": "esbuild dist/js/index.js --bundle '--define:process.env.NODE_ENV=\"production\"' --minify --outfile=../../assets/game/index.js",
     "build:sass": "run-p build:sass:*",
     "build:sass:compile": "sass src/styles/style.scss ../../assets/game/index.css",
     "build:sass:autoprefixer": "postcss ../../assets/game/index.css --use autoprefixer -o ../../assets/game/index.css",
@@ -30,6 +34,7 @@
     "npm-run-all": "^4.1.5",
     "postcss-cli": "^7.1.0",
     "sass": "^1.26.2",
+    "sucrase": "^3.12.1",
     "typescript": "^3.7.5"
   },
   "dependencies": {

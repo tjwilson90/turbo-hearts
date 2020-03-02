@@ -58,4 +58,3 @@ document.addEventListener("DOMContentLoaded", () => {
   eventSource.once("end_replay", animator.endReplay);
   new ChatInput(document.getElementById("chat-input") as HTMLTextAreaElement, service);
 });
-
