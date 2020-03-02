@@ -6,3 +6,4 @@
 .DS_Store
 assets/game/
 assets/lobby/
+*.log

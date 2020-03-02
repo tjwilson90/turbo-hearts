@@ -2,6 +2,14 @@ use crate::types::{Event, GameId, Player, UserId};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct GameState {
+    pub players: Vec<Player>,
+    pub updated_at_time: i64,
+    pub created_at_time: i64,
+    pub created_by_user_id: UserId,
+}
+
 #[serde(tag = "type", rename_all = "snake_case")]
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub enum LobbyEvent {
@@ -15,7 +23,7 @@ pub enum LobbyEvent {
     },
     LobbyState {
         subscribers: HashSet<UserId>,
-        games: HashMap<GameId, Vec<Player>>,
+        games: HashMap<GameId, GameState>,
     },
     JoinGame {
         game_id: GameId,

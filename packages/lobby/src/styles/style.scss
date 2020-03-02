@@ -1,7 +1,6 @@
-@import "/node_modules/normalize.css/normalize.css";
+@use "../../node_modules/normalize.css/normalize.css";
 
-@import "modules/variables";
-@import "modules/base";
+@use "modules/base";
 
 .turbo-hearts-container {
   background: #dfd;

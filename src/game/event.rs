@@ -25,6 +25,7 @@ pub enum GameEvent {
         west: Player,
         rules: ChargingRules,
         created_at_time: i64,
+        created_by_user_id: UserId,
     },
     Deal {
         north: Cards,

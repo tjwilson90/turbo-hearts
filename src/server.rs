@@ -109,6 +109,7 @@ impl Server {
                 game_id,
                 &game_lobby.participants,
                 game_lobby.created_at_time,
+                game_lobby.created_by_user_id,
             )?;
             self.start_bots(game_id, &game_lobby.participants);
         }
@@ -285,6 +286,7 @@ fn hydrate_games(tx: &Transaction) -> Result<HashMap<GameId, GameLobby>, CardsEr
             west,
             rules,
             created_at_time,
+            created_by_user_id,
         } = serde_json::from_str(&row.get::<_, String>(1)?)?
         {
             let mut participants = HashSet::new();
@@ -310,6 +312,7 @@ fn hydrate_games(tx: &Transaction) -> Result<HashMap<GameId, GameLobby>, CardsEr
                     participants,
                     updated_at_time: timestamp,
                     created_at_time,
+                    created_by_user_id
                 },
             );
         }

@@ -127,112 +127,11 @@ function createGameElement(game_id, user_ids) {
   return li;
 }
 
-function createAddBotButton() {
-  let button = document.createElement("button");
-  button.className = "add-bot";
-  button.textContent = "Add Bot";
-  button.addEventListener("click", addBot);
-  return button;
-}
-
-function createJoinButton() {
-  let button = document.createElement("button");
-  button.className = "join";
-  button.textContent = "Join";
-  button.addEventListener("click", joinGame);
-  return button;
-}
-
-function createLeaveButton() {
-  let button = document.createElement("button");
-  button.className = "leave";
-  button.textContent = "Leave";
-  button.addEventListener("click", leaveGame);
-  return button;
-}
-
-function createOpenButton() {
-  let button = document.createElement("button");
-  button.className = "open";
-  button.textContent = "Open";
-  button.addEventListener("click", openGame);
-  return button;
-}
-
 function getUserId() {
   return document.cookie.replace(
     /(?:(?:^|.*;\s*)USER_ID\s*\=\s*([^;]*).*$)|^.*$/,
     "$1"
   );
-}
-
-function subscribe() {
-  if (eventStream != null) {
-    eventStream.close();
-  }
-  eventStream = new EventSource("/lobby/subscribe");
-  eventStream.onmessage = onEvent;
-}
-
-function newGame(event) {
-  event.preventDefault();
-  let rules = document.querySelector('input[name="rules"]:checked').value;
-  console.log("newGame: %s", rules);
-  fetch("/lobby/new", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({ rules: rules })
-  })
-    .then(response => response.json())
-    .then(data => console.log("Created game: %o", data));
-}
-
-function addBot(event) {
-  let game_id = event.target.parentNode.id;
-  let rules = document.querySelector('input[name="rules"]:checked').value;
-  console.log("addBot: %s, %s", game_id, rules);
-  fetch("/lobby/add_bot", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      game_id: game_id,
-      rules: rules,
-      algorithm: algorithms[Math.floor(Math.random() * algorithms.length)]
-    })
-  })
-    .then(response => response.json())
-    .then(data => console.log("Add bot: %o", data));
-}
-
-function joinGame(event) {
-  let game_id = event.target.parentNode.id;
-  let rules = document.querySelector('input[name="rules"]:checked').value;
-  console.log("joinGame: %s, %s", game_id, rules);
-  fetch("/lobby/join", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({ game_id: game_id, rules: rules })
-  })
-    .then(response => response.json())
-    .then(data => console.log("Joined game: %o", data));
-}
-
-function leaveGame(event) {
-  let game_id = event.target.parentNode.id;
-  console.log("leaveGame: %s", game_id);
-  fetch("/lobby/leave", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({ game_id: game_id })
-  });
 }
 
 function openGame(event) {
