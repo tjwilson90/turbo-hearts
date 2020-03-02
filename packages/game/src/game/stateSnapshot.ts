@@ -80,6 +80,7 @@ export function newPlayer(type: "bot" | "human", userId: string): TurboHearts.Pl
 }
 
 export function withDeal(player: TurboHearts.Player, cards: Card[]): TurboHearts.Player {
+  sortCards(cards);
   return {
     ...player,
     hand: cards.length === 0 ? EMPTY_HAND : cards,
