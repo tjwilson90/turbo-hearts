@@ -16,7 +16,7 @@
     "build:sass:compile": "sass src/styles/style.scss ../../assets/game/index.css",
     "build:sass:autoprefixer": "postcss ../../assets/game/index.css --use autoprefixer -o ../../assets/game/index.css",
     "watch": "run-p watch:*",
-    "watch:js": "chokidar 'src/**/*.ts' -c 'run-s build:js && echo \"[build:js ✓\"]'",
+    "watch:js": "chokidar 'src/**/*.ts*' -c 'run-s build:js && echo \"[build:js ✓\"]'",
     "watch:sass": "chokidar 'src/styles/**/*.scss' -c 'run-s build:sass && echo \"[build:sass ✓\"]'"
   },
   "devDependencies": {

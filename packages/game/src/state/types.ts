@@ -23,6 +23,10 @@ export interface UsersState {
 
 export interface GameState {
   gameId: string;
+  top: User | undefined;
+  right: User | undefined;
+  bottom: User | undefined;
+  left: User | undefined;
 }
 
 export interface GameContext {

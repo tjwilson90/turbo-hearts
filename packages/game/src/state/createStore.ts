@@ -5,10 +5,18 @@ import { Store } from "redux";
 import { TurboHeartsEventSource } from "../game/TurboHeartsEventSource";
 import { TurboHeartsService } from "../game/TurboHeartsService";
 import { Snapshotter } from "../game/snapshotter";
+import { SetUsers } from "./actions";
 
 const chatReducer = TypedReducer.builder<ChatState>().build();
 const usersReducer = TypedReducer.builder<UsersState>().build();
-const gameReducer = TypedReducer.builder<GameState>().build();
+const gameReducer = TypedReducer.builder<GameState>()
+  .withHandler(SetUsers.TYPE, (state, users) => {
+    return {
+      ...state,
+      ...users
+    };
+  })
+  .build();
 
 const rootReducer = combineReducers({
   chat: chatReducer,
@@ -26,7 +34,11 @@ const INITIAL_STATE: GameAppState = {
     me: undefined!
   },
   game: {
-    gameId: undefined!
+    gameId: undefined!,
+    top: undefined,
+    right: undefined,
+    bottom: undefined,
+    left: undefined
   },
   context: {
     eventSource: undefined!,
@@ -46,5 +58,6 @@ export function createGameAppStore(gameId: string) {
   initialState.context.eventSource = new TurboHeartsEventSource(gameId);
   initialState.context.service = new TurboHeartsService(gameId);
   initialState.context.snapshotter = new Snapshotter(initialState.users.me.userId);
+  initialState.context.eventSource.on("event", initialState.context.snapshotter.onEvent);
   return createStore(rootReducer, initialState) as Store<GameAppState>;
 }
