@@ -28,4 +28,4 @@ tempfile = "*"
 
 [profile.release]
 lto = "thin"
-codegen-units = 2
+codegen-units = 1
