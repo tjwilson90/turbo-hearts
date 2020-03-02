@@ -37,7 +37,6 @@ export class UserDispatcher {
   constructor(private service: TurboHeartsService, private myUserId: string, private dispatch: Dispatch) {}
 
   public async loadUsersForGame(event: SitEventData) {
-    console.log(event);
     const ids = [event.north.userId, event.east.userId, event.south.userId, event.west.userId];
     const loadedUsers = await this.service.getUsers(ids);
     const bottomSeat = getBottomSeat(event, this.myUserId);
