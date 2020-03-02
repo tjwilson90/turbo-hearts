@@ -1,8 +1,12 @@
+use crate::bot::Strategy;
+use rand::SeedableRng;
+use rand_chacha::ChaCha20Rng;
 use rusqlite::{
     types::{FromSql, FromSqlError, ToSqlOutput, Value, ValueRef},
     ToSql,
 };
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 use std::{
     fmt,
     fmt::{Debug, Display},
@@ -90,17 +94,18 @@ impl FromSql for GameId {
     }
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, Hash)]
-pub struct Participant {
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash, Serialize)]
+pub struct PlayerWithOptions {
     pub player: Player,
     pub rules: ChargingRules,
+    pub seat: Option<Seat>,
 }
 
 #[serde(tag = "type", rename_all = "snake_case")]
-#[derive(Clone, Debug, Eq, PartialEq, Hash, Serialize, Deserialize)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash, Serialize, Deserialize)]
 pub enum Player {
     Human { user_id: UserId },
-    Bot { user_id: UserId, algorithm: String },
+    Bot { user_id: UserId, strategy: Strategy },
 }
 
 impl Player {
@@ -153,9 +158,41 @@ impl Display for ChargingRules {
     }
 }
 
+#[serde(tag = "type", rename_all = "snake_case")]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub enum Seed {
+    Chosen { value: String },
+    Random { value: String },
+    Redacted,
+}
+
+impl Seed {
+    pub fn random() -> Self {
+        Seed::Random {
+            value: Uuid::new_v4().to_string(),
+        }
+    }
+
+    pub fn redact(&self) -> Self {
+        match self {
+            Seed::Random { .. } => Seed::Redacted,
+            _ => self.clone(),
+        }
+    }
+
+    pub fn rng(&self) -> ChaCha20Rng {
+        let bytes = match self {
+            Seed::Chosen { value } => value.as_bytes(),
+            Seed::Random { value } => value.as_bytes(),
+            Seed::Redacted => panic!("Cannot create an rng from a redacted seed"),
+        };
+        ChaCha20Rng::from_seed(Sha256::digest(bytes).into())
+    }
+}
+
 #[repr(u8)]
 #[serde(rename_all = "snake_case")]
-#[derive(Copy, Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash, Serialize, Deserialize)]
 pub enum Seat {
     North,
     East,

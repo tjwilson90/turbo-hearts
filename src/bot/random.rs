@@ -10,8 +10,6 @@ pub struct Random {
 }
 
 impl Random {
-    pub const NAME: &'static str = "random";
-
     pub fn new() -> Self {
         Self { charged: false }
     }
