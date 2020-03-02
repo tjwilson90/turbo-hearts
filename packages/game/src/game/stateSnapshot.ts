@@ -1,4 +1,4 @@
-import { Card, EventData, Pass } from "../types";
+import { Card, EventData, Pass, Seat } from "../types";
 import { emptyArray } from "../util/array";
 import { sortCards } from "./sortCards";
 
@@ -58,6 +58,13 @@ export namespace TurboHearts {
     handNumber: number;
     trickNumber: number;
     playNumber: number;
+  }
+
+  export interface Trick {
+    trickNumber: number;
+    leader: Seat;
+    plays: Card[];
+    winner: Seat;
   }
 
   export interface Game {

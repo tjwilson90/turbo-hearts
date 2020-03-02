@@ -32,6 +32,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const ctx = store.getState().context;
   const userDispatcher = new UserDispatcher(ctx.service, userId, store.dispatch);
   ctx.eventSource.once("sit", (event: SitEventData) => {
+    // console.log(event);
     userDispatcher.loadUsersForGame(event);
   });
   ctx.eventSource.on("chat", (chat: ChatEvent) => {
@@ -39,6 +40,7 @@ document.addEventListener("DOMContentLoaded", () => {
     store.dispatch(AppendChat(chat));
   });
   ctx.snapshotter.on("snapshot", snapshot => {
+    // console.log(snapshot);
     const bottomSeat = getBottomSeat(snapshot.next, userId);
     const seatOrderForBottomSeat: { [bottomSeat in Seat]: Seat[] } = {
       north: ["south", "west", "north", "east"],
@@ -53,6 +55,9 @@ document.addEventListener("DOMContentLoaded", () => {
       left: snapshot.next[seatOrderForBottomSeat[bottomSeat][3]].action
     };
     store.dispatch(UpdateActions(actions));
+  });
+  ctx.trickTracker.on("trick", trick => {
+    console.log(trick);
   });
   ReactDOM.render(
     <Provider store={store}>

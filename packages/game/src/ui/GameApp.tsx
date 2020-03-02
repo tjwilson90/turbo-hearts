@@ -35,6 +35,7 @@ class GameAppInternal extends React.Component<GameApp.Props> {
           <Nameplate user={this.props.game.left} className="left" action={this.props.game.leftAction} />
         </div>
         <div className="sidebar">
+          <TrickLog />
           <ChatLog />
           <ChatInput onChat={this.handleChat} />
         </div>

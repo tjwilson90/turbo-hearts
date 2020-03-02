@@ -1,7 +1,8 @@
 import { TurboHeartsEventSource } from "../game/TurboHeartsEventSource";
 import { TurboHeartsService } from "../game/TurboHeartsService";
 import { Snapshotter } from "../game/snapshotter";
-import { Action } from "../game/stateSnapshot";
+import { Action, TurboHearts } from "../game/stateSnapshot";
+import { TrickTracker } from "../game/TrickTracker";
 
 export interface ChatMessage {
   userId: string;
@@ -33,12 +34,15 @@ export interface GameState {
   rightAction: Action;
   bottomAction: Action;
   leftAction: Action;
+
+  tricks: TurboHearts.Trick[];
 }
 
 export interface GameContext {
   eventSource: TurboHeartsEventSource;
   service: TurboHeartsService;
   snapshotter: Snapshotter;
+  trickTracker: TrickTracker;
 }
 
 export interface GameAppState {
