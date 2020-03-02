@@ -88,7 +88,7 @@ containing the list of all active subscribers, as well as all incomplete games.
   "type": "lobby_state",
   "subscribers": ["d33b08ca-4d34-44f8-8643-cbf7fce5a91c", "38009247-c85b-4ca1-8e59-cf626ea565f7"],
   "games": {
-    "8c9e2ff7-dcf3-49be-86f0-315f469840bc": [{
+    "8c9e2ff7-dcf3-49be-86f0-315f469840bc": {
       "players": [{
         "player": {
           "type": "human",
@@ -104,7 +104,7 @@ containing the list of all active subscribers, as well as all incomplete games.
       "created_by": "17b5876b-30f7-460f-beb4-a54cc114dcf2",
       "last_updated_time": 1583168449628,
       "last_updated_by": "17b5876b-30f7-460f-beb4-a54cc114dcf2"
-    }]
+    }
   }
 }
 ```

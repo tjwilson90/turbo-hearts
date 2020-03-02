@@ -1,5 +1,5 @@
 var eventStream = null;
-let algorithms = ["duck", "gottatry", "random"];
+let strategies = ["duck", "gotta_try", "random"];
 
 function onEvent(event) {
   const data = JSON.parse(event.data);
@@ -9,7 +9,7 @@ function onEvent(event) {
       onJoinLobby(data.user_id);
       break;
     case "new_game":
-      onNewGame(data.game_id, data.user_id);
+      onNewGame(data.game_id, data.game);
       break;
     case "lobby_state":
       onLobbyState(data.subscribers, data.games);
@@ -39,9 +39,10 @@ function onJoinLobby(user_id) {
   }
 }
 
-function onNewGame(game_id, user_id) {
+function onNewGame(game_id, game) {
   let gamesList = document.getElementById("games");
-  gamesList.appendChild(createGameElement(game_id, [user_id]));
+  let user_ids = game.players.map(player => player.player.user_id);
+  gamesList.appendChild(createGameElement(game_id, user_ids));
 }
 
 function onLobbyState(subscribers, games) {
@@ -53,7 +54,8 @@ function onLobbyState(subscribers, games) {
   let gamesList = document.getElementById("games");
   gamesList.innerHTML = "";
   for (let game_id in games) {
-    let user_ids = games[game_id].map(player => player.user_id);
+    let players = games[game_id].players;
+    let user_ids = players.map(player => player.player.user_id);
     gamesList.appendChild(createGameElement(game_id, user_ids));
   }
 }
@@ -61,11 +63,11 @@ function onLobbyState(subscribers, games) {
 function onJoinGame(game_id, player) {
   let gameNode = document.getElementById(game_id);
   let playerList = gameNode.firstElementChild;
-  playerList.appendChild(createPlayerElement(player.user_id));
+  playerList.appendChild(createPlayerElement(player.player.user_id));
   if (playerList.childElementCount >= 4) {
     gameNode.removeChild(gameNode.lastElementChild);
     gameNode.appendChild(createOpenButton());
-  } else if (player.user_id === getUserId()) {
+  } else if (player.player.user_id === getUserId()) {
     gameNode.removeChild(gameNode.lastElementChild);
     gameNode.appendChild(createLeaveButton());
   }
@@ -201,7 +203,7 @@ function addBot(event) {
     body: JSON.stringify({
       game_id: game_id,
       rules: rules,
-      algorithm: algorithms[Math.floor(Math.random() * algorithms.length)]
+      strategy: strategies[Math.floor(Math.random() * strategies.length)]
     })
   })
     .then(response => response.json())
