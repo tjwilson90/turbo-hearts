@@ -1,4 +1,4 @@
-use crate::bot::Strategy;
+use crate::{bot::Strategy, cards::PassDirection};
 use rand::SeedableRng;
 use rand_chacha::ChaCha20Rng;
 use rusqlite::{
@@ -180,13 +180,36 @@ impl Seed {
         }
     }
 
-    pub fn rng(&self) -> ChaCha20Rng {
-        let bytes = match self {
+    pub fn as_bytes(&self) -> [u8; 32] {
+        Sha256::digest(match self {
             Seed::Chosen { value } => value.as_bytes(),
             Seed::Random { value } => value.as_bytes(),
-            Seed::Redacted => panic!("Cannot create an rng from a redacted seed"),
-        };
-        ChaCha20Rng::from_seed(Sha256::digest(bytes).into())
+            Seed::Redacted => panic!("cannot convert redacted seed to bytes"),
+        })
+        .into()
+    }
+}
+
+pub enum RandomEvent {
+    Deal(PassDirection),
+    KeeperPass,
+}
+
+impl RandomEvent {
+    fn id(&self) -> u64 {
+        match self {
+            RandomEvent::Deal(PassDirection::Left) => 0,
+            RandomEvent::Deal(PassDirection::Right) => 1,
+            RandomEvent::Deal(PassDirection::Across) => 2,
+            RandomEvent::Deal(PassDirection::Keeper) => 3,
+            RandomEvent::KeeperPass => 4,
+        }
+    }
+
+    pub fn rng(&self, seed: [u8; 32]) -> ChaCha20Rng {
+        let mut rng = ChaCha20Rng::from_seed(seed);
+        rng.set_stream(self.id());
+        rng
     }
 }
 

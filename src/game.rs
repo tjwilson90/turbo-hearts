@@ -5,7 +5,6 @@ use crate::{
     types::{GameId, Seat, UserId},
 };
 use rand::seq::SliceRandom;
-use rand_chacha::ChaCha20Rng;
 use rusqlite::{ToSql, Transaction};
 use std::{
     collections::{hash_map::Entry, HashMap},
@@ -20,10 +19,9 @@ use tokio::sync::{
 mod endpoints;
 mod event;
 
-use crate::lobby::LobbyGame;
+use crate::{lobby::LobbyGame, types::RandomEvent};
 pub use endpoints::*;
 pub use event::*;
-use rand::SeedableRng;
 
 #[derive(Clone)]
 pub struct Games {
@@ -88,7 +86,6 @@ impl Games {
             }
         }
         self.db.run_with_retry(|tx| {
-            let mut rng = game.seed.rng();
             persist_events(
                 &tx,
                 game_id,
@@ -104,7 +101,7 @@ impl Games {
                         created_by: game.created_by,
                         seed: game.seed.clone(),
                     },
-                    deal(&mut rng, PassDirection::Left),
+                    deal(game.seed.as_bytes(), PassDirection::Left),
                 ],
             )
         })?;
@@ -171,7 +168,7 @@ impl Games {
                         - game.post_pass_hand[3]
                         | cards;
                     let mut passes = passes.into_iter().collect::<Vec<_>>();
-                    passes.shuffle(&mut game.rng);
+                    passes.shuffle(&mut RandomEvent::KeeperPass.rng(game.seed));
                     events.push(GameEvent::RecvPass {
                         to: Seat::North,
                         cards: passes[0..3].iter().cloned().collect(),
@@ -235,14 +232,10 @@ impl Games {
                 let mut events = vec![GameEvent::Play { seat, card }];
                 if game.state.played | card == Cards::ALL {
                     match game.state.phase {
-                        GamePhase::PlayLeft => {
-                            events.push(deal(&mut game.rng, PassDirection::Right))
-                        }
-                        GamePhase::PlayRight => {
-                            events.push(deal(&mut game.rng, PassDirection::Across))
-                        }
+                        GamePhase::PlayLeft => events.push(deal(game.seed, PassDirection::Right)),
+                        GamePhase::PlayRight => events.push(deal(game.seed, PassDirection::Across)),
                         GamePhase::PlayAcross => {
-                            events.push(deal(&mut game.rng, PassDirection::Keeper))
+                            events.push(deal(game.seed, PassDirection::Keeper))
                         }
                         _ => {}
                     };
@@ -357,7 +350,7 @@ struct Game {
     pre_pass_hand: [Cards; 4],
     post_pass_hand: [Cards; 4],
     state: GameState,
-    rng: ChaCha20Rng,
+    seed: [u8; 32],
 }
 
 impl Game {
@@ -368,7 +361,7 @@ impl Game {
             pre_pass_hand: [Cards::NONE; 4],
             post_pass_hand: [Cards::NONE; 4],
             state: GameState::new(),
-            rng: ChaCha20Rng::seed_from_u64(0),
+            seed: [0; 32],
         }
     }
 
@@ -413,7 +406,7 @@ impl Game {
         self.events.push(event.clone());
         match &event {
             GameEvent::Sit { seed, .. } => {
-                self.rng = seed.rng();
+                self.seed = seed.as_bytes();
             }
             GameEvent::Deal {
                 north,
@@ -686,9 +679,10 @@ impl Game {
     }
 }
 
-fn deal(rng: &mut ChaCha20Rng, pass: PassDirection) -> GameEvent {
+fn deal(seed: [u8; 32], pass: PassDirection) -> GameEvent {
+    let mut rng = RandomEvent::Deal(pass).rng(seed);
     let mut deck = Cards::ALL.into_iter().collect::<Vec<_>>();
-    deck.shuffle(rng);
+    deck.shuffle(&mut rng);
     GameEvent::Deal {
         north: deck[0..13].iter().cloned().collect(),
         east: deck[13..26].iter().cloned().collect(),
