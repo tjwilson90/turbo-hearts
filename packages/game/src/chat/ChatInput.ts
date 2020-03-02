@@ -12,5 +12,6 @@ export class ChatInput {
       event.preventDefault();
       return false;
     }
+    return true;
   };
 }
