@@ -845,6 +845,7 @@ impl GameState {
                 south,
                 west,
                 rules,
+                ..
             } => {
                 self.players[0] = north.user_id();
                 self.players[1] = east.user_id();

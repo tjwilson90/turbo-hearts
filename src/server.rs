@@ -4,7 +4,7 @@ use crate::{
     db::Database,
     error::CardsError,
     game::{GameEvent, Games},
-    lobby::{Lobby, LobbyEvent},
+    lobby::{GameLobby, Lobby, LobbyEvent},
     types::{ChargingRules, GameId, Participant, Player, Seat, UserId},
 };
 use log::info;
@@ -37,8 +37,8 @@ impl Server {
             lobby: Lobby::new(partial_games.clone()),
             games: Games::new(db),
         };
-        for (game_id, participants) in &partial_games {
-            server.start_bots(*game_id, participants);
+        for (game_id, lobby) in &partial_games {
+            server.start_bots(*game_id, &lobby.participants);
         }
         Ok(server)
     }
@@ -90,7 +90,7 @@ impl Server {
         player: Player,
         rules: ChargingRules,
     ) -> Result<HashSet<Player>, CardsError> {
-        let participants = match self.lobby.join_game(game_id, player.clone(), rules).await {
+        let game_lobby = match self.lobby.join_game(game_id, player.clone(), rules).await {
             Ok(participants) => {
                 info!("{:?} joined game {}", player, game_id);
                 participants
@@ -103,12 +103,17 @@ impl Server {
                 return Err(e);
             }
         };
-        if participants.len() == 4 {
+        if game_lobby.participants.len() == 4 {
             info!("starting game {}", game_id);
-            self.games.start_game(game_id, &participants)?;
-            self.start_bots(game_id, &participants);
+            self.games.start_game(
+                game_id,
+                &game_lobby.participants,
+                game_lobby.created_at_time,
+            )?;
+            self.start_bots(game_id, &game_lobby.participants);
         }
-        Ok(participants
+        Ok(game_lobby
+            .participants
             .into_iter()
             .map(|participant| participant.player)
             .collect())
@@ -263,21 +268,23 @@ impl Server {
     }
 }
 
-fn hydrate_games(tx: &Transaction) -> Result<HashMap<GameId, HashSet<Participant>>, CardsError> {
+fn hydrate_games(tx: &Transaction) -> Result<HashMap<GameId, GameLobby>, CardsError> {
     let mut stmt = tx.prepare(
-        "SELECT game_id, event FROM event
+        "SELECT game_id, event, timestamp FROM event
             WHERE event_id = 0 AND game_id NOT IN (SELECT game_id FROM game)",
     )?;
     let mut rows = stmt.query(NO_PARAMS)?;
     let mut games = HashMap::new();
     while let Some(row) = rows.next()? {
         let game_id = row.get(0)?;
+        let timestamp = row.get(2)?;
         if let GameEvent::Sit {
             north,
             east,
             south,
             west,
             rules,
+            created_at_time,
         } = serde_json::from_str(&row.get::<_, String>(1)?)?
         {
             let mut participants = HashSet::new();
@@ -297,7 +304,14 @@ fn hydrate_games(tx: &Transaction) -> Result<HashMap<GameId, HashSet<Participant
                 player: west,
                 rules,
             });
-            games.insert(game_id, participants);
+            games.insert(
+                game_id,
+                GameLobby {
+                    participants,
+                    updated_at_time: timestamp,
+                    created_at_time,
+                },
+            );
         }
     }
     Ok(games)

@@ -266,6 +266,7 @@ async fn test_new_game() -> Result<(), CardsError> {
                 south,
                 west,
                 rules: ChargingRules::Classic,
+                ..
             }) => assert_eq!(
                 set![north, east, south, west],
                 set![h!(*TWILSON), h!(*TSLATCHER), h!(*DCERVELLI), h!(*CARRINO)]
@@ -293,6 +294,7 @@ async fn test_pass() -> Result<(), CardsError> {
                         south: h!(*TSLATCHER),
                         west: h!(*CARRINO),
                         rules: ChargingRules::Classic,
+                        created_at_time: 0,
                     },
                     GameEvent::Deal {
                         north: c!(A764S A96H AJD K863C),
