@@ -1,7 +1,6 @@
 # Turbo Hearts
 
 ![](https://github.com/tjwilson90/turbo-hearts/workflows/Rust/badge.svg)
-[![Actions Panel](https://img.shields.io/badge/actionspanel-enabled-brightgreen)](https://www.actionspanel.app/app/tjwilson90/turbo-hearts)
 
 ## Getting Started
 
