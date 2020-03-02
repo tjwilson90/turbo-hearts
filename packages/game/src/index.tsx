@@ -13,7 +13,7 @@ import { createGameAppStore } from "./state/createStore";
 import { UserDispatcher } from "./state/UserDispatcher";
 import { GameApp } from "./ui/GameApp";
 import { SitEventData, ChatEvent, Seat } from "./types";
-import { AppendChat, UpdateActions } from "./state/actions";
+import { AppendChat, UpdateActions, AppendTrick, ResetTricks } from "./state/actions";
 import { getBottomSeat } from "./view/TurboHeartsStage";
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -32,6 +32,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const ctx = store.getState().context;
   const userDispatcher = new UserDispatcher(ctx.service, userId, store.dispatch);
   ctx.eventSource.once("sit", (event: SitEventData) => {
+    // console.log(event);
     userDispatcher.loadUsersForGame(event);
   });
   ctx.eventSource.on("chat", (chat: ChatEvent) => {
@@ -39,6 +40,7 @@ document.addEventListener("DOMContentLoaded", () => {
     store.dispatch(AppendChat(chat));
   });
   ctx.snapshotter.on("snapshot", snapshot => {
+    // console.log(snapshot);
     const bottomSeat = getBottomSeat(snapshot.next, userId);
     const seatOrderForBottomSeat: { [bottomSeat in Seat]: Seat[] } = {
       north: ["south", "west", "north", "east"],
@@ -53,6 +55,12 @@ document.addEventListener("DOMContentLoaded", () => {
       left: snapshot.next[seatOrderForBottomSeat[bottomSeat][3]].action
     };
     store.dispatch(UpdateActions(actions));
+  });
+  ctx.trickTracker.on("trick", trick => {
+    store.dispatch(AppendTrick(trick));
+  });
+  ctx.trickTracker.on("reset", () => {
+    store.dispatch(ResetTricks());
   });
   ReactDOM.render(
     <Provider store={store}>
