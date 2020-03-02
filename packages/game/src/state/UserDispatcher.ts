@@ -1,7 +1,7 @@
 import { Dispatch } from "redoodle";
 import { SitEventData } from "../types";
 import { TurboHeartsService } from "../game/TurboHeartsService";
-import { SetUsers } from "./actions";
+import { SetGameUsers, UpdateUsers } from "./actions";
 
 function getBottomSeat(event: SitEventData, myUserId: string) {
   if (event.north.userId === myUserId) {
@@ -32,9 +32,12 @@ function bot(id: string) {
 }
 
 export class UserDispatcher {
+  private loadedIds = new Set<string>();
+
   constructor(private service: TurboHeartsService, private myUserId: string, private dispatch: Dispatch) {}
 
   public async loadUsersForGame(event: SitEventData) {
+    console.log(event);
     const ids = [event.north.userId, event.east.userId, event.south.userId, event.west.userId];
     const loadedUsers = await this.service.getUsers(ids);
     const bottomSeat = getBottomSeat(event, this.myUserId);
@@ -48,6 +51,19 @@ export class UserDispatcher {
       bottom: loadedUsers[bottomId] ?? bot(bottomId),
       left: loadedUsers[leftId] ?? bot(leftId)
     };
-    this.dispatch(SetUsers(usersByPosition));
+    this.dispatch(SetGameUsers(usersByPosition));
+    this.dispatch(UpdateUsers(loadedUsers));
+  }
+
+  public async loadUsers(ids: string[]) {
+    const toLoad = ids.filter(id => !this.loadedIds.has(id));
+    if (toLoad.length === 0) {
+      return;
+    }
+    for (const id of toLoad) {
+      this.loadedIds.add(id);
+    }
+    const loadedUsers = await this.service.getUsers(toLoad);
+    this.dispatch(UpdateUsers(loadedUsers));
   }
 }

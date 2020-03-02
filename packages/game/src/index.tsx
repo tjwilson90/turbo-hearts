@@ -12,7 +12,8 @@ import { Provider } from "react-redux";
 import { createGameAppStore } from "./state/createStore";
 import { UserDispatcher } from "./state/UserDispatcher";
 import { GameApp } from "./ui/GameApp";
-import { SitEventData } from "./types";
+import { SitEventData, ChatEvent } from "./types";
+import { AppendChat } from "./state/actions";
 
 document.addEventListener("DOMContentLoaded", () => {
   const userId = cookie.parse(document.cookie)["USER_ID"];
@@ -27,9 +28,14 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   const store = createGameAppStore(gameId);
-  const userDispatcher = new UserDispatcher(store.getState().context.service, userId, store.dispatch);
-  store.getState().context.eventSource.once("sit", event => {
-    userDispatcher.loadUsersForGame(event as SitEventData);
+  const ctx = store.getState().context;
+  const userDispatcher = new UserDispatcher(ctx.service, userId, store.dispatch);
+  ctx.eventSource.once("sit", (event: SitEventData) => {
+    userDispatcher.loadUsersForGame(event);
+  });
+  ctx.eventSource.on("chat", (chat: ChatEvent) => {
+    userDispatcher.loadUsers([chat.userId]);
+    store.dispatch(AppendChat(chat));
   });
   ReactDOM.render(
     <Provider store={store}>

@@ -1,16 +1,49 @@
 import * as cookie from "cookie";
-import { GameAppState, ChatState, UsersState, GameState, GameContext } from "./types";
-import { createStore, TypedReducer, combineReducers } from "redoodle";
-import { Store } from "redux";
+import { GameAppState, ChatState, UsersState, GameState, GameContext, User } from "./types";
+import { createStore, TypedReducer, combineReducers, loggingMiddleware, StoreEnhancer } from "redoodle";
+import { Store, applyMiddleware } from "redux";
 import { TurboHeartsEventSource } from "../game/TurboHeartsEventSource";
 import { TurboHeartsService } from "../game/TurboHeartsService";
 import { Snapshotter } from "../game/snapshotter";
-import { SetUsers } from "./actions";
+import { SetGameUsers, AppendChat, UpdateUsers } from "./actions";
+import { ChatEvent } from "../types";
 
-const chatReducer = TypedReducer.builder<ChatState>().build();
-const usersReducer = TypedReducer.builder<UsersState>().build();
+const chatReducer = TypedReducer.builder<ChatState>()
+  .withHandler(AppendChat.TYPE, (state, msg) => {
+    return {
+      ...state,
+      messages: [...state.messages, msg]
+    };
+  })
+  .build();
+
+const usersReducer = TypedReducer.builder<UsersState>()
+  .withHandler(UpdateUsers.TYPE, (state, users) => {
+    const toUpdate: User[] = [];
+    for (const id in users) {
+      if (state.users[id] !== users[id]) {
+        toUpdate.push(users[id]);
+      }
+    }
+    if (toUpdate.length === 0) {
+      return state;
+    } else {
+      const newUsers = {
+        ...state.users
+      };
+      for (const user of toUpdate) {
+        newUsers[user.userId] = user;
+      }
+      return {
+        ...state,
+        users: newUsers
+      };
+    }
+  })
+  .build();
+
 const gameReducer = TypedReducer.builder<GameState>()
-  .withHandler(SetUsers.TYPE, (state, users) => {
+  .withHandler(SetGameUsers.TYPE, (state, users) => {
     return {
       ...state,
       ...users
@@ -59,5 +92,7 @@ export function createGameAppStore(gameId: string) {
   initialState.context.service = new TurboHeartsService(gameId);
   initialState.context.snapshotter = new Snapshotter(initialState.users.me.userId);
   initialState.context.eventSource.on("event", initialState.context.snapshotter.onEvent);
-  return createStore(rootReducer, initialState) as Store<GameAppState>;
+  return createStore(rootReducer, initialState, applyMiddleware(loggingMiddleware({})) as StoreEnhancer) as Store<
+    GameAppState
+  >;
 }
