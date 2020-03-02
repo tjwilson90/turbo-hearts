@@ -1,6 +1,7 @@
 use crate::{
     config::CONFIG, db::Database, error::CardsError, server::Server, types::UserId, user::Users,
 };
+use http::header;
 use r2d2_sqlite::SqliteConnectionManager;
 use rand_distr::Gamma;
 use reqwest::Client;
@@ -51,6 +52,13 @@ async fn main() -> Result<(), CardsError> {
         .or(lobby::router(server, user_id))
         .or(auth::router(users.clone(), http_client))
         .or(endpoint::users(users))
+        .with(
+            warp::cors()
+                .allow_any_origin()
+                .allow_credentials(true)
+                .allow_header(header::CONTENT_TYPE)
+                .build(),
+        )
         .recover(error::handle_rejection);
     warp::serve(app).run(([127, 0, 0, 1], CONFIG.port)).await;
     Ok(())
