@@ -16,7 +16,7 @@
     "build:js-dev:bundle": "esbuild dist/js/index.js --bundle '--define:process.env.NODE_ENV=\"development\"' --minify --outfile=../../assets/game/index.js",
     "build:js-prod:compile": "tsc -p .",
     "build:js-prod:bundle": "esbuild dist/js/index.js --bundle '--define:process.env.NODE_ENV=\"production\"' --minify --outfile=../../assets/game/index.js",
-    "build:sass": "run-p build:sass:*",
+    "build:sass": "run-s build:sass:*",
     "build:sass:compile": "sass src/styles/style.scss ../../assets/game/index.css",
     "build:sass:autoprefixer": "postcss ../../assets/game/index.css --use autoprefixer -o ../../assets/game/index.css",
     "watch": "run-p watch:*",
