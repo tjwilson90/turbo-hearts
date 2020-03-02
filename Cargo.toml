@@ -11,6 +11,7 @@ http = "*"
 log = "*"
 once_cell = "*"
 rand = "*"
+rand_chacha = "*"
 rand_distr = "*"
 r2d2 = "*"
 r2d2_sqlite = "*"
@@ -18,6 +19,7 @@ reqwest = { version = "*", default-features = false, features = ["json", "rustls
 rusqlite = { version = "*", features = ["bundled"] }
 serde = { version = "*", features = ["derive"] }
 serde_json = "*"
+sha2 = "*"
 thiserror = "*"
 tokio = { version = "*", features = ["macros", "rt-threaded"] }
 uuid = { version = "*", features = ["serde", "v4"] }

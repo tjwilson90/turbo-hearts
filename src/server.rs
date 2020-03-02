@@ -4,8 +4,8 @@ use crate::{
     db::Database,
     error::CardsError,
     game::{GameEvent, Games},
-    lobby::{GameLobby, Lobby, LobbyEvent},
-    types::{ChargingRules, GameId, Participant, Player, Seat, UserId},
+    lobby::{Lobby, LobbyEvent, LobbyGame},
+    types::{GameId, Player, PlayerWithOptions, Seat, UserId},
 };
 use log::info;
 use rand_distr::Gamma;
@@ -38,22 +38,22 @@ impl Server {
             games: Games::new(db),
         };
         for (game_id, lobby) in &partial_games {
-            server.start_bots(*game_id, &lobby.participants);
+            server.start_bots(*game_id, &lobby.players);
         }
         Ok(server)
     }
 
-    fn start_bots(&self, game_id: GameId, participants: &HashSet<Participant>) {
+    fn start_bots(&self, game_id: GameId, participants: &HashSet<PlayerWithOptions>) {
         if participants.len() < 4 {
             return;
         }
         for participant in participants {
-            if let Player::Bot { user_id, algorithm } = &participant.player {
+            if let Player::Bot { user_id, strategy } = participant.player {
                 info!(
-                    "Starting bot {} with algorithm {} in game {}",
-                    user_id, algorithm, game_id
+                    "Starting bot {} with strategy {:?} in game {}",
+                    user_id, strategy, game_id
                 );
-                let bot = Bot::new(*user_id, algorithm);
+                let bot = Bot::new(user_id, strategy);
                 task::spawn(bot.run(self.clone(), game_id));
             }
         }
@@ -78,19 +78,18 @@ impl Server {
         self.lobby.subscribe(user_id).await
     }
 
-    pub async fn new_game(&self, user_id: UserId, rules: ChargingRules) -> GameId {
-        let game_id = self.lobby.new_game(user_id, rules).await;
-        info!("User {} started game {}", user_id, game_id);
+    pub async fn new_game(&self, player: PlayerWithOptions, seed: Option<String>) -> GameId {
+        let game_id = self.lobby.new_game(player, seed).await;
+        info!("{:?} started game {}", player, game_id);
         game_id
     }
 
     pub async fn join_game(
         &self,
         game_id: GameId,
-        player: Player,
-        rules: ChargingRules,
-    ) -> Result<HashSet<Player>, CardsError> {
-        let game_lobby = match self.lobby.join_game(game_id, player.clone(), rules).await {
+        player: PlayerWithOptions,
+    ) -> Result<(), CardsError> {
+        let game = match self.lobby.join_game(game_id, player.clone()).await {
             Ok(participants) => {
                 info!("{:?} joined game {}", player, game_id);
                 participants
@@ -103,20 +102,12 @@ impl Server {
                 return Err(e);
             }
         };
-        if game_lobby.participants.len() == 4 {
+        if game.players.len() == 4 {
             info!("starting game {}", game_id);
-            self.games.start_game(
-                game_id,
-                &game_lobby.participants,
-                game_lobby.created_at_time,
-            )?;
-            self.start_bots(game_id, &game_lobby.participants);
+            self.games.start_game(game_id, &game)?;
+            self.start_bots(game_id, &game.players);
         }
-        Ok(game_lobby
-            .participants
-            .into_iter()
-            .map(|participant| participant.player)
-            .collect())
+        Ok(())
     }
 
     pub async fn leave_game(&self, game_id: GameId, user_id: UserId) {
@@ -268,7 +259,7 @@ impl Server {
     }
 }
 
-fn hydrate_games(tx: &Transaction) -> Result<HashMap<GameId, GameLobby>, CardsError> {
+fn hydrate_games(tx: &Transaction) -> Result<HashMap<GameId, LobbyGame>, CardsError> {
     let mut stmt = tx.prepare(
         "SELECT game_id, event, timestamp FROM event
             WHERE event_id = 0 AND game_id NOT IN (SELECT game_id FROM game)",
@@ -284,32 +275,41 @@ fn hydrate_games(tx: &Transaction) -> Result<HashMap<GameId, GameLobby>, CardsEr
             south,
             west,
             rules,
-            created_at_time,
+            created_time,
+            created_by,
+            seed,
         } = serde_json::from_str(&row.get::<_, String>(1)?)?
         {
             let mut participants = HashSet::new();
-            participants.insert(Participant {
+            participants.insert(PlayerWithOptions {
                 player: north,
                 rules,
+                seat: None,
             });
-            participants.insert(Participant {
+            participants.insert(PlayerWithOptions {
                 player: east,
                 rules,
+                seat: None,
             });
-            participants.insert(Participant {
+            participants.insert(PlayerWithOptions {
                 player: south,
                 rules,
+                seat: None,
             });
-            participants.insert(Participant {
+            participants.insert(PlayerWithOptions {
                 player: west,
                 rules,
+                seat: None,
             });
             games.insert(
                 game_id,
-                GameLobby {
-                    participants,
-                    updated_at_time: timestamp,
-                    created_at_time,
+                LobbyGame {
+                    players: participants,
+                    seed,
+                    created_time,
+                    created_by,
+                    last_updated_time: timestamp,
+                    last_updated_by: north.user_id(),
                 },
             );
         }
