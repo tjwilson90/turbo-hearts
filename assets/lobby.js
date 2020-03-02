@@ -204,8 +204,8 @@ function addBot(event) {
       algorithm: algorithms[Math.floor(Math.random() * algorithms.length)]
     })
   })
-  .then(response => response.json())
-  .then(data => console.log("Add bot: %o", data));
+    .then(response => response.json())
+    .then(data => console.log("Add bot: %o", data));
 }
 
 function joinGame(event) {
@@ -219,8 +219,8 @@ function joinGame(event) {
     },
     body: JSON.stringify({ game_id: game_id, rules: rules })
   })
-  .then(response => response.json())
-  .then(data => console.log("Joined game: %o", data));
+    .then(response => response.json())
+    .then(data => console.log("Joined game: %o", data));
 }
 
 function leaveGame(event) {
@@ -238,11 +238,7 @@ function leaveGame(event) {
 function openGame(event) {
   let game_id = event.target.parentNode.id;
   console.log("openGame: %s", game_id);
-  if (window.location.host.indexOf("localhost") !== -1) {
-    window.open("http://localhost:8080#" + game_id);
-  } else {
-    window.open("https://play.anti.run/assets/dist/#" + game_id);
-  }
+  window.open("/game/#" + game_id);
 }
 
 document.addEventListener("DOMContentLoaded", event => {

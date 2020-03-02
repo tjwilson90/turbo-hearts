@@ -6,7 +6,6 @@ import { ChatInput } from "./chat/ChatInput";
 import { Snapshotter } from "./game/snapshotter";
 import { TurboHeartsEventSource } from "./game/TurboHeartsEventSource";
 import { createGameAppStore } from "./state/createStore";
-import "./styles/style.scss";
 import { ChatEvent } from "./types";
 import { GameApp } from "./ui/GameApp";
 import { TurboHeartsStage } from "./view/TurboHeartsStage";

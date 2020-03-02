@@ -8,23 +8,33 @@ jobs:
   run:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Repository
+      - name: Checkout repository
         uses: actions/checkout@v2
-      - name: Install Frontend Dependencies
+
+      - name: Install Pax
+        run: cargo install pax
+
+      - name: Yarn install
         run: yarn install
         working-directory: packages/game
-      - name: Build Frontend
-        run: yarn build:prod
+
+      - name: Yarn build
+        run: yarn build
         working-directory: packages/game
+
       - name: Install musl
         run: sudo apt-get install musl-tools
-      - name: Install Rust Target
+
+      - name: Add rust target
         run: rustup target add x86_64-unknown-linux-musl
-      - name: Build Backend
+
+      - name: Cargo build
         run: cargo build --target x86_64-unknown-linux-musl --release --verbose
-      - name: Build Dist
+
+      - name: Make dist
         run: ./scripts/make-dist.sh
-      - name: Upload Dist
+
+      - name: Upload release
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

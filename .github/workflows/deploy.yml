@@ -1,0 +1,57 @@
+name: Deploy
+
+on: repository_dispatch
+
+jobs:
+  run:
+    if: github.event.action == 'deploy'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Install Pax
+        run: cargo install pax
+
+      - name: Yarn install
+        run: yarn install
+        working-directory: packages/game
+
+      - name: Yarn build
+        run: yarn build
+        working-directory: packages/game
+
+      - name: Install musl
+        run: sudo apt-get install musl-tools
+
+      - name: Add rust target
+        run: rustup target add x86_64-unknown-linux-musl
+
+      - name: Cargo build
+        run: cargo build --target x86_64-unknown-linux-musl --release --verbose
+
+      - name: Make dist
+        run: ./scripts/make-dist.sh
+
+      - name: Deploy release
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          passphrase: ${{ secrets.SSH_PASSPHRASE }}
+          port: ${{ secrets.SSH_PORT }}
+          source: turbo-hearts.tgz
+          target: /opt
+          overwrite: true
+
+      - name: Run release
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          passphrase: ${{ secrets.SSH_PASSPHRASE }}
+          port: ${{ secrets.SSH_PORT }}
+          script_stop: true
+          script: /opt/deploy-play.anti.run.sh
