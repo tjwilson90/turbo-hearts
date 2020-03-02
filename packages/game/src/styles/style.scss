@@ -35,6 +35,12 @@ body {
       white-space: nowrap;
       line-height: $nameplate-short;
 
+      &.to-play {
+        color: white;
+        background: #ff3030;
+        border: 1px solid #ff0000;
+      }
+
       &.bottom {
         margin-left: auto;
         margin-right: auto;
@@ -126,4 +132,3 @@ body {
     }
   }
 }
-

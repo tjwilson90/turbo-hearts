@@ -1,6 +1,7 @@
 import { TurboHeartsEventSource } from "../game/TurboHeartsEventSource";
 import { TurboHeartsService } from "../game/TurboHeartsService";
 import { Snapshotter } from "../game/snapshotter";
+import { Action } from "../game/stateSnapshot";
 
 export interface ChatMessage {
   userId: string;
@@ -27,6 +28,11 @@ export interface GameState {
   right: User | undefined;
   bottom: User | undefined;
   left: User | undefined;
+
+  topAction: Action;
+  rightAction: Action;
+  bottomAction: Action;
+  leftAction: Action;
 }
 
 export interface GameContext {

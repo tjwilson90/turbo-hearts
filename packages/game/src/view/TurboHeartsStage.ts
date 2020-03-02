@@ -26,7 +26,7 @@ import {
   LIMBO_TOP_RIGHT,
   LIMBO_BOTTOM,
   CARD_DROP_SHADOW,
-  CARD_DISPLAY_HEIGHT,
+  CARD_DISPLAY_HEIGHT
 } from "../const";
 import { groupCards } from "../events/groupCards";
 import { TurboHeartsService } from "../game/TurboHeartsService";
@@ -41,7 +41,7 @@ import {
   PointWithRotation,
   SpriteCard,
   PlayerSpriteCards,
-  Position,
+  Position
 } from "../types";
 import { StepAnimation } from "./StepAnimation";
 import { spriteCardsOf } from "../events/helpers";
@@ -132,6 +132,20 @@ function emptyPlayerSpriteCards() {
 }
 
 export type Mode = "live" | "review";
+
+export function getBottomSeat(state: TurboHearts.StateSnapshot, userId: string) {
+  if (state.north.userId === userId) {
+    return "north";
+  } else if (state.east.userId === userId) {
+    return "east";
+  } else if (state.south.userId === userId) {
+    return "south";
+  } else if (state.west.userId === userId) {
+    return "west";
+  } else {
+    return "south";
+  }
+}
 
 export class TurboHeartsStage {
   public app: PIXI.Application;
@@ -336,17 +350,7 @@ export class TurboHeartsStage {
   }
 
   private getBottomSeat(state: TurboHearts.StateSnapshot) {
-    if (state.north.userId === this.userId) {
-      return "north";
-    } else if (state.east.userId === this.userId) {
-      return "east";
-    } else if (state.south.userId === this.userId) {
-      return "south";
-    } else if (state.west.userId === this.userId) {
-      return "west";
-    } else {
-      return "south";
-    }
+    return getBottomSeat(state, this.userId);
   }
 
   private snapToState(state: TurboHearts.StateSnapshot) {

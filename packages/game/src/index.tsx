@@ -12,8 +12,9 @@ import { Provider } from "react-redux";
 import { createGameAppStore } from "./state/createStore";
 import { UserDispatcher } from "./state/UserDispatcher";
 import { GameApp } from "./ui/GameApp";
-import { SitEventData, ChatEvent } from "./types";
-import { AppendChat } from "./state/actions";
+import { SitEventData, ChatEvent, Seat } from "./types";
+import { AppendChat, UpdateActions } from "./state/actions";
+import { getBottomSeat } from "./view/TurboHeartsStage";
 
 document.addEventListener("DOMContentLoaded", () => {
   const userId = cookie.parse(document.cookie)["USER_ID"];
@@ -36,6 +37,22 @@ document.addEventListener("DOMContentLoaded", () => {
   ctx.eventSource.on("chat", (chat: ChatEvent) => {
     userDispatcher.loadUsers([chat.userId]);
     store.dispatch(AppendChat(chat));
+  });
+  ctx.snapshotter.on("snapshot", snapshot => {
+    const bottomSeat = getBottomSeat(snapshot.next, userId);
+    const seatOrderForBottomSeat: { [bottomSeat in Seat]: Seat[] } = {
+      north: ["south", "west", "north", "east"],
+      east: ["west", "north", "east", "south"],
+      south: ["north", "east", "south", "west"],
+      west: ["east", "south", "west", "north"]
+    };
+    const actions = {
+      top: snapshot.next[seatOrderForBottomSeat[bottomSeat][0]].action,
+      right: snapshot.next[seatOrderForBottomSeat[bottomSeat][1]].action,
+      bottom: snapshot.next[seatOrderForBottomSeat[bottomSeat][2]].action,
+      left: snapshot.next[seatOrderForBottomSeat[bottomSeat][3]].action
+    };
+    store.dispatch(UpdateActions(actions));
   });
   ReactDOM.render(
     <Provider store={store}>
