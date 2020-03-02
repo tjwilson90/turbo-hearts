@@ -4,7 +4,7 @@ import { applyMiddleware, Store } from "redux";
 import { Snapshotter } from "../game/snapshotter";
 import { TurboHeartsEventSource } from "../game/TurboHeartsEventSource";
 import { TurboHeartsService } from "../game/TurboHeartsService";
-import { AppendChat, SetGameUsers, UpdateUsers } from "./actions";
+import { AppendChat, SetGameUsers, UpdateUsers, UpdateActions } from "./actions";
 import { ChatState, GameAppState, GameContext, GameState, User, UsersState } from "./types";
 
 const chatReducer = TypedReducer.builder<ChatState>()
@@ -48,6 +48,15 @@ const gameReducer = TypedReducer.builder<GameState>()
       ...users
     };
   })
+  .withHandler(UpdateActions.TYPE, (state, actions) => {
+    return {
+      ...state,
+      topAction: actions.top,
+      rightAction: actions.right,
+      bottomAction: actions.bottom,
+      leftAction: actions.left
+    };
+  })
   .build();
 
 const rootReducer = combineReducers({
@@ -70,7 +79,11 @@ const INITIAL_STATE: GameAppState = {
     top: undefined,
     right: undefined,
     bottom: undefined,
-    left: undefined
+    left: undefined,
+    topAction: "none",
+    rightAction: "none",
+    bottomAction: "none",
+    leftAction: "none"
   },
   context: {
     eventSource: undefined!,

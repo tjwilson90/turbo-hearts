@@ -29,10 +29,10 @@ class GameAppInternal extends React.Component<GameApp.Props> {
       <React.Fragment>
         <div className="canvas-container">
           <canvas ref={this.canvasRef}></canvas>
-          <Nameplate user={this.props.game.top} className="top" />
-          <Nameplate user={this.props.game.right} className="right" />
-          <Nameplate user={this.props.game.bottom} className="bottom" />
-          <Nameplate user={this.props.game.left} className="left" />
+          <Nameplate user={this.props.game.top} className="top" action={this.props.game.topAction} />
+          <Nameplate user={this.props.game.right} className="right" action={this.props.game.rightAction} />
+          <Nameplate user={this.props.game.bottom} className="bottom" action={this.props.game.bottomAction} />
+          <Nameplate user={this.props.game.left} className="left" action={this.props.game.leftAction} />
         </div>
         <div className="sidebar">
           <ChatLog />
