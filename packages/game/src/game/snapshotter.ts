@@ -35,8 +35,8 @@ export class Snapshotter {
   private emitter = new EventEmitter();
   private snapshots: TurboHearts.StateSnapshot[] = [];
 
-  constructor(userName: string) {
-    this.snapshots.push(emptyStateSnapshot(userName));
+  constructor(userId: string) {
+    this.snapshots.push(emptyStateSnapshot(userId));
   }
 
   public onEvent = (event: EventData) => {
@@ -188,14 +188,14 @@ export class Snapshotter {
   };
 
   public on(
-    event: "snapshot",
+    _event: "snapshot",
     fn: (event: { next: TurboHearts.StateSnapshot; previous: TurboHearts.StateSnapshot }) => void
   ) {
     this.emitter.on("snapshot", fn);
   }
 
   public off(
-    event: "snapshot",
+    _event: "snapshot",
     fn: (event: { next: TurboHearts.StateSnapshot; previous: TurboHearts.StateSnapshot }) => void
   ) {
     this.emitter.off("snapshot", fn);

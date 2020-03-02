@@ -20,7 +20,7 @@
     "build:sass:compile": "sass src/styles/style.scss ../../assets/game/index.css",
     "build:sass:autoprefixer": "postcss ../../assets/game/index.css --use autoprefixer -o ../../assets/game/index.css",
     "watch": "run-p watch:*",
-    "watch:js": "chokidar 'src/**/*.ts' -c 'run-s build:js && echo \"[build:js ✓\"]'",
+    "watch:js": "chokidar 'src/**/*.ts*' -c 'run-s build:js && echo \"[build:js ✓\"]'",
     "watch:sass": "chokidar 'src/styles/**/*.scss' -c 'run-s build:sass && echo \"[build:sass ✓\"]'"
   },
   "devDependencies": {
@@ -28,6 +28,7 @@
     "@types/cookie": "^0.3.3",
     "@types/react": "^16.9.19",
     "@types/react-dom": "^16.9.5",
+    "@types/react-redux": "^7.1.7",
     "@types/tween.js": "^17.2.0",
     "autoprefixer": "^9.7.4",
     "chokidar-cli": "^2.1.0",
@@ -44,7 +45,12 @@
     "eventemitter3": "^4.0.0",
     "normalize.css": "^8.0.1",
     "pixi-filters": "^3.0.3",
-    "pixi.js": "^5.2.1"
+    "pixi.js": "^5.2.1",
+    "react": "^16.13.0",
+    "react-dom": "^16.13.0",
+    "react-redux": "^7.2.0",
+    "redoodle": "2.3.2",
+    "redux": "^4.0.5"
   },
   "prettier": {
     "printWidth": 120
