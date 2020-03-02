@@ -28,6 +28,7 @@ pub struct GameLobby {
     pub participants: HashSet<Participant>,
     pub created_at_time: i64,
     pub updated_at_time: i64,
+    pub created_by_user_id: UserId,
 }
 
 struct Inner {
@@ -69,12 +70,17 @@ impl Lobby {
                 .map(|(game_id, lobby)| {
                     (
                         *game_id,
-                        lobby
-                            .participants
-                            .iter()
-                            .map(|participant| &participant.player)
-                            .cloned()
-                            .collect()
+                        GameState {
+                            players: lobby
+                                .participants
+                                .iter()
+                                .map(|participant| &participant.player)
+                                .cloned()
+                                .collect(),
+                            created_at_time: lobby.created_at_time,
+                            updated_at_time: lobby.updated_at_time,
+                            created_by_user_id: lobby.created_by_user_id,
+                        }
                     )
                 })
                 .collect(),
@@ -99,6 +105,7 @@ impl Lobby {
             participants,
             created_at_time: timestamp,
             updated_at_time: timestamp,
+            created_by_user_id: user_id.clone(),
         };
         inner.games.insert(game_id, game);
         inner.broadcast(LobbyEvent::NewGame { game_id, user_id });
