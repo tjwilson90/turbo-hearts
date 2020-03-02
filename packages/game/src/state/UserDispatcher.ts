@@ -3,14 +3,14 @@ import { SitEventData } from "../types";
 import { TurboHeartsService } from "../game/TurboHeartsService";
 import { SetUsers } from "./actions";
 
-function getBottomSeat(event: SitEventData) {
-  if (event.north.userId === this.userId) {
+function getBottomSeat(event: SitEventData, myUserId: string) {
+  if (event.north.userId === myUserId) {
     return "north";
-  } else if (event.east.userId === this.userId) {
+  } else if (event.east.userId === myUserId) {
     return "east";
-  } else if (event.south.userId === this.userId) {
+  } else if (event.south.userId === myUserId) {
     return "south";
-  } else if (event.west.userId === this.userId) {
+  } else if (event.west.userId === myUserId) {
     return "west";
   } else {
     return "south";
@@ -24,18 +24,29 @@ const BOTTOM_SEAT_TO_POSITION_INDICES = {
   west: [3, 0, 1, 2]
 };
 
+function bot(id: string) {
+  return {
+    userId: id,
+    name: `Bot (${id.substring(0, 8)})`
+  };
+}
+
 export class UserDispatcher {
-  constructor(private service: TurboHeartsService, private dispatch: Dispatch) {}
+  constructor(private service: TurboHeartsService, private myUserId: string, private dispatch: Dispatch) {}
 
   public async loadUsersForGame(event: SitEventData) {
     const ids = [event.north.userId, event.east.userId, event.south.userId, event.west.userId];
     const loadedUsers = await this.service.getUsers(ids);
-    const bottomSeat = getBottomSeat(event);
+    const bottomSeat = getBottomSeat(event, this.myUserId);
+    const topId = ids[BOTTOM_SEAT_TO_POSITION_INDICES[bottomSeat][0]];
+    const rightId = ids[BOTTOM_SEAT_TO_POSITION_INDICES[bottomSeat][1]];
+    const bottomId = ids[BOTTOM_SEAT_TO_POSITION_INDICES[bottomSeat][2]];
+    const leftId = ids[BOTTOM_SEAT_TO_POSITION_INDICES[bottomSeat][3]];
     const usersByPosition = {
-      top: loadedUsers[ids[BOTTOM_SEAT_TO_POSITION_INDICES[bottomSeat][0]]],
-      right: loadedUsers[ids[BOTTOM_SEAT_TO_POSITION_INDICES[bottomSeat][1]]],
-      bottom: loadedUsers[ids[BOTTOM_SEAT_TO_POSITION_INDICES[bottomSeat][2]]],
-      left: loadedUsers[ids[BOTTOM_SEAT_TO_POSITION_INDICES[bottomSeat][3]]]
+      top: loadedUsers[topId] ?? bot(topId),
+      right: loadedUsers[rightId] ?? bot(rightId),
+      bottom: loadedUsers[bottomId] ?? bot(bottomId),
+      left: loadedUsers[leftId] ?? bot(leftId)
     };
     this.dispatch(SetUsers(usersByPosition));
   }

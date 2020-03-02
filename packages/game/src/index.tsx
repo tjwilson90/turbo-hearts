@@ -27,7 +27,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   const store = createGameAppStore(gameId);
-  const userDispatcher = new UserDispatcher(store.getState().context.service, store.dispatch);
+  const userDispatcher = new UserDispatcher(store.getState().context.service, userId, store.dispatch);
   store.getState().context.eventSource.once("sit", event => {
     userDispatcher.loadUsersForGame(event as SitEventData);
   });

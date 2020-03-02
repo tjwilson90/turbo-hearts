@@ -1,6 +1,6 @@
 import * as React from "react";
 import { connect } from "react-redux";
-import { GameAppState, GameContext, User } from "../state/types";
+import { GameAppState, GameContext, User, GameState } from "../state/types";
 import { Nameplate } from "./Nameplate";
 import { TurboHeartsStage } from "../view/TurboHeartsStage";
 import { Dispatch } from "redoodle";
@@ -14,6 +14,7 @@ export namespace GameApp {
   export interface StoreProps {
     me: User;
     context: GameContext;
+    game: GameState;
   }
 
   export type Props = OwnProps & StoreProps;
@@ -27,10 +28,10 @@ class GameAppInternal extends React.Component<GameApp.Props> {
       <React.Fragment>
         <div className="canvas-container">
           <canvas ref={this.canvasRef}></canvas>
-          <Nameplate name="test" className="bottom" />
-          <Nameplate name="test2" className="left" />
-          <Nameplate name="Malcie" className="top" />
-          <Nameplate name="Daddy" className="right" />
+          <Nameplate user={this.props.game.top} className="top" />
+          <Nameplate user={this.props.game.right} className="right" />
+          <Nameplate user={this.props.game.bottom} className="bottom" />
+          <Nameplate user={this.props.game.left} className="left" />
         </div>
         <div className="sidebar">
           <div id="chat-log" className="chat-log"></div>
@@ -97,7 +98,8 @@ class GameAppInternal extends React.Component<GameApp.Props> {
 function mapStateToProps(state: GameAppState): GameApp.StoreProps {
   return {
     me: state.users.me,
-    context: state.context
+    context: state.context,
+    game: state.game
   };
 }
 
