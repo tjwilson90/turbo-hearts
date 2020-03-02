@@ -126,15 +126,19 @@ impl Users {
             let mut stmt =
                 tx.prepare("SELECT name, realm, external_id FROM user WHERE user_id = ?")?;
             for id in &ids {
-                let user = stmt.query_row(&[id], |row| {
-                    Ok(User {
-                        id: *id,
-                        name: row.get_unwrap::<_, String>(0),
-                        realm: row.get_unwrap::<_, String>(1),
-                        external_id: row.get_unwrap::<_, String>(2),
+                let user = stmt
+                    .query_row(&[id], |row| {
+                        Ok(User {
+                            id: *id,
+                            name: row.get_unwrap::<_, String>(0),
+                            realm: row.get_unwrap::<_, String>(1),
+                            external_id: row.get_unwrap::<_, String>(2),
+                        })
                     })
-                })?;
-                uncached.insert(user);
+                    .optional()?;
+                if let Some(user) = user {
+                    uncached.insert(user);
+                }
             }
             Ok(())
         })?;
