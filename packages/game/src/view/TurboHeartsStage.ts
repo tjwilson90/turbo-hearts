@@ -2,7 +2,6 @@ import TWEEN from "@tweenjs/tween.js";
 import * as PIXI from "pixi.js";
 import {
   BOTTOM,
-  CARD_DISPLAY_HEIGHT,
   CARD_DROP_SHADOW,
   CARD_OVERLAP,
   CARD_SCALE,
@@ -26,12 +25,12 @@ import {
   Z_CHARGED_CARDS,
   Z_HAND_CARDS,
   Z_PILE_CARDS,
-  Z_PLAYED_CARDS
+  Z_PLAYED_CARDS,
+  CARD_DISPLAY_HEIGHT,
+  FASTER_ANIMATION_DURATION
 } from "../const";
-import { CardPickSupport } from "../events/animations/CardPickSupport";
 import { groupCards } from "../events/groupCards";
-import { spriteCardsOf } from "../events/helpers";
-import { cardsOf, TurboHearts } from "../game/stateSnapshot";
+import { TurboHearts, Action } from "../game/stateSnapshot";
 import { TurboHeartsService } from "../game/TurboHeartsService";
 import {
   Animation,
@@ -45,8 +44,10 @@ import {
   Seat,
   SpriteCard
 } from "../types";
-import { Button } from "../ui/Button";
 import { StepAnimation } from "./StepAnimation";
+import { spriteCardsOf } from "../events/helpers";
+import EventEmitter from "eventemitter3";
+import { emptyArray } from "../util/array";
 
 const CHARGEABLE_CARDS: Card[] = ["TC", "JD", "AH", "QS"];
 
@@ -114,13 +115,6 @@ export const LIMBO_POSITIONS_FOR_BOTTOM_SEAT: {
   }
 };
 
-const directionText: { [P in Pass]: string } = {
-  left: "Left",
-  right: "Right",
-  across: "Across",
-  keeper: "In"
-};
-
 function emptyPlayerSpriteCards() {
   return {
     hand: [],
@@ -151,11 +145,15 @@ export class TurboHeartsStage {
   public app: PIXI.Application;
 
   private replay = true;
-  private mode = "live";
 
   private background: PIXI.Sprite | undefined;
-  private snapshots: TurboHearts.StateSnapshot[] = [];
-  private currentSnapshotIndex = -1;
+  private snapshot: TurboHearts.StateSnapshot | undefined;
+
+  private picked: Set<SpriteCard> = new Set();
+  private hovered: SpriteCard | undefined = undefined;
+  private initialPosition: Map<SpriteCard, number> = new Map();
+  private cardMap: Map<PIXI.Sprite, SpriteCard> = new Map();
+  private cardTweens: Map<PIXI.Sprite, TWEEN.Tween> = new Map();
 
   private animations: Animation[] = [];
   private runningAnimation: Animation | undefined;
@@ -167,8 +165,11 @@ export class TurboHeartsStage {
   private bottom: PlayerSpriteCards = emptyPlayerSpriteCards();
   private left: PlayerSpriteCards = emptyPlayerSpriteCards();
 
-  private input: CardPickSupport | undefined = undefined;
-  private button: Button | undefined = undefined;
+  private emitter = new EventEmitter();
+
+  private action: Action = "none";
+  private legalPlays: Card[] = emptyArray();
+  private actionToSet: { action: Action; legalPlays: Card[] } | undefined;
 
   constructor(
     private canvas: HTMLCanvasElement,
@@ -193,101 +194,26 @@ export class TurboHeartsStage {
 
   public endReplay = () => {
     this.replay = false;
-    this.currentSnapshotIndex = this.snapshots.length - 1;
-    const state = this.snapshots[this.currentSnapshotIndex];
-    this.snapToState(state);
-    this.trackInput();
-  };
-
-  public trackInput = () => {
-    if (this.mode !== "live" || this.replay || this.currentSnapshotIndex < 0) {
-      return;
-    }
-    const state = this.snapshots[this.snapshots.length - 1];
-    const bottomSeat = this.getBottomSeat(state);
-    const player = state[bottomSeat];
-    const action = player.action;
-    if (this.input !== undefined) {
-      // TODO: player.legalPlays isn't sufficient for pass/charge
-      if (this.input.action !== action || this.input.rawCards !== player.legalPlays) {
-        this.endInput();
-      }
-    }
-    if (action !== "none" && this.input === undefined) {
-      this.beginInput(player);
+    if (this.snapshot !== undefined) {
+      this.animations.push(this.snapAnimation());
     }
   };
-
-  private endInput() {
-    if (this.input !== undefined) {
-      this.input.cleanUp();
-      this.input = undefined;
-    }
-    if (this.button !== undefined) {
-      this.app.stage.removeChild(this.button.container);
-      this.button = undefined;
-    }
-  }
-
-  private beginInput(player: TurboHearts.Player) {
-    const state = this.snapshots[this.snapshots.length - 1];
-    switch (player.action) {
-      case "pass": {
-        this.button = new Button(
-          "Pass 3 Cards " + directionText[state.pass],
-          TABLE_SIZE - CARD_DISPLAY_HEIGHT * 1.5,
-          () => {
-            this.service.passCards([...this.input!.picked.values()].map(c => c.card));
-          }
-        );
-        this.button.setEnabled(false);
-        const picker = new CardPickSupport(
-          this.bottom.hand,
-          "pass",
-          () => {
-            this.button?.setEnabled(picker.picked.size === 3);
-          },
-          player.hand
-        );
-        this.input = picker;
-        this.app.stage.addChild(this.button.container);
-        break;
-      }
-      case "charge": {
-        this.button = new Button("Charge Cards", TABLE_SIZE - CARD_DISPLAY_HEIGHT * 1.5, () => {
-          this.service.chargeCards([...this.input!.picked.values()].map(c => c.card));
-        });
-        this.button.setEnabled(true);
-        const chargeableCards = spriteCardsOf(this.bottom.hand, CHARGEABLE_CARDS);
-        const legalCharges = cardsOf(player.hand, CHARGEABLE_CARDS);
-        this.input = new CardPickSupport(chargeableCards, "charge", () => {}, legalCharges);
-        this.app.stage.addChild(this.button.container);
-        break;
-      }
-      case "play": {
-        const playableCards = [...this.bottom.hand, ...this.bottom.charged];
-        const legalPlays = spriteCardsOf(playableCards, player.legalPlays);
-        const picker = new CardPickSupport(
-          legalPlays,
-          "play",
-          () => {
-            const cards = Array.from(picker.picked.values());
-            if (cards.length !== 1) {
-              return;
-            }
-            picker.cleanUp();
-            this.service.playCard(cards[0].card);
-          },
-          player.legalPlays
-        );
-        this.input = picker;
-        break;
-      }
-    }
-  }
 
   public acceptSnapshot = (event: { next: TurboHearts.StateSnapshot; previous: TurboHearts.StateSnapshot }) => {
-    this.snapshots.push(event.next);
+    if (!this.replay && this.snapshot !== undefined && event.next.index === this.snapshot.index + 1) {
+      this.animations.push(this.getAnimation(this.snapshot, event.next));
+    }
+    this.snapshot = event.next;
+    const player = this.snapshot[getBottomSeat(this.snapshot, this.userId)];
+    let legalPlays: Card[] = emptyArray();
+    if (player.action === "pass") {
+      legalPlays = player.hand;
+    } else if (player.action === "charge") {
+      legalPlays = CHARGEABLE_CARDS;
+    } else if (player.action === "play") {
+      legalPlays = player.legalPlays;
+    }
+    this.setAction(player.action, legalPlays);
   };
 
   private createCard = (card: Card, hidden: boolean) => {
@@ -296,22 +222,26 @@ export class TurboHeartsStage {
     return spriteCard;
   };
 
-  private getAnimation(previous: TurboHearts.StateSnapshot, next: TurboHearts.StateSnapshot): Animation {
-    const snapAnimation = () => {
-      let finished = false;
-      return {
-        start: () => {
-          this.snapToState(next);
-          setTimeout(() => {
-            finished = true;
-          }, 50);
-        },
-        isFinished: () => {
-          return finished;
+  private snapAnimation = () => {
+    let finished = false;
+    return {
+      start: () => {
+        if (this.snapshot === undefined) {
+          finished = true;
+          return;
         }
-      };
+        this.snapToState(this.snapshot);
+        setTimeout(() => {
+          finished = true;
+        }, 50);
+      },
+      isFinished: () => {
+        return finished;
+      }
     };
+  };
 
+  private getAnimation(previous: TurboHearts.StateSnapshot, next: TurboHearts.StateSnapshot): Animation {
     const noopAnimation = () => ({
       start: () => {},
       isFinished: () => true
@@ -344,7 +274,7 @@ export class TurboHeartsStage {
       return noopAnimation();
     }
     if (next.event.type === "sit") {
-      return snapAnimation();
+      return this.snapAnimation();
     }
     throw new Error("");
   }
@@ -356,9 +286,6 @@ export class TurboHeartsStage {
   private snapToState(state: TurboHearts.StateSnapshot) {
     const bottomSeat = this.getBottomSeat(state);
     this.cardContainer.removeChildren();
-
-    // TODO: nameplates
-    // TODO: to play indicator
 
     const layoutHand = (seat: Seat, position: Position, layout: PlayerCardPositions) => {
       const handCards = state[seat].hand.map(c => createSpriteCard(this.app.loader.resources, c, false));
@@ -461,6 +388,151 @@ export class TurboHeartsStage {
     this.onReady();
   };
 
+  public setAction(action: Action, legalPlays: Card[], immediate: boolean = false) {
+    this.actionToSet = { action, legalPlays };
+    if (immediate || (!this.replay && this.runningAnimation === undefined && this.animations.length === 0)) {
+      this.setActionInternal();
+    }
+  }
+
+  private setActionInternal() {
+    if (this.actionToSet === undefined) {
+      return;
+    }
+    if (this.action === this.actionToSet.action && this.legalPlays === this.actionToSet.legalPlays) {
+      this.actionToSet = undefined;
+      return;
+    }
+    this.disableCardInteraction();
+    this.action = this.actionToSet.action;
+    this.legalPlays = this.actionToSet.legalPlays;
+    if (this.action !== "none") {
+      this.enableCardInteraction(this.actionToSet.legalPlays);
+    }
+    this.emitter.emit("action", this.action);
+    this.actionToSet = undefined;
+  }
+
+  private enableCardInteraction(legalPlays: Card[]) {
+    if (this.snapshot === undefined) {
+      return;
+    }
+
+    const spriteCards = spriteCardsOf([...this.bottom.hand, ...this.bottom.charged], legalPlays);
+    for (const card of spriteCards) {
+      this.cardMap.set(card.sprite, card);
+      this.initialPosition.set(card, card.sprite.position.y);
+      card.sprite.interactive = true;
+      card.sprite.buttonMode = true;
+      card.sprite.addListener("pointertap", this.onClick);
+      card.sprite.addListener("pointerover", this.onOver);
+      card.sprite.addListener("pointerout", this.onOut);
+    }
+  }
+
+  private disableCardInteraction() {
+    for (const tween of this.cardTweens.values()) {
+      tween.stop();
+    }
+    for (const sprite of this.cardMap.keys()) {
+      const spriteCard = this.cardMap.get(sprite)!;
+      if (!this.picked.has(spriteCard)) {
+        const pos = this.initialPosition.get(spriteCard)!;
+        sprite.position.y = pos;
+      }
+      sprite.interactive = false;
+      sprite.buttonMode = false;
+      sprite.removeListener("pointertap", this.onClick);
+      sprite.removeListener("pointerover", this.onOver);
+      sprite.removeListener("pointerout", this.onOut);
+    }
+    this.picked.clear();
+    this.hovered = undefined;
+    this.initialPosition.clear();
+    this.cardMap.clear();
+    this.cardTweens.clear();
+    this.emitter.emit("pick", []);
+  }
+
+  private tweenTo(sprite: PIXI.Sprite, y: number) {
+    const existingTween = this.cardTweens.get(sprite);
+    if (existingTween !== undefined) {
+      existingTween.stop();
+    }
+    const tween = new TWEEN.Tween(sprite.position)
+      .to({ y }, FASTER_ANIMATION_DURATION)
+      .onComplete(() => this.cardTweens.delete(sprite));
+    this.cardTweens.set(sprite, tween);
+    tween.start();
+  }
+
+  private animate(card: SpriteCard) {
+    const initialPosition = this.initialPosition.get(card);
+    if (initialPosition === undefined) {
+      throw new Error("missing card to animate");
+    }
+    let pos;
+    const offset = CARD_DISPLAY_HEIGHT / 4;
+    if (this.picked.has(card)) {
+      pos = initialPosition - 1.33 * offset;
+    } else if (this.hovered === card) {
+      pos = initialPosition - offset;
+    } else {
+      pos = initialPosition;
+    }
+    this.tweenTo(card.sprite, pos);
+  }
+
+  private onOver = (event: PIXI.interaction.InteractionEvent) => {
+    const sprite = event.currentTarget as PIXI.Sprite;
+    const card = this.cardMap.get(sprite);
+    if (card === undefined) {
+      throw new Error("missing card to animate");
+    }
+    this.hovered = card;
+    this.animate(card);
+  };
+
+  private onOut = (event: PIXI.interaction.InteractionEvent) => {
+    const sprite = event.currentTarget as PIXI.Sprite;
+    const card = this.cardMap.get(sprite);
+    if (card === undefined) {
+      throw new Error("missing card to animate");
+    }
+    if (this.hovered === card) {
+      this.hovered = undefined;
+    }
+    this.animate(card);
+  };
+
+  private onClick = (event: PIXI.interaction.InteractionEvent) => {
+    const card = this.cardMap.get(event.currentTarget as PIXI.Sprite);
+    if (card !== undefined) {
+      if (this.picked.has(card)) {
+        this.picked.delete(card);
+      } else {
+        this.picked.add(card);
+      }
+      this.animate(card);
+      this.emitter.emit(
+        "pick",
+        Array.from(this.picked).map(sc => sc.card)
+      );
+    }
+  };
+
+  public on(type: "action", listener: (action: Action) => void): void;
+  public on(type: "pick", listener: (picks: Card[]) => void): void;
+  public on(type: string, listener: EventEmitter.ListenerFn) {
+    this.emitter.on(type, listener);
+  }
+
+  public off(type: "action", listener: (action: Action) => void): void;
+  public off(type: "pick", listener: (picks: Card[]) => void): void;
+  public off(type: string, listener: EventEmitter.ListenerFn) {
+    this.emitter.off(type, listener);
+  }
+
   private gameLoop = () => {
     TWEEN.update();
     if (this.replay || (this.runningAnimation !== undefined && !this.runningAnimation.isFinished())) {
@@ -470,24 +542,10 @@ export class TurboHeartsStage {
     if (this.animations.length > 0) {
       this.runningAnimation = this.animations.shift()!;
       this.runningAnimation.start();
+      // this.setActionInternal();
       return;
-    }
-
-    if (this.currentSnapshotIndex === -1) {
-      if (this.snapshots.length > 0) {
-        this.snapToState(this.snapshots[0]);
-        this.currentSnapshotIndex = 0;
-      }
-      return;
-    }
-
-    if (this.currentSnapshotIndex < this.snapshots.length - 1) {
-      const current = this.snapshots[this.currentSnapshotIndex];
-      const next = this.snapshots[this.currentSnapshotIndex + 1];
-      const animation = this.getAnimation(current, next);
-      this.animations.push(animation);
-      this.currentSnapshotIndex++;
-      this.trackInput();
+    } else {
+      this.setActionInternal();
     }
   };
 }

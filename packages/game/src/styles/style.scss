@@ -22,6 +22,27 @@ body {
   .canvas-container {
     position: relative;
 
+    .input {
+      position: absolute;
+      width: 250px;
+      height: 60px;
+      font-size: 15px;
+      margin-left: auto;
+      margin-right: auto;
+      left: 0;
+      right: 0;
+      bottom: 200px;
+      border: 1px solid #707070;
+      background: #e0e0e0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      button {
+        margin-top: 5px;
+      }
+    }
+
     .nameplate {
       position: absolute;
       display: flex;
