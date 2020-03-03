@@ -1,8 +1,9 @@
 use crate::{
     auth::RedirectToAuthChooser,
-    cards::{Cards, GamePhase},
+    cards::Cards,
     config::CONFIG,
-    types::{GameId, UserId},
+    game::{id::GameId, phase::GamePhase},
+    user::UserId,
 };
 use http::{header, Response, StatusCode};
 use rusqlite::ErrorCode;
@@ -42,8 +43,6 @@ pub enum CardsError {
     NotYourCards(Cards),
     #[error("player {0} makes the next {1}")]
     NotYourTurn(UserId, &'static str),
-    #[error("api endpoints require a \"name\" cookie identifying the caller")]
-    MissingNameCookie,
     #[error("on the first trick if you have nothing but points, you must play the jack of diamonds if you have it")]
     MustPlayJackOfDiamonds,
     #[error("on the first trick if you have nothing but positive points, you must play the queen of spades if you have it")]

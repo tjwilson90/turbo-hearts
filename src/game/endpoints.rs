@@ -1,9 +1,6 @@
 use crate::{
-    auth,
-    cards::{Card, Cards},
-    endpoint,
-    server::Server,
-    types::{GameId, Seat, UserId},
+    auth, card::Card, cards::Cards, endpoint, game::id::GameId, seat::Seat, server::Server,
+    user::UserId,
 };
 use serde::Deserialize;
 use warp::{sse, Filter, Rejection, Reply};

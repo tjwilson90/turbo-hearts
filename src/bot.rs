@@ -1,10 +1,12 @@
 use crate::{
     bot::{duck::Duck, gottatry::GottaTry, random::Random},
-    cards::{Card, Cards, GameState},
+    card::Card,
+    cards::Cards,
     error::CardsError,
-    game::GameEvent,
+    game::{event::GameEvent, id::GameId, state::GameState},
+    seat::Seat,
     server::Server,
-    types::{GameId, Seat, UserId},
+    user::UserId,
 };
 use log::info;
 use rand::distributions::Distribution;
