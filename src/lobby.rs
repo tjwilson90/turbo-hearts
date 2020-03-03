@@ -1,6 +1,9 @@
 use crate::{
     error::CardsError,
-    types::{GameId, PlayerWithOptions, UserId},
+    game::id::GameId,
+    lobby::event::LobbyEvent,
+    types::{PlayerWithOptions, Seed},
+    user::UserId,
 };
 use serde::Serialize;
 use std::{
@@ -13,12 +16,8 @@ use tokio::sync::{
     Mutex,
 };
 
-mod endpoints;
-mod event;
-
-use crate::types::Seed;
-pub use endpoints::*;
-pub use event::*;
+pub mod endpoints;
+pub mod event;
 
 #[derive(Clone)]
 pub struct Lobby {

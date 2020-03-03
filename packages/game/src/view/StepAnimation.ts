@@ -8,19 +8,17 @@ import {
   FAST_ANIMATION_DURATION,
   LEFT,
   RIGHT,
+  TABLE_CENTER_X,
+  TABLE_CENTER_Y,
   TOP,
   TRICK_COLLECTION_PAUSE,
   Z_CHARGED_CARDS,
   Z_DEALING_CARDS,
+  Z_HAND_CARDS,
   Z_PILE_CARDS,
   Z_PLAYED_CARDS,
-  Z_TRANSIT_CARDS,
-  Z_HAND_CARDS,
-  TABLE_CENTER_X,
-  TABLE_CENTER_Y
+  Z_TRANSIT_CARDS
 } from "../const";
-import { groupCards } from "../events/groupCards";
-import { sleep, spriteCardsOf } from "../events/helpers";
 import { sortCards, sortSpriteCards } from "../game/sortCards";
 import { TurboHearts } from "../game/stateSnapshot";
 import {
@@ -30,51 +28,17 @@ import {
   PlayerCardPositions,
   PlayerSpriteCards,
   Point,
-  Position,
   ReceivePassEventData,
   Seat,
-  SpriteCard,
-  SendPassEventData
+  SendPassEventData,
+  SpriteCard
 } from "../types";
 import { pushAll, removeAll } from "../util/array";
-import { PASS_POSITION_OFFSETS, addToSeat } from "../game/snapshotter";
+import { groupCards } from "../util/groupCards";
+import { sleep, spriteCardsOf } from "../util/helpers";
+import { POSITIONS, POSITION_ORDER, SEAT_ORDER_FOR_BOTTOM_SEAT, addToSeat, PASS_OFFSETS } from "../util/seatPositions";
 import { LIMBO_POSITIONS_FOR_BOTTOM_SEAT } from "./TurboHeartsStage";
 
-const TRUE_SEAT_ORDER_FOR_BOTTOM_SEAT: { [bottomSeat in Seat]: Seat[] } = {
-  // [top, right, bottom, left]
-  north: ["south", "west", "north", "east"],
-  east: ["west", "north", "east", "south"],
-  south: ["north", "east", "south", "west"],
-  west: ["east", "south", "west", "north"]
-};
-
-const POSITIONS: { [bottomSeat in Seat]: { [trueSeat in Seat]: Position } } = {
-  north: {
-    north: "bottom",
-    east: "left",
-    south: "top",
-    west: "right"
-  },
-  east: {
-    north: "right",
-    east: "bottom",
-    south: "left",
-    west: "top"
-  },
-  south: {
-    north: "top",
-    east: "right",
-    south: "bottom",
-    west: "left"
-  },
-  west: {
-    north: "left",
-    east: "top",
-    south: "right",
-    west: "bottom"
-  }
-};
-const POSITION_ORDER: Position[] = ["top", "right", "bottom", "left"];
 const POSITION_LAYOUTS = { top: TOP, right: RIGHT, bottom: BOTTOM, left: LEFT };
 
 export class StepAnimation implements Animation {
@@ -125,7 +89,7 @@ export class StepAnimation implements Animation {
 
   private animateDeal() {
     const backTexture = this.cardTextures["BACK"].texture;
-    const seatOrder = TRUE_SEAT_ORDER_FOR_BOTTOM_SEAT[this.bottomSeat];
+    const seatOrder = SEAT_ORDER_FOR_BOTTOM_SEAT[this.bottomSeat];
     const deckCards: SpriteCard[] = [];
     for (let i = 0; i < 4; i++) {
       const spriteCards = this[POSITION_ORDER[i]];
@@ -237,7 +201,7 @@ export class StepAnimation implements Animation {
   }
 
   private async animateReceivePass(event: ReceivePassEventData) {
-    const fromSeat = addToSeat(event.to, -PASS_POSITION_OFFSETS[this.next.pass]);
+    const fromSeat = addToSeat(event.to, -PASS_OFFSETS[this.next.pass]);
     const toPlayer = this.getSpritePlayer(event.to);
     const fromPlayer = this.getSpritePlayer(fromSeat);
     const received = [...event.cards];
@@ -304,7 +268,7 @@ export class StepAnimation implements Animation {
   }
 
   private async animatePlay() {
-    const seatOrder = TRUE_SEAT_ORDER_FOR_BOTTOM_SEAT[this.bottomSeat];
+    const seatOrder = SEAT_ORDER_FOR_BOTTOM_SEAT[this.bottomSeat];
     for (let i = 0; i < 4; i++) {
       const playerPrev = this.previous[seatOrder[i]];
       const playerNext = this.next[seatOrder[i]];
@@ -343,7 +307,7 @@ export class StepAnimation implements Animation {
 
   private async animateEndTrick(winner: Seat) {
     await sleep(TRICK_COLLECTION_PAUSE);
-    const seatOrder = TRUE_SEAT_ORDER_FOR_BOTTOM_SEAT[this.bottomSeat];
+    const seatOrder = SEAT_ORDER_FOR_BOTTOM_SEAT[this.bottomSeat];
     const pileCards: SpriteCard[] = [];
     let winnerPlayer: PlayerSpriteCards;
     let winnerLayout: PlayerCardPositions;

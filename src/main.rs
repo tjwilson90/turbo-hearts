@@ -1,5 +1,9 @@
 use crate::{
-    config::CONFIG, db::Database, error::CardsError, server::Server, types::UserId, user::Users,
+    config::CONFIG,
+    db::Database,
+    error::CardsError,
+    server::Server,
+    user::{UserId, Users},
 };
 use http::header;
 use r2d2_sqlite::SqliteConnectionManager;
@@ -12,6 +16,7 @@ mod macros;
 
 mod auth;
 mod bot;
+mod card;
 mod cards;
 mod config;
 mod db;
@@ -19,7 +24,10 @@ mod endpoint;
 mod error;
 mod game;
 mod lobby;
+mod rank;
+mod seat;
 mod server;
+mod suit;
 #[cfg(test)]
 mod test;
 mod types;
@@ -48,9 +56,9 @@ async fn main() -> Result<(), CardsError> {
     let user_id = user_id(users.clone());
 
     let app = endpoint::assets()
-        .or(game::router(server.clone(), user_id.clone()))
-        .or(lobby::router(server, user_id))
-        .or(auth::router(users.clone(), http_client))
+        .or(game::endpoints::router(server.clone(), user_id.clone()))
+        .or(lobby::endpoints::router(server, user_id))
+        .or(auth::endpoints::router(users.clone(), http_client))
         .or(endpoint::users(users))
         .with(
             warp::cors()

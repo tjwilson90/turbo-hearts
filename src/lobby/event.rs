@@ -1,6 +1,8 @@
 use crate::{
+    game::id::GameId,
     lobby::LobbyGame,
-    types::{Event, GameId, PlayerWithOptions, UserId},
+    types::{Event, PlayerWithOptions},
+    user::UserId,
 };
 use serde::Serialize;
 use std::collections::{HashMap, HashSet};

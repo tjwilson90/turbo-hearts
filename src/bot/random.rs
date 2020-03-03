@@ -1,7 +1,8 @@
 use crate::{
     bot::{Algorithm, BotState},
-    cards::{Card, Cards},
-    game::GameEvent,
+    card::Card,
+    cards::Cards,
+    game::event::GameEvent,
 };
 use rand::{seq::SliceRandom, Rng};
 
