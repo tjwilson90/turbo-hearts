@@ -1,35 +1,18 @@
-import { EventData, Pass, Seat } from "../types";
+import { EventEmitter } from "eventemitter3";
+import { EventData } from "../types";
+import { PASS_OFFSETS, addToSeat } from "../util/seatPositions";
 import {
   emptyStateSnapshot,
   newPlayer,
   TurboHearts,
+  withAction,
   withCharge,
   withDeal,
   withEndTrick,
   withPlay,
   withReceivePass,
-  withSentPass,
-  withAction
+  withSentPass
 } from "./stateSnapshot";
-import { EventEmitter } from "eventemitter3";
-
-export const SEATS: Seat[] = ["north", "east", "south", "west"];
-
-export const PASS_POSITION_OFFSETS: { [pass in Pass]: number } = {
-  left: 1,
-  right: -1,
-  across: 2,
-  keeper: 0
-};
-
-export function addToSeat(seat: Seat, n: number): Seat {
-  let i = SEATS.indexOf(seat) + n;
-  if (i < 0) {
-    i += SEATS.length;
-  }
-  i = i % SEATS.length;
-  return SEATS[i];
-}
 
 export class Snapshotter {
   private emitter = new EventEmitter();
@@ -95,7 +78,7 @@ export class Snapshotter {
 
       case "recv_pass": {
         const toPlayer = previous[event.to];
-        const fromSeat = addToSeat(event.to, -PASS_POSITION_OFFSETS[previous.pass]);
+        const fromSeat = addToSeat(event.to, -PASS_OFFSETS[previous.pass]);
         const fromPlayer = previous[fromSeat];
         const passPlayers = withReceivePass(fromPlayer, toPlayer, event.cards);
         this.snapshots.push({
