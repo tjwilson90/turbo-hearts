@@ -13,6 +13,15 @@ function renameCommon(event: any) {
     if (event.hasOwnProperty("game_id")) {
         renameProp(event, "game_id", "gameId");
     }
+    if (event.hasOwnProperty("created_by")) {
+        renameProp(event, "created_by", "createdBy");
+    }
+    if (event.hasOwnProperty("last_updated_time")) {
+    renameProp(event, "last_updated_time", "updatedAt", time => new Date(time) );
+    }
+    if (event.hasOwnProperty("created_time")) {
+        renameProp(event, "created_time", "createdAt", time => new Date(time));
+    }
 }
 
 function unrustify(event: any): LobbyEvent {
@@ -28,15 +37,22 @@ function unrustify(event: any): LobbyEvent {
         case "lobby_state":
             for (const gameId in event.games) {
                 const game = event.games[gameId];
-                renameProp(game, "updated_at_time", "updatedAt", time => new Date(time) );
-                renameProp(game, "created_at_time", "createdAt", time => new Date(time) );
-                for (const player of game.players) {
-                    renameCommon(player);
-                }
+                game.gameId = gameId;
+                renameCommon(game);
+                game.players = game.players.map((player: any) => {
+                    renameCommon(player.player);
+                    return player.player;
+                });
+                delete game.last_updated_by;
+                delete game.seed;
             }
             return event;
-        case "new_game":
         case "join_game":
+            event.userId = event.player.player.user_id;
+            return event;
+        case "new_game":
+            event.createdBy = event.game.created_by;
+            return event;
         case "leave_game":
         case "finish_game":
         case "chat":

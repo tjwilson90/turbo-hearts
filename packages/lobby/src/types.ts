@@ -26,7 +26,7 @@ export interface LobbyStateEvent {
             updatedAt: Date;
             createdAt: Date;
             players: LobbyPlayer[];
-            userId: string;
+            createdBy: string;
         };
     }
     userId: string;
@@ -45,7 +45,7 @@ export interface ExitLobbyEvent {
 
 export interface NewGameEvent {
     type: "new_game";
-    userId: string;
+    createdBy: string;
     gameId: string;
 }
 

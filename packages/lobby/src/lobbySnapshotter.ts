@@ -12,8 +12,9 @@ import EventEmitter from "eventemitter3";
 import { TurboHeartsLobbyEventSource } from "./TurboHeartsLobbyEventSource";
 
 export interface LobbyGame {
+    gameId: string;
     players: LobbyPlayer[];
-    createdByUserId: string;
+    createdBy: string;
     updatedAt: Date;
     createdAt: Date;
 }
@@ -61,9 +62,10 @@ export class LobbySnapshotter {
         for (const gameId in event.games) {
             const game = event.games[gameId];
             games[gameId] = {
+                gameId,
                 createdAt: game.createdAt,
-                updatedAt: game.createdAt,
-                createdByUserId: game.userId,
+                updatedAt: game.updatedAt,
+                createdBy: game.createdBy,
                 players: game.players
             }
         }
@@ -96,11 +98,11 @@ export class LobbySnapshotter {
                 [event.gameId]: {
                     players: [{
                         type: "human",
-                        userId: event.userId,
+                        userId: event.createdBy,
                     }],
                     createdAt: new Date(),
                     updatedAt: new Date(),
-                    createdByUserId: event.userId,
+                    createdBy: event.createdBy,
                 }
             }
         };
