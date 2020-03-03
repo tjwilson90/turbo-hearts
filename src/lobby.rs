@@ -1,7 +1,8 @@
 use crate::{
     error::CardsError,
-    types::{ChargingRules, GameId, Participant, Player, UserId},
+    types::{GameId, PlayerWithOptions, UserId},
 };
+use serde::Serialize;
 use std::{
     collections::{hash_map::Entry, HashMap, HashSet, VecDeque},
     sync::Arc,
@@ -15,6 +16,7 @@ use tokio::sync::{
 mod endpoints;
 mod event;
 
+use crate::types::Seed;
 pub use endpoints::*;
 pub use event::*;
 
@@ -23,21 +25,36 @@ pub struct Lobby {
     inner: Arc<Mutex<Inner>>,
 }
 
-#[derive(Clone, Debug)]
-pub struct GameLobby {
-    pub participants: HashSet<Participant>,
-    pub created_at_time: i64,
-    pub updated_at_time: i64,
-    pub created_by_user_id: UserId,
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+pub struct LobbyGame {
+    pub players: HashSet<PlayerWithOptions>,
+    pub seed: Seed,
+    pub created_time: i64,
+    pub created_by: UserId,
+    pub last_updated_time: i64,
+    pub last_updated_by: UserId,
+}
+
+impl LobbyGame {
+    fn redact(&self) -> Self {
+        LobbyGame {
+            players: self.players.clone(),
+            seed: self.seed.redact(),
+            created_time: self.created_time,
+            created_by: self.created_by,
+            last_updated_time: self.last_updated_time,
+            last_updated_by: self.last_updated_by,
+        }
+    }
 }
 
 struct Inner {
     subscribers: HashMap<UserId, Vec<UnboundedSender<LobbyEvent>>>,
-    games: HashMap<GameId, GameLobby>,
+    games: HashMap<GameId, LobbyGame>,
 }
 
 impl Lobby {
-    pub fn new(games: HashMap<GameId, GameLobby>) -> Self {
+    pub fn new(games: HashMap<GameId, LobbyGame>) -> Self {
         Self {
             inner: Arc::new(Mutex::new(Inner {
                 subscribers: HashMap::new(),
@@ -67,73 +84,58 @@ impl Lobby {
             games: inner
                 .games
                 .iter()
-                .map(|(game_id, lobby)| {
-                    (
-                        *game_id,
-                        GameState {
-                            players: lobby
-                                .participants
-                                .iter()
-                                .map(|participant| &participant.player)
-                                .cloned()
-                                .collect(),
-                            created_at_time: lobby.created_at_time,
-                            updated_at_time: lobby.updated_at_time,
-                            created_by_user_id: lobby.created_by_user_id,
-                        }
-                    )
-                })
+                .map(|(game_id, lobby)| (*game_id, lobby.redact()))
                 .collect(),
         })
         .unwrap();
         rx
     }
 
-    pub async fn new_game(&self, user_id: UserId, rules: ChargingRules) -> GameId {
+    pub async fn new_game(&self, player: PlayerWithOptions, seed: Option<String>) -> GameId {
         let game_id = GameId::new();
+        let user_id = player.player.user_id();
         let mut inner = self.inner.lock().await;
         let mut participants = HashSet::new();
-        participants.insert(Participant {
-            player: Player::Human { user_id },
-            rules,
-        });
+        participants.insert(player);
         let timestamp = SystemTime::now()
             .duration_since(SystemTime::UNIX_EPOCH)
             .unwrap()
             .as_millis() as i64;
-        let game = GameLobby {
-            participants,
-            created_at_time: timestamp,
-            updated_at_time: timestamp,
-            created_by_user_id: user_id.clone(),
+        let game = LobbyGame {
+            players: participants,
+            seed: seed.map_or_else(|| Seed::random(), |value| Seed::Chosen { value }),
+            created_time: timestamp,
+            created_by: user_id,
+            last_updated_time: timestamp,
+            last_updated_by: user_id,
         };
+        let redacted = game.redact();
         inner.games.insert(game_id, game);
-        inner.broadcast(LobbyEvent::NewGame { game_id, user_id });
+        inner.broadcast(LobbyEvent::NewGame {
+            game_id,
+            game: redacted,
+        });
         game_id
     }
 
     pub async fn join_game(
         &self,
         game_id: GameId,
-        player: Player,
-        rules: ChargingRules,
-    ) -> Result<GameLobby, CardsError> {
+        player: PlayerWithOptions,
+    ) -> Result<LobbyGame, CardsError> {
         let mut inner = self.inner.lock().await;
-        if let Some(lobby) = inner.games.get_mut(&game_id) {
-            if lobby.participants.len() == 4 {
+        if let Some(game) = inner.games.get_mut(&game_id) {
+            if game.players.len() == 4 {
                 return Err(CardsError::GameHasStarted(game_id));
             }
-            lobby.participants.insert(Participant {
-                player: player.clone(),
-                rules,
-            });
-            lobby.updated_at_time = SystemTime::now()
+            game.players.insert(player.clone());
+            game.last_updated_time = SystemTime::now()
                 .duration_since(SystemTime::UNIX_EPOCH)
                 .unwrap()
                 .as_millis() as i64;
-            let lobby = lobby.clone();
+            let game = game.clone();
             inner.broadcast(LobbyEvent::JoinGame { game_id, player });
-            Ok(lobby)
+            Ok(game)
         } else {
             Err(CardsError::UnknownGame(game_id))
         }
@@ -143,7 +145,7 @@ impl Lobby {
         let mut inner = self.inner.lock().await;
         let games = &mut inner.games;
         if let Entry::Occupied(mut entry) = games.entry(game_id) {
-            let participants = &mut entry.get_mut().participants;
+            let participants = &mut entry.get_mut().players;
             let count = participants.len();
             participants.retain(|participant| participant.player.user_id() != user_id);
             if participants.len() < count {

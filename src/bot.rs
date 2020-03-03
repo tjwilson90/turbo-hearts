@@ -8,6 +8,7 @@ use crate::{
 };
 use log::info;
 use rand::distributions::Distribution;
+use serde::{Deserialize, Serialize};
 use tokio::{sync::mpsc::error::TryRecvError, time, time::Duration};
 
 mod duck;
@@ -19,6 +20,15 @@ pub struct Bot {
     algorithm: Box<dyn Algorithm + Send + Sync>,
 }
 
+#[repr(u8)]
+#[serde(rename_all = "snake_case")]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash, Serialize, Deserialize)]
+pub enum Strategy {
+    Duck,
+    GottaTry,
+    Random,
+}
+
 pub struct BotState {
     user_id: UserId,
     seat: Seat,
@@ -28,12 +38,11 @@ pub struct BotState {
 }
 
 impl Bot {
-    pub fn new(user_id: UserId, algorithm: &str) -> Self {
-        let algorithm: Box<dyn Algorithm + Send + Sync> = match algorithm {
-            Duck::NAME => Box::new(Duck::new()),
-            GottaTry::NAME => Box::new(GottaTry::new()),
-            Random::NAME => Box::new(Random::new()),
-            _ => panic!("Unknown algorithm"),
+    pub fn new(user_id: UserId, strategy: Strategy) -> Self {
+        let algorithm: Box<dyn Algorithm + Send + Sync> = match strategy {
+            Strategy::Duck => Box::new(Duck::new()),
+            Strategy::GottaTry => Box::new(GottaTry::new()),
+            Strategy::Random => Box::new(Random::new()),
         };
         Self {
             state: BotState {

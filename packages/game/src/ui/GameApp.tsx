@@ -5,6 +5,7 @@ import { Nameplate } from "./Nameplate";
 import { TurboHeartsStage } from "../view/TurboHeartsStage";
 import { UserDispatcher } from "../state/UserDispatcher";
 import { ChatLog } from "./ChatLog";
+import { TrickLog } from "./TrickLog";
 import { ChatInput } from "./ChatInput";
 
 export namespace GameApp {
@@ -35,6 +36,7 @@ class GameAppInternal extends React.Component<GameApp.Props> {
           <Nameplate user={this.props.game.left} className="left" action={this.props.game.leftAction} />
         </div>
         <div className="sidebar">
+          <TrickLog />
           <ChatLog />
           <ChatInput onChat={this.handleChat} />
         </div>

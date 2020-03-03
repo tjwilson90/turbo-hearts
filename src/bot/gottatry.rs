@@ -7,8 +7,6 @@ use crate::{
 pub struct GottaTry;
 
 impl GottaTry {
-    pub const NAME: &'static str = "gottatry";
-
     pub fn new() -> Self {
         Self
     }

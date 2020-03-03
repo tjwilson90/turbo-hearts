@@ -678,6 +678,11 @@ isexe@^2.0.0:
   resolved "https://registry.yarnpkg.com/isexe/-/isexe-2.0.0.tgz#e8fbf374dc556ff8947a10dcb0572d633f2cfa10"
   integrity sha1-6PvzdNxVb/iUehDcsFctYz8s+hA=
 
+"js-tokens@^3.0.0 || ^4.0.0":
+  version "4.0.0"
+  resolved "https://artifactory.palantir.build/artifactory/api/npm/all-npm/js-tokens/-/js-tokens-4.0.0.tgz#19203fb59991df98e3a287050d4647cdeaf32499"
+  integrity sha1-GSA/tZmR35jjoocFDUZHzerzJJk=
+
 js-yaml@^3.13.1:
   version "3.13.1"
   resolved "https://registry.yarnpkg.com/js-yaml/-/js-yaml-3.13.1.tgz#aff151b30bfdfa8e49e05da22e7415e9dfa37847"
@@ -749,6 +754,13 @@ log-symbols@^2.2.0:
   integrity sha1-V0Dhxdbw39pK2TI7UzIQfva0xAo=
   dependencies:
     chalk "^2.0.1"
+
+loose-envify@^1.1.0, loose-envify@^1.4.0:
+  version "1.4.0"
+  resolved "https://artifactory.palantir.build/artifactory/api/npm/all-npm/loose-envify/-/loose-envify-1.4.0.tgz#71ee51fa7be4caec1a63839f7e682d8132d30caf"
+  integrity sha1-ce5R+nvkyuwaY4OffmgtgTLTDK8=
+  dependencies:
+    js-tokens "^3.0.0 || ^4.0.0"
 
 memorystream@^0.3.1:
   version "0.3.1"
@@ -846,9 +858,9 @@ num2fraction@^1.2.2:
   resolved "https://registry.yarnpkg.com/num2fraction/-/num2fraction-1.2.2.tgz#6f682b6a027a4e9ddfa4564cd2589d1d4e669ede"
   integrity sha1-b2gragJ6Tp3fpFZM0lidHU5mnt4=
 
-object-assign@^4.0.1:
+object-assign@^4.0.1, object-assign@^4.1.1:
   version "4.1.1"
-  resolved "https://registry.yarnpkg.com/object-assign/-/object-assign-4.1.1.tgz#2109adc7965887cfc05cbbd442cac8bfbb360863"
+  resolved "https://artifactory.palantir.build/artifactory/api/npm/all-npm/object-assign/-/object-assign-4.1.1.tgz#2109adc7965887cfc05cbbd442cac8bfbb360863"
   integrity sha1-IQmtx5ZYh8/AXLvUQsrIv7s2CGM=
 
 object-inspect@^1.7.0:
@@ -1031,6 +1043,39 @@ pretty-hrtime@^1.0.3:
   resolved "https://artifactory.palantir.build/artifactory/api/npm/all-npm/pretty-hrtime/-/pretty-hrtime-1.0.3.tgz#b7e3ea42435a4c9b2759d99e0f201eb195802ee1"
   integrity sha1-t+PqQkNaTJsnWdmeDyAesZWALuE=
 
+prop-types@^15.6.2:
+  version "15.7.2"
+  resolved "https://artifactory.palantir.build/artifactory/api/npm/all-npm/prop-types/-/prop-types-15.7.2.tgz#52c41e75b8c87e72b9d9360e0206b99dcbffa6c5"
+  integrity sha1-UsQedbjIfnK52TYOAga5ncv/psU=
+  dependencies:
+    loose-envify "^1.4.0"
+    object-assign "^4.1.1"
+    react-is "^16.8.1"
+
+react-dom@^16.13.0:
+  version "16.13.0"
+  resolved "https://artifactory.palantir.build/artifactory/api/npm/all-npm/react-dom/-/react-dom-16.13.0.tgz#cdde54b48eb9e8a0ca1b3dc9943d9bb409b81866"
+  integrity sha1-zd5UtI656KDKGz3JlD2btAm4GGY=
+  dependencies:
+    loose-envify "^1.1.0"
+    object-assign "^4.1.1"
+    prop-types "^15.6.2"
+    scheduler "^0.19.0"
+
+react-is@^16.8.1:
+  version "16.13.0"
+  resolved "https://artifactory.palantir.build/artifactory/api/npm/all-npm/react-is/-/react-is-16.13.0.tgz#0f37c3613c34fe6b37cd7f763a0d6293ab15c527"
+  integrity sha1-DzfDYTw0/ms3zX92Og1ik6sVxSc=
+
+react@^16.13.0:
+  version "16.13.0"
+  resolved "https://artifactory.palantir.build/artifactory/api/npm/all-npm/react/-/react-16.13.0.tgz#d046eabcdf64e457bbeed1e792e235e1b9934cf7"
+  integrity sha1-0EbqvN9k5Fe77tHnkuI14bmTTPc=
+  dependencies:
+    loose-envify "^1.1.0"
+    object-assign "^4.1.1"
+    prop-types "^15.6.2"
+
 read-cache@^1.0.0:
   version "1.0.0"
   resolved "https://artifactory.palantir.build/artifactory/api/npm/all-npm/read-cache/-/read-cache-1.0.0.tgz#e664ef31161166c9751cdbe8dbcf86b5fb58f774"
@@ -1092,6 +1137,14 @@ sass@^1.26.2:
   integrity sha1-ThfFwjlOLuf/1lOsHYYjFKaldns=
   dependencies:
     chokidar ">=2.0.0 <4.0.0"
+
+scheduler@^0.19.0:
+  version "0.19.0"
+  resolved "https://artifactory.palantir.build/artifactory/api/npm/all-npm/scheduler/-/scheduler-0.19.0.tgz#a715d56302de403df742f4a9be11975b32f5698d"
+  integrity sha1-pxXVYwLeQD33QvSpvhGXWzL1aY0=
+  dependencies:
+    loose-envify "^1.1.0"
+    object-assign "^4.1.1"
 
 "semver@2 || 3 || 4 || 5", semver@^5.5.0:
   version "5.7.1"

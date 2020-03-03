@@ -1,8 +1,7 @@
 use crate::{
     cards::{Card, Cards, PassDirection},
-    types::{ChargingRules, Event, Player, Seat, UserId},
+    types::{ChargingRules, Event, Player, Seat, Seed, UserId},
 };
-use rand::seq::SliceRandom;
 use rusqlite::{
     types::{FromSql, FromSqlError, ToSqlOutput, Value, ValueRef},
     ToSql,
@@ -24,8 +23,9 @@ pub enum GameEvent {
         south: Player,
         west: Player,
         rules: ChargingRules,
-        created_at_time: i64,
-        created_by_user_id: UserId,
+        created_time: i64,
+        created_by: UserId,
+        seed: Seed,
     },
     Deal {
         north: Cards,
@@ -103,24 +103,33 @@ pub enum GameEvent {
         south_score: i16,
         west_score: i16,
     },
-    GameComplete,
+    GameComplete {
+        seed: Seed,
+    },
 }
 
 impl GameEvent {
-    pub fn deal(pass: PassDirection) -> Self {
-        let mut deck = Cards::ALL.into_iter().collect::<Vec<_>>();
-        deck.shuffle(&mut rand::thread_rng());
-        GameEvent::Deal {
-            north: deck[0..13].iter().cloned().collect(),
-            east: deck[13..26].iter().cloned().collect(),
-            south: deck[26..39].iter().cloned().collect(),
-            west: deck[39..52].iter().cloned().collect(),
-            pass,
-        }
-    }
-
     pub fn redact(&self, seat: Option<Seat>, rules: ChargingRules) -> GameEvent {
         match self {
+            GameEvent::Sit {
+                north,
+                east,
+                south,
+                west,
+                rules,
+                created_time,
+                created_by,
+                seed,
+            } => GameEvent::Sit {
+                north: north.clone(),
+                east: east.clone(),
+                south: south.clone(),
+                west: west.clone(),
+                rules: *rules,
+                created_time: *created_time,
+                created_by: *created_by,
+                seed: seed.redact(),
+            },
             GameEvent::Deal {
                 north,
                 east,
