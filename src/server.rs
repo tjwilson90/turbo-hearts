@@ -1,11 +1,14 @@
 use crate::{
     bot::Bot,
-    cards::{Card, Cards},
+    card::Card,
+    cards::Cards,
     db::Database,
     error::CardsError,
-    game::{GameEvent, Games},
-    lobby::{Lobby, LobbyEvent, LobbyGame},
-    types::{GameId, Player, PlayerWithOptions, Seat, UserId},
+    game::{event::GameEvent, id::GameId, Games},
+    lobby::{event::LobbyEvent, Lobby, LobbyGame},
+    seat::Seat,
+    types::{Player, PlayerWithOptions},
+    user::UserId,
 };
 use log::info;
 use rand_distr::Gamma;

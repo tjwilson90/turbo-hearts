@@ -1,7 +1,7 @@
 use crate::{
     auth,
-    types::{Event, UserId},
-    user::{User, Users},
+    types::Event,
+    user::{User, UserId, Users},
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;

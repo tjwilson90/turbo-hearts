@@ -1,8 +1,13 @@
 use crate::{
-    cards::{Card, Cards, GamePhase, GameState, PassDirection},
+    card::Card,
+    cards::Cards,
     db::Database,
     error::CardsError,
-    types::{GameId, Seat, UserId},
+    game::{event::GameEvent, id::GameId, phase::GamePhase, state::GameState},
+    lobby::LobbyGame,
+    seat::Seat,
+    types::{PassDirection, RandomEvent},
+    user::UserId,
 };
 use rand::seq::SliceRandom;
 use rusqlite::{ToSql, Transaction};
@@ -16,12 +21,12 @@ use tokio::sync::{
     Mutex,
 };
 
-mod endpoints;
-mod event;
-
-use crate::{lobby::LobbyGame, types::RandomEvent};
-pub use endpoints::*;
-pub use event::*;
+pub mod claim;
+pub mod endpoints;
+pub mod event;
+pub mod id;
+pub mod phase;
+pub mod state;
 
 #[derive(Clone)]
 pub struct Games {
