@@ -1,3 +1,11 @@
 $primary-font: Helvetica, sans-serif;
-$primary-color: #333;
- 
+
+$bg-color: #222831;
+$bg-color-secondary: #393e46;
+$bg2-color: lighten($bg-color, 10%);
+$bg2-color-secondary: lighten($bg-color-secondary, 10%);
+
+$accent-color: #d65a31;
+
+$text-color: #eeeeee;
+$text-color-muted: #bbbbbb;
