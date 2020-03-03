@@ -177,7 +177,8 @@ export class TurboHeartsStage {
       width: TABLE_SIZE,
       height: TABLE_SIZE,
       backgroundColor: 0x77a178,
-      resolution: dpr
+      resolution: dpr,
+      autoStart: false
     });
     this.app.stage.sortableChildren = true;
     this.app.loader.resources;
@@ -378,7 +379,7 @@ export class TurboHeartsStage {
     this.background.zIndex = Z_BACKGROUND;
     this.app.stage.addChild(this.background);
     this.app.stage.addChild(this.cardContainer);
-    this.app.ticker.add(this.gameLoop);
+    requestAnimationFrame(this.gameLoop);
     this.onReady();
   };
 
@@ -528,11 +529,16 @@ export class TurboHeartsStage {
   }
 
   private gameLoop = () => {
-    TWEEN.update();
+    requestAnimationFrame(this.gameLoop);
+    const tweenUpdate = TWEEN.update();
+    if (this.runningAnimation !== undefined || tweenUpdate) {
+      this.app.render();
+    }
     if (this.replay || (this.runningAnimation !== undefined && !this.runningAnimation.isFinished())) {
       return;
     }
 
+    this.runningAnimation = undefined;
     if (this.animations.length > 0) {
       this.runningAnimation = this.animations.shift()!;
       this.runningAnimation.start();
