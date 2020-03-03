@@ -7,7 +7,7 @@
   "scripts": {
     "clean": "rm -rf ../../assets/game && rm -rf dist/js",
     "start": "run-s build watch",
-    "build": "mkdir -p ../../assets/game && mkdir -p dist/js/ && run-p build:*",
+    "build": "mkdir -p ../../assets/game && mkdir -p dist/js/ && run-s build:*",
     "build:html": "cp src/index.html ../../assets/game/index.html",
     "build:js": "if [ \"${NODE_ENV}\" = 'production' ]; then run-s build:js-prod:*; else run-s build:js-dev:*; fi",
     "build:js-dev:compile": "sucrase -q src/ -d dist/js/ --transforms typescript,imports,jsx",

@@ -2,8 +2,11 @@ use crate::{
     auth,
     bot::Strategy,
     endpoint,
+    game::id::GameId,
+    seat::Seat,
     server::Server,
-    types::{ChargingRules, GameId, Player, PlayerWithOptions, Seat, UserId},
+    types::{ChargingRules, Player, PlayerWithOptions},
+    user::UserId,
 };
 use serde::Deserialize;
 use std::convert::Infallible;
