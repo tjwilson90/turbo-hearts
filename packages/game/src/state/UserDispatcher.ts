@@ -38,6 +38,9 @@ export class UserDispatcher {
 
   public async loadUsersForGame(event: SitEventData) {
     const ids = [event.north.userId, event.east.userId, event.south.userId, event.west.userId];
+    for (const id of ids) {
+      this.loadedIds.add(id);
+    }
     const loadedUsers = await this.service.getUsers(ids);
     const bottomSeat = getBottomSeat(event, this.myUserId);
     const topId = ids[BOTTOM_SEAT_TO_POSITION_INDICES[bottomSeat][0]];
