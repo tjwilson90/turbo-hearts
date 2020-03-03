@@ -1,7 +1,9 @@
 use crate::{
-    auth, endpoint,
+    auth,
+    bot::Strategy,
+    endpoint,
     server::Server,
-    types::{ChargingRules, GameId, Player, UserId},
+    types::{ChargingRules, GameId, Player, PlayerWithOptions, Seat, UserId},
 };
 use serde::Deserialize;
 use std::convert::Infallible;
@@ -16,7 +18,7 @@ pub fn router(server: infallible!(Server), user_id: rejection!(UserId)) -> reply
                 .or(join_game(server.clone(), user_id.clone()))
                 .or(leave_game(server.clone(), user_id.clone()))
                 .or(add_bot(server.clone()))
-                .or(remove_bot(server.clone()))
+                .or(remove(server.clone()))
                 .or(chat(server, user_id)),
         )
         .boxed()
@@ -47,6 +49,8 @@ fn new_game(server: infallible!(Server), user_id: rejection!(UserId)) -> reply!(
     #[derive(Debug, Deserialize)]
     struct Request {
         rules: ChargingRules,
+        seat: Option<Seat>,
+        seed: Option<String>,
     }
 
     async fn handle(
@@ -54,8 +58,13 @@ fn new_game(server: infallible!(Server), user_id: rejection!(UserId)) -> reply!(
         user_id: UserId,
         request: Request,
     ) -> Result<impl Reply, Infallible> {
-        let Request { rules } = request;
-        let game_id = server.new_game(user_id, rules).await;
+        let Request { rules, seat, seed } = request;
+        let player = PlayerWithOptions {
+            player: Player::Human { user_id },
+            rules,
+            seat,
+        };
+        let game_id = server.new_game(player, seed).await;
         Ok(warp::reply::json(&game_id))
     }
 
@@ -72,6 +81,7 @@ fn join_game(server: infallible!(Server), user_id: rejection!(UserId)) -> reply!
     struct Request {
         game_id: GameId,
         rules: ChargingRules,
+        seat: Option<Seat>,
     }
 
     async fn handle(
@@ -79,11 +89,18 @@ fn join_game(server: infallible!(Server), user_id: rejection!(UserId)) -> reply!
         user_id: UserId,
         request: Request,
     ) -> Result<impl Reply, Rejection> {
-        let Request { game_id, rules } = request;
-        let players = server
-            .join_game(game_id, Player::Human { user_id }, rules)
-            .await?;
-        Ok(warp::reply::json(&players))
+        let Request {
+            game_id,
+            rules,
+            seat,
+        } = request;
+        let player = PlayerWithOptions {
+            player: Player::Human { user_id },
+            rules,
+            seat,
+        };
+        server.join_game(game_id, player).await?;
+        Ok(warp::reply())
     }
 
     warp::path!("join")
@@ -123,21 +140,25 @@ fn add_bot(server: infallible!(Server)) -> reply!() {
     struct Request {
         game_id: GameId,
         rules: ChargingRules,
-        algorithm: String,
+        strategy: Strategy,
     }
 
     async fn handle(server: Server, request: Request) -> Result<impl Reply, Rejection> {
         let Request {
             game_id,
             rules,
-            algorithm,
+            strategy,
         } = request;
         let bot_id = UserId::new();
-        let player = Player::Bot {
-            user_id: bot_id,
-            algorithm,
+        let player = PlayerWithOptions {
+            player: Player::Bot {
+                user_id: bot_id,
+                strategy,
+            },
+            rules,
+            seat: None,
         };
-        let _ = server.join_game(game_id, player, rules).await?;
+        server.join_game(game_id, player).await?;
         Ok(warp::reply::json(&bot_id))
     }
 
@@ -148,7 +169,7 @@ fn add_bot(server: infallible!(Server)) -> reply!() {
         .and_then(handle)
 }
 
-fn remove_bot(server: infallible!(Server)) -> reply!() {
+fn remove(server: infallible!(Server)) -> reply!() {
     #[derive(Debug, Deserialize)]
     struct Request {
         game_id: GameId,
@@ -161,7 +182,7 @@ fn remove_bot(server: infallible!(Server)) -> reply!() {
         Ok(warp::reply())
     }
 
-    warp::path!("remove_bot")
+    warp::path!("remove")
         .and(warp::post())
         .and(server)
         .and(warp::body::json())

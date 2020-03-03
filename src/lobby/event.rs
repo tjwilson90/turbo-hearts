@@ -1,17 +1,12 @@
-use crate::types::{Event, GameId, Player, UserId};
-use serde::{Deserialize, Serialize};
+use crate::{
+    lobby::LobbyGame,
+    types::{Event, GameId, PlayerWithOptions, UserId},
+};
+use serde::Serialize;
 use std::collections::{HashMap, HashSet};
 
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
-pub struct GameState {
-    pub players: Vec<Player>,
-    pub updated_at_time: i64,
-    pub created_at_time: i64,
-    pub created_by_user_id: UserId,
-}
-
 #[serde(tag = "type", rename_all = "snake_case")]
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
 pub enum LobbyEvent {
     Ping,
     JoinLobby {
@@ -19,15 +14,15 @@ pub enum LobbyEvent {
     },
     NewGame {
         game_id: GameId,
-        user_id: UserId,
+        game: LobbyGame,
     },
     LobbyState {
         subscribers: HashSet<UserId>,
-        games: HashMap<GameId, GameState>,
+        games: HashMap<GameId, LobbyGame>,
     },
     JoinGame {
         game_id: GameId,
-        player: Player,
+        player: PlayerWithOptions,
     },
     LeaveGame {
         game_id: GameId,
