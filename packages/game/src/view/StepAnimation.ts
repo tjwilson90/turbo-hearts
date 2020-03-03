@@ -19,8 +19,8 @@ import {
   TABLE_CENTER_X,
   TABLE_CENTER_Y
 } from "../const";
-import { groupCards } from "../events/groupCards";
-import { sleep, spriteCardsOf } from "../events/helpers";
+import { groupCards } from "../util/groupCards";
+import { sleep, spriteCardsOf } from "../util/helpers";
 import { sortCards, sortSpriteCards } from "../game/sortCards";
 import { TurboHearts } from "../game/stateSnapshot";
 import {

@@ -29,7 +29,7 @@ import {
   CARD_DISPLAY_HEIGHT,
   FASTER_ANIMATION_DURATION
 } from "../const";
-import { groupCards } from "../events/groupCards";
+import { groupCards } from "../util/groupCards";
 import { TurboHearts, Action } from "../game/stateSnapshot";
 import { TurboHeartsService } from "../game/TurboHeartsService";
 import {
@@ -45,7 +45,7 @@ import {
   SpriteCard
 } from "../types";
 import { StepAnimation } from "./StepAnimation";
-import { spriteCardsOf } from "../events/helpers";
+import { spriteCardsOf } from "../util/helpers";
 import EventEmitter from "eventemitter3";
 import { emptyArray } from "../util/array";
 
@@ -542,8 +542,6 @@ export class TurboHeartsStage {
     if (this.animations.length > 0) {
       this.runningAnimation = this.animations.shift()!;
       this.runningAnimation.start();
-      // this.setActionInternal();
-      return;
     } else {
       this.setActionInternal();
     }
