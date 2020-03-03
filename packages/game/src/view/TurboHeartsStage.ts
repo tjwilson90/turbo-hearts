@@ -48,6 +48,7 @@ import { StepAnimation } from "./StepAnimation";
 import { spriteCardsOf } from "../util/helpers";
 import EventEmitter from "eventemitter3";
 import { emptyArray } from "../util/array";
+import { POSITION_FOR_BOTTOM_SEAT } from "../util/seatPositions";
 
 const CHARGEABLE_CARDS: Card[] = ["TC", "JD", "AH", "QS"];
 
@@ -69,13 +70,6 @@ const LAYOUTS_FOR_BOTTOM_SEAT: { [bottomSeat in Seat]: PlayerCardPositions[] } =
   east: [RIGHT, BOTTOM, LEFT, TOP],
   south: [TOP, RIGHT, BOTTOM, LEFT],
   west: [LEFT, TOP, RIGHT, BOTTOM]
-};
-
-const POSITION_FOR_BOTTOM_SEAT: { [bottomSeat in Seat]: Position[] } = {
-  north: ["bottom", "left", "top", "right"],
-  east: ["right", "bottom", "left", "top"],
-  south: ["top", "right", "bottom", "left"],
-  west: ["left", "top", "right", "bottom"]
 };
 
 const LIMBO_1 = { left: LIMBO_TOP_RIGHT, right: LIMBO_TOP_LEFT, across: LIMBO_BOTTOM, keeper: LIMBO_CENTER };
