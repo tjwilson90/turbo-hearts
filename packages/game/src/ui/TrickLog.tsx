@@ -2,7 +2,8 @@ import * as React from "react";
 import { connect } from "react-redux";
 import { TurboHearts } from "../game/stateSnapshot";
 import { GameAppState } from "../state/types";
-import { Seat } from "../types";
+import { Seat, Card } from "../types";
+import classNames from "classnames";
 
 export namespace TrickLog {
   export interface StoreProps {
@@ -27,9 +28,37 @@ const BOTTOM_OFFSET = {
   west: 1
 };
 
+type Suit = "S" | "H" | "D" | "C";
+const suitMap: { [key in Suit]: string } = {
+  S: "♠",
+  H: "♥",
+  D: "♦",
+  C: "♣"
+};
+
+const colorMap: { [key in Suit]: string } = {
+  S: "#000000",
+  H: "#ff0000",
+  D: "#0d00ff",
+  C: "#008000"
+};
+
+function NiceCard(props: { card: Card }) {
+  if (props.card == null) {
+    return null;
+  }
+  let rank = props.card.substring(0, 1);
+  if (rank === "T") {
+    rank = "10";
+  }
+  const suit = props.card.substring(1) as Suit;
+
+  return <span style={{ color: colorMap[suit] }}>{`${rank}${suitMap[suit]}`}</span>;
+}
+
 class TrickLogInternal extends React.Component<TrickLog.Props> {
   public render() {
-    if (this.props.tricks.length === 0) {
+    if (this.props.tricks.length === 0 || this.props.bottomSeat === undefined) {
       return <div className="trick-log"></div>;
     }
     return <div className="trick-log">{this.renderNiceTrick(this.props.tricks[this.props.tricks.length - 1])}</div>;
@@ -38,38 +67,42 @@ class TrickLogInternal extends React.Component<TrickLog.Props> {
   private renderNiceTrick(trick: TurboHearts.Trick) {
     const leaderOffset = LEADER_OFFSET[trick.leader];
     const bottomOffset = BOTTOM_OFFSET[this.props.bottomSeat];
+    const isLeader = (i: number) => (i + leaderOffset + bottomOffset) % 4 === 0;
+    const card = (i: number, ofs = 0) => {
+      return <NiceCard card={trick.plays[ofs + ((i + leaderOffset + bottomOffset) % 4)]} />;
+    };
     if (trick.plays.length === 4) {
       return (
         <div className="trick-container">
-          <div className="top">{trick.plays[(leaderOffset + bottomOffset) % 4]}</div>
-          <div className="right">{trick.plays[(1 + leaderOffset + bottomOffset) % 4]}</div>
-          <div className="bottom">{trick.plays[(2 + leaderOffset + bottomOffset) % 4]}</div>
-          <div className="left">{trick.plays[(3 + leaderOffset + bottomOffset) % 4]}</div>
-          <div className="center">LAST</div>
+          <div className={classNames("top", { leader: isLeader(0) })}>{card(0)}</div>
+          <div className={classNames("right", { leader: isLeader(1) })}>{card(1)}</div>
+          <div className={classNames("bottom", { leader: isLeader(2) })}>{card(2)}</div>
+          <div className={classNames("left", { leader: isLeader(3) })}>{card(3)}</div>
+          <div className={classNames("center")}>LAST</div>
         </div>
       );
     } else {
       return (
         <div className="trick-container">
-          <div className="top">
-            {trick.plays[(leaderOffset + bottomOffset) % 4]}
+          <div className={classNames("top", { leader: isLeader(0) })}>
+            {card(0)}
             <br />
-            {trick.plays[4 + ((leaderOffset + bottomOffset) % 4)]}
+            {card(0, 4)}
           </div>
-          <div className="right">
-            {trick.plays[(1 + leaderOffset + bottomOffset) % 4]}
+          <div className={classNames("right", { leader: isLeader(1) })}>
+            {card(1)}
             <br />
-            {trick.plays[4 + ((1 + leaderOffset + bottomOffset) % 4)]}
+            {card(1, 4)}
           </div>
-          <div className="bottom">
-            {trick.plays[(2 + leaderOffset + bottomOffset) % 4]}
+          <div className={classNames("bottom", { leader: isLeader(2) })}>
+            {card(2)}
             <br />
-            {trick.plays[4 + ((2 + leaderOffset + bottomOffset) % 4)]}
+            {card(2, 4)}
           </div>
-          <div className="left">
-            {trick.plays[(3 + leaderOffset + bottomOffset) % 4]}
+          <div className={classNames("left", { leader: isLeader(3) })}>
+            {card(3)}
             <br />
-            {trick.plays[4 + ((3 + leaderOffset + bottomOffset) % 4)]}
+            {card(3, 4)}
           </div>
           <div className="center">LAST</div>
         </div>
