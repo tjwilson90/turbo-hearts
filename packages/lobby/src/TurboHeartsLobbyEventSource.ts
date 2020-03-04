@@ -71,6 +71,7 @@ export class TurboHeartsLobbyEventSource {
     public connect() {
         this.eventSource = new EventSource(`/lobby/subscribe`);
         this.eventSource.addEventListener("message", this.handleEvent);
+        this.eventSource.addEventListener("error", this.panic);
     }
 
     public on<K extends LobbyEvent>(event: K["type"], fn: (event: K) => void) {
@@ -96,4 +97,11 @@ export class TurboHeartsLobbyEventSource {
         this.emitter.emit("event", rawEvent);
         this.emitter.emit(rawEvent.type, rawEvent);
     };
+
+    private panic = () => {
+        document.cookie = "AUTH_TOKEN=; expires = Thu, 01 Jan 1970 00:00:00 GMT";
+        document.cookie = "USER_ID=; expires = Thu, 01 Jan 1970 00:00:00 GMT";
+        document.cookie = "USER_NAME=; expires = Thu, 01 Jan 1970 00:00:00 GMT";
+        location.reload();
+    }
 }
