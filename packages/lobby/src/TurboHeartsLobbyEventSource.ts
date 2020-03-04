@@ -27,6 +27,8 @@ function renameCommon(event: any) {
 function unrustify(event: any): LobbyEvent {
     renameCommon(event);
 
+    console.log(event);
+
     switch (event.type) {
         case "join_lobby":
             event.type = "enter";
@@ -48,7 +50,8 @@ function unrustify(event: any): LobbyEvent {
             }
             return event;
         case "join_game":
-            event.userId = event.player.player.user_id;
+            renameCommon(event.player.player);
+            event.player = event.player.player;
             return event;
         case "new_game":
             event.createdBy = event.game.created_by;

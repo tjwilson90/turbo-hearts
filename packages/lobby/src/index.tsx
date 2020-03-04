@@ -5,32 +5,29 @@ if (typeof process === "undefined") {
   (window as any).process = { env: {} };
 }
 
-
+import { createStore } from "./state/createStore";
 import { TurboHeartsLobbyEventSource } from "./TurboHeartsLobbyEventSource";
-import { LobbySnapshot, LobbySnapshotter } from "./lobbySnapshotter";
+import { LobbySubscriber } from "./lobbySubscriber";
 import { TurboHeartsLobbyService } from "./TurboHeartsLobbyService";
-import * as ReactDOM  from "react-dom";
+import * as ReactDOM from "react-dom";
 import * as React from "react";
 import { Lobby } from "./components/Lobby";
-
-function render(snapshot: LobbySnapshot, service: TurboHeartsLobbyService) {
-  ReactDOM.render(
-      <Lobby {...snapshot} messages={[]} service={service}/>,
-      document.getElementById("lobby")
-  )
-}
+import { Provider } from "react-redux";
 
 document.addEventListener("DOMContentLoaded", () => {
-  const eventSource = new TurboHeartsLobbyEventSource();
+  const lobbyEventSource = new TurboHeartsLobbyEventSource();
   const service = new TurboHeartsLobbyService();
 
-  const snaphotter = new LobbySnapshotter(eventSource)
-  snaphotter.on("snapshot", (snapshot) => render(snapshot, service));
+  const store = createStore();
 
-  render(snaphotter.snapshot, service);
+  new LobbySubscriber(lobbyEventSource, service, store);
 
-  eventSource.connect();
-  
-  service.createLobby("classic");
-  service.chat("Hello world");
+  ReactDOM.render(
+      <Provider store={store}>
+        <Lobby service={service}/>
+      </Provider>,
+      document.getElementById("lobby")
+  )
+
+  lobbyEventSource.connect();
 });

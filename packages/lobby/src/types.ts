@@ -1,4 +1,4 @@
-export type BotAlgorithms = "random" | "duck" | "gottatry";
+export type BotStrategy = "random" | "duck" | "gotta_try";
 
 export type Rules = "classic"
     | "blind"
@@ -14,7 +14,7 @@ export interface HumanLobbyPlayer {
 export interface BotLobbyPlayer {
     type: "bot";
     userId: string;
-    algorithm: BotAlgorithms;
+    strategy: BotStrategy;
 }
 export type LobbyPlayer = HumanLobbyPlayer | BotLobbyPlayer;
 
@@ -51,7 +51,7 @@ export interface NewGameEvent {
 
 export interface JoinGameEvent {
     type: "join_game";
-    userId: string;
+    player: LobbyPlayer;
     gameId: string;
 }
 
