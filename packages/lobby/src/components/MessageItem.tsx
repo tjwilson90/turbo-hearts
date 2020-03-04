@@ -55,12 +55,12 @@ class MessageItemInternal extends React.PureComponent<MessageItem.Props> {
             const gameLinkIndex = unconsumed.indexOf("$gameUrl=");
             if (gameLinkIndex !== -1) {
                 const gameHash = unconsumed.substr(gameLinkIndex + 9, 36);
-                consumed.push(<>{unconsumed.substr(0, gameLinkIndex)}</>);
-                consumed.push(<a className="inline-message-link" href={`/game#${gameHash}`} target="_blank">Open game</a>);
+                consumed.push(<React.Fragment key={consumed.length}>{unconsumed.substr(0, gameLinkIndex)}</React.Fragment>);
+                consumed.push(<a key={consumed.length} className="inline-message-link" href={`/game#${gameHash}`} target="_blank">Open game</a>);
                 unconsumed = msg.slice(gameLinkIndex + 45);
                 continue;
             }
-            consumed.push(<>{unconsumed}</>);
+            consumed.push(<React.Fragment key={consumed.length}>{unconsumed}</React.Fragment>);
             unconsumed = "";
         }
         return consumed;
