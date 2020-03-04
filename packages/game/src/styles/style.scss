@@ -141,22 +141,30 @@ body {
             grid-row: 1;
             grid-column: 2;
             justify-self: center;
+            border-bottom: 2px solid transparent;
           }
           .right {
             grid-row: 2;
             grid-column: 3;
             justify-self: center;
+            border-bottom: 2px solid transparent;
           }
           .bottom {
             grid-row: 3;
             grid-column: 2;
             justify-self: center;
+            border-bottom: 2px solid transparent;
           }
           .left {
             grid-row: 2;
             grid-column: 1;
             justify-self: center;
+            border-bottom: 2px solid transparent;
           }
+          .leader {
+            border-bottom: 2px solid #808080;
+          }
+
           .center {
             grid-row: 2;
             grid-column: 2;
@@ -173,7 +181,8 @@ body {
         height: 64px;
         padding-top: 5px;
 
-        th, td {
+        th,
+        td {
           padding: 2px;
           text-align: right;
           width: 28px;
@@ -212,8 +221,4 @@ body {
       outline: none;
     }
   }
-}
-
-.leader {
-  border: 1px solid green;
 }
