@@ -95,7 +95,7 @@ function onFinishGame(game_id) {
 }
 
 function onLeaveLobby(user_id) {
-  let playerNode = document.querySelector("#players" + "." + user_id);
+  let playerNode = document.querySelector("#players > ." + user_id);
   if (playerNode != null) {
     playerNode.remove();
   }

@@ -64,10 +64,10 @@ impl Games {
         let game = {
             let mut inner = self.inner.lock().await;
             match inner.entry(game_id) {
-                Entry::Occupied(entry) => entry.get().clone(),
+                Entry::Occupied(entry) => Arc::clone(entry.get()),
                 Entry::Vacant(entry) => {
                     let game = Arc::new(Mutex::new(Game::new()));
-                    entry.insert(game.clone());
+                    entry.insert(Arc::clone(&game));
                     game
                 }
             }
@@ -97,10 +97,10 @@ impl Games {
                 0,
                 &[
                     GameEvent::Sit {
-                        north: players[0].player.clone(),
-                        east: players[1].player.clone(),
-                        south: players[2].player.clone(),
-                        west: players[3].player.clone(),
+                        north: players[0].player,
+                        east: players[1].player,
+                        south: players[2].player,
+                        west: players[3].player,
                         rules: players[0].rules,
                         created_time: game.created_time,
                         created_by: game.created_by,
@@ -402,9 +402,9 @@ impl Game {
         }
     }
 
-    fn apply<F>(&mut self, event: &GameEvent, broadcast: F)
+    fn apply<F>(&mut self, event: &GameEvent, mut broadcast: F)
     where
-        F: Fn(&mut Game, &GameEvent),
+        F: FnMut(&mut Game, &GameEvent),
     {
         broadcast(&mut *self, &event);
         self.state.apply(&event);
