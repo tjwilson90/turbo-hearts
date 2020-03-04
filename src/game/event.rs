@@ -1,13 +1,11 @@
 use crate::{
     card::Card,
     cards::Cards,
+    player::Player,
     seat::Seat,
-    types::{ChargingRules, Event, PassDirection, Player, Seed},
+    seed::Seed,
+    types::{ChargingRules, Event, PassDirection},
     user::UserId,
-};
-use rusqlite::{
-    types::{FromSql, FromSqlError, ToSqlOutput, Value, ValueRef},
-    ToSql,
 };
 use serde::{Deserialize, Serialize};
 
@@ -212,18 +210,5 @@ impl Event for GameEvent {
             GameEvent::Ping => true,
             _ => false,
         }
-    }
-}
-
-impl ToSql for GameEvent {
-    fn to_sql(&self) -> Result<ToSqlOutput<'_>, rusqlite::Error> {
-        let json = serde_json::to_string(self).unwrap();
-        Ok(ToSqlOutput::Owned(Value::Text(json)))
-    }
-}
-
-impl FromSql for GameEvent {
-    fn column_result(value: ValueRef<'_>) -> Result<Self, FromSqlError> {
-        value.as_str().map(|s| serde_json::from_str(s).unwrap())
     }
 }

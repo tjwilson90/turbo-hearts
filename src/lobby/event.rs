@@ -1,7 +1,9 @@
 use crate::{
     game::id::GameId,
-    lobby::LobbyGame,
-    types::{Event, PlayerWithOptions},
+    lobby::{LobbyChat, LobbyGame},
+    player::PlayerWithOptions,
+    seed::Seed,
+    types::Event,
     user::UserId,
 };
 use serde::Serialize;
@@ -16,15 +18,20 @@ pub enum LobbyEvent {
     },
     NewGame {
         game_id: GameId,
-        game: LobbyGame,
+        player: PlayerWithOptions,
+        seed: Seed,
     },
     LobbyState {
         subscribers: HashSet<UserId>,
+        chat: Vec<LobbyChat>,
         games: HashMap<GameId, LobbyGame>,
     },
     JoinGame {
         game_id: GameId,
         player: PlayerWithOptions,
+    },
+    StartGame {
+        game_id: GameId,
     },
     LeaveGame {
         game_id: GameId,

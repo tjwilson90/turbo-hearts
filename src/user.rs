@@ -1,8 +1,5 @@
 use crate::{db::Database, error::CardsError};
-use rusqlite::{
-    types::{FromSql, FromSqlError, ToSqlOutput, Value, ValueRef},
-    OptionalExtension, ToSql,
-};
+use rusqlite::{OptionalExtension, ToSql};
 use serde::{Deserialize, Serialize};
 use std::{
     collections::{HashMap, HashSet},
@@ -38,21 +35,6 @@ impl FromStr for UserId {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Ok(UserId(s.parse()?))
-    }
-}
-
-impl ToSql for UserId {
-    fn to_sql(&self) -> Result<ToSqlOutput<'_>, rusqlite::Error> {
-        Ok(ToSqlOutput::Owned(Value::Text(self.0.to_string())))
-    }
-}
-
-impl FromSql for UserId {
-    fn column_result(value: ValueRef<'_>) -> Result<Self, FromSqlError> {
-        match value.as_str() {
-            Ok(value) => Ok(value.parse().unwrap()),
-            Err(e) => Err(e),
-        }
     }
 }
 

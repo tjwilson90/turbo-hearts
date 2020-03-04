@@ -80,12 +80,21 @@ in the lobby.
 #### LobbyState
 
 Whenever a client subscribes to the lobby, a `lobby_state` message is sent to that subscriber
-containing the list of all active subscribers, as well as all incomplete games.
+containing the list of all active subscribers, recent chat messages, and all incomplete games.
 
 ```json
 {
   "type": "lobby_state",
   "subscribers": ["d33b08ca-4d34-44f8-8643-cbf7fce5a91c", "38009247-c85b-4ca1-8e59-cf626ea565f7"],
+  "chat": [{
+    "timestamp": 1583168443628,
+    "user_id": "17b5876b-30f7-460f-beb4-a54cc114dcf2",
+    "message": "Anyone here?"
+  }, {
+    "timestamp": 1583168445328,
+    "user_id": "17b5876b-30f7-460f-beb4-a54cc114dcf2",
+    "message": "I'll be around for half an hour"
+  }],
   "games": {
     "8c9e2ff7-dcf3-49be-86f0-315f469840bc": {
       "players": [{
@@ -102,7 +111,8 @@ containing the list of all active subscribers, as well as all incomplete games.
       "created_time": 1583168449628,
       "created_by": "17b5876b-30f7-460f-beb4-a54cc114dcf2",
       "last_updated_time": 1583168449628,
-      "last_updated_by": "17b5876b-30f7-460f-beb4-a54cc114dcf2"
+      "last_updated_by": "17b5876b-30f7-460f-beb4-a54cc114dcf2",
+      "started_time": null
     }
   }
 }
@@ -118,21 +128,16 @@ id of the game and the id of the player who created the game.
   "type": "new_game",
   "game_id": "8c9e2ff7-dcf3-49be-86f0-315f469840bc",
   "game": {
-    "players": [{
-      "player": {
-        "type": "human",
-        "user_id": "17b5876b-30f7-460f-beb4-a54cc114dcf2"
-      },
-      "rules": "blind",
-      "seat": "east"
-    }],
-    "seed": {
-      "type": "redacted"
+  "player": {
+    "player": {
+      "type": "human",
+      "user_id": "17b5876b-30f7-460f-beb4-a54cc114dcf2"
     },
-    "created_time": 1583168449628,
-    "created_by": "17b5876b-30f7-460f-beb4-a54cc114dcf2",
-    "last_updated_time": 1583168449628,
-    "last_updated_by": "17b5876b-30f7-460f-beb4-a54cc114dcf2"
+    "rules": "blind",
+    "seat": "east"
+  },
+  "seed": {
+    "type": "redacted"
   }
 }
 ```
@@ -155,6 +160,18 @@ containing the id of the game and the player who joined the game.
     "rules": "classic",
     "seat": null
   }
+}
+```
+
+#### StartGame
+
+Whenever a game is started, a `start_game` message is sent to all active subscribers
+containing the id of the game.
+
+```json
+{
+  "type": "start_game",
+  "game_id": "8c9e2ff7-dcf3-49be-86f0-315f469840bc"
 }
 ```
 
@@ -227,9 +244,10 @@ Response:
 
 ### `POST /lobby/join`
 
-Join an existing game and propose charging rules. Returns the members of the game. The actual
-charging rules will be selected randomly from the proposed rules of all players once the game has
-four players.
+Join an existing game, propose charging rules, and optionally declare a preferred seat. The actual
+charging rules will be selected randomly from the proposed rules of all players once the game
+starts. If there are conflicting preferred seats, one player requesting a seat will get the seat
+and the other players requesting the same seat will be assigned a random seat.
 
 Request:
 ```json
@@ -240,9 +258,21 @@ Request:
 }
 ```
 
+### `POST /lobby/start`
+
+Start a game. Games must have at least four players to start. If more than four players joined the
+game, a random subset of four players will be chosen to play in the game.
+
+Request:
+```json
+{
+  "game_id": "8c9e2ff7-dcf3-49be-86f0-315f469840bc"
+}
+```
+
 ### `POST /lobby/leave`
 
-Leave an existing game.
+Leave a game that hasn't started yet.
 
 Request:
 ```json
@@ -271,7 +301,7 @@ Response:
 
 ### `POST /lobby/remove`
 
-Remove a player from an existing unstarted game.
+Remove a player from an unstarted game.
 
 Request:
 ```json
