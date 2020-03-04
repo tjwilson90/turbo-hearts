@@ -12,8 +12,8 @@ import { Provider } from "react-redux";
 import { createGameAppStore } from "./state/createStore";
 import { UserDispatcher } from "./state/UserDispatcher";
 import { GameApp } from "./ui/GameApp";
-import { SitEventData, ChatEvent, Seat } from "./types";
-import { AppendChat, UpdateActions, AppendTrick, ResetTricks } from "./state/actions";
+import { SitEventData, ChatEvent, Seat, HandCompleteEventData } from "./types";
+import { AppendChat, UpdateActions, AppendTrick, ResetTricks, AppendHandScore } from "./state/actions";
 import { getBottomSeat } from "./view/TurboHeartsStage";
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -38,6 +38,9 @@ document.addEventListener("DOMContentLoaded", () => {
   ctx.eventSource.on("chat", (chat: ChatEvent) => {
     userDispatcher.loadUsers([chat.userId]);
     store.dispatch(AppendChat(chat));
+  });
+  ctx.eventSource.on("hand_complete", (scores: HandCompleteEventData) => {
+    store.dispatch(AppendHandScore(scores));
   });
   ctx.snapshotter.on("snapshot", snapshot => {
     // console.log(snapshot);

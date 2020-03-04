@@ -38,6 +38,7 @@ export interface GameState {
   bottomAction: Action;
   leftAction: Action;
 
+  scores: number[][];
   tricks: TurboHearts.Trick[];
 }
 

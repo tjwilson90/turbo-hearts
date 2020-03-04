@@ -45,6 +45,12 @@ function unrustify(event: EventData): EventData {
     case "charge_status":
     case "pass_status":
       return mutateNesw(event);
+    case "hand_complete":
+      renameProp(event, "north_score", "northScore");
+      renameProp(event, "east_score", "eastScore");
+      renameProp(event, "south_score", "southScore");
+      renameProp(event, "west_score", "westScore");
+      return event;
     default:
       return event;
   }
