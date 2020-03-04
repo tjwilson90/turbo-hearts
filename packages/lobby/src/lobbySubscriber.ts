@@ -172,10 +172,12 @@ export class LobbySubscriber {
     }
 
     private async maybeLoadUserId(userId: string) {
-        const userName = await this.lobbyService.getUser(userId);
-        this.store.dispatch(UpdateUserNames({
-            ...this.store.getState().users.userNamesByUserId,
-            [userId]: userName,
-        }));
+        if (this.store.getState().users.userNamesByUserId[userId] === undefined) {
+            const userName = await this.lobbyService.getUser(userId);
+            this.store.dispatch(UpdateUserNames({
+                ...this.store.getState().users.userNamesByUserId,
+                [userId]: userName,
+            }));
+        }
     }
 }
