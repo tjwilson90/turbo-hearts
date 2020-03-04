@@ -6,6 +6,7 @@ import { TurboHeartsStage } from "../view/TurboHeartsStage";
 import { UserDispatcher } from "../state/UserDispatcher";
 import { ChatLog } from "./ChatLog";
 import { TrickLog } from "./TrickLog";
+import { ScoreTable } from "./ScoreTable";
 import { ChatInput } from "./ChatInput";
 import { Action, TurboHearts, emptyStateSnapshot } from "../game/stateSnapshot";
 import { Card, Pass } from "../types";
@@ -73,7 +74,10 @@ class GameAppInternal extends React.Component<GameApp.Props, GameApp.State> {
           )}
         </div>
         <div className="sidebar">
-          <TrickLog />
+          <div className="game-data">
+            <TrickLog />
+            <ScoreTable />
+          </div>
           <ChatLog />
           <ChatInput onChat={this.handleChat} />
         </div>

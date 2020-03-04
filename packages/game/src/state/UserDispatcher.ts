@@ -48,6 +48,10 @@ export class UserDispatcher {
     const bottomId = ids[BOTTOM_SEAT_TO_POSITION_INDICES[bottomSeat][2]];
     const leftId = ids[BOTTOM_SEAT_TO_POSITION_INDICES[bottomSeat][3]];
     const usersByPosition = {
+      north: loadedUsers[ids[0]] ?? bot(ids[0]),
+      east: loadedUsers[ids[1]] ?? bot(ids[1]),
+      south: loadedUsers[ids[2]] ?? bot(ids[2]),
+      west: loadedUsers[ids[3]] ?? bot(ids[3]),
       bottomSeat,
       top: loadedUsers[topId] ?? bot(topId),
       right: loadedUsers[rightId] ?? bot(rightId),
