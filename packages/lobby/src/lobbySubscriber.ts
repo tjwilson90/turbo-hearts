@@ -29,6 +29,8 @@ export class LobbySubscriber {
     }
 
     private onLobbyStateEvent = (event: LobbyStateEvent) => {
+        const collectedUserIds = new Set<string>();
+
         for (const gameId in event.games) {
             const game = event.games[gameId];
 
@@ -42,6 +44,13 @@ export class LobbySubscriber {
                     players: game.players
                 },
             }))
+
+            collectedUserIds.add(game.createdBy);
+
+            const humanPlayers = game.players.filter(player => player.type === "human");
+            for (const player of humanPlayers) {
+                collectedUserIds.add(player.userId);
+            }
         }
 
         this.store.dispatch(UpdateChatUserIds({
@@ -50,6 +59,10 @@ export class LobbySubscriber {
         }));
 
         for (const userId of event.subscribers) {
+            collectedUserIds.add(userId);
+        }
+
+        for (const userId of collectedUserIds) {
             this.maybeLoadUserId(userId);
         }
     }
