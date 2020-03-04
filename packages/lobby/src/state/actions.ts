@@ -21,6 +21,3 @@ export const DeleteLobbyGame = TypedAction.define("DeleteLobbyGame")<{
 }>();
 
 export const ToggleHideOldGames = TypedAction.defineWithoutPayload("ToggleHideOldGames")();
-export const ToggleCollapseGame = TypedAction.define("ToggleCollapseGame")<{
-    gameId: string;
-}>();

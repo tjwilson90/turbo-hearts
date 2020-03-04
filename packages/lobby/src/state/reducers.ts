@@ -2,7 +2,6 @@ import { combineReducers, TypedReducer } from "redoodle";
 import { ChatsState, GamesState, UiState, UsersState } from "./types";
 import {
     AppendChat, DeleteLobbyGame,
-    ToggleCollapseGame,
     ToggleHideOldGames,
     UpdateChatUserIds,
     UpdateLobbyGame,
@@ -49,13 +48,6 @@ const uiReducer = TypedReducer.builder<UiState>()
     .withHandler(ToggleHideOldGames.TYPE, (state) => ({
         ...state,
         hideOldGames: !state.hideOldGames,
-    }))
-    .withHandler(ToggleCollapseGame.TYPE, (state, { gameId }) => ({
-        ...state,
-        collapsedGames: {
-            ...state.collapsedGames,
-            [gameId]: !state.collapsedGames[gameId],
-        },
     }))
     .build();
 

@@ -1,6 +1,7 @@
 import * as React from "react";
 import { ChatMessage, LobbyState, UsersState } from "../state/types";
 import { connect } from "react-redux";
+import classNames from "classnames";
 
 export namespace MessageItem {
     export interface OwnProps {
@@ -29,15 +30,40 @@ class MessageItemInternal extends React.PureComponent<MessageItem.Props> {
         return (
             <div className="message-item">
                 <div className="time">{hours}:{minutes}</div>
-                <div className="message">
+                <div className={classNames("message", {"-generated": msg.generated})}>
                     <span className="user-name">
-                        {this.props.users.userNamesByUserId[msg.userId] !== undefined
-                            ? this.props.users.userNamesByUserId[msg.userId]
-                            : "Loading"}
-                    </span>&nbsp;{msg.message}
+                        {this.renderUserName(msg.userId)}
+                    </span>&nbsp;{this.renderMessage(msg.message)}
                 </div>
             </div>
         );
+    }
+
+    private renderUserName(userId: string | undefined) {
+        if (userId === undefined) {
+            return null;
+        }
+        return this.props.users.userNamesByUserId[userId] !== undefined
+            ? this.props.users.userNamesByUserId[userId]
+            : "Loading"
+    }
+
+    private renderMessage(msg: string) {
+        const consumed: JSX.Element[] = [];
+        let unconsumed = msg;
+        while (unconsumed.length > 0) {
+            const gameLinkIndex = unconsumed.indexOf("$gameUrl=");
+            if (gameLinkIndex !== -1) {
+                const gameHash = unconsumed.substr(gameLinkIndex + 9, 36);
+                consumed.push(<>{unconsumed.substr(0, gameLinkIndex)}</>);
+                consumed.push(<a className="inline-message-link" href={`/game#${gameHash}`} target="_blank">Open game</a>);
+                unconsumed = msg.slice(gameLinkIndex + 45);
+                continue;
+            }
+            consumed.push(<>{unconsumed}</>);
+            unconsumed = "";
+        }
+        return consumed;
     }
 
 }

@@ -52,6 +52,8 @@ function mapDispatchToProps(dispatch: Dispatch, ownProps: Lobby.OwnProps) {
 }
 
 class LobbyInternal extends React.PureComponent<Lobby.Props> {
+    private inputRef: HTMLTextAreaElement | null = null;
+
     public render() {
         return (
             <div className="lobby-wrapper">
@@ -71,7 +73,7 @@ class LobbyInternal extends React.PureComponent<Lobby.Props> {
                     </div>
                 </div>
                 <div className="message-list">
-                    <div className="list">
+                    <div className="list" onClick={this.focusTextInput}>
                         {this.renderMessages()}
                     </div>
                     <div className="entry">
@@ -79,6 +81,7 @@ class LobbyInternal extends React.PureComponent<Lobby.Props> {
                     </div>
                 </div>
                 <div className="user-list">
+                    {this.renderUserList()}
                 </div>
             </div>
         );
@@ -87,7 +90,7 @@ class LobbyInternal extends React.PureComponent<Lobby.Props> {
     private renderGamesList() {
         let sortedGames = Object.values(this.props.games);
 
-        sortedGames.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+        sortedGames.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 
         if (this.props.hideOldGames) {
             sortedGames = sortedGames
@@ -109,12 +112,41 @@ class LobbyInternal extends React.PureComponent<Lobby.Props> {
                 className="chat-input"
                 placeholder="Enter chat message..."
                 onKeyPress={this.handleKeyPress}
+                autoFocus={true}
+                ref={el => this.inputRef = el}
             />
         )
     }
 
+    private renderUserList() {
+        const users = this.props.chat.userIds
+            .map(userId => ({
+                userId,
+                userName: this.props.users.userNamesByUserId[userId]
+            }))
+            .sort((a, b) => {
+                if (a.userName === undefined) {
+                    return 1;
+                }
+                if (b.userName === undefined) {
+                    return -1;
+                }
+                return a.userName.localeCompare(b.userName);
+            });
+
+        return users.map(({ userId, userName }) => (
+            <div className="user-name-item" key={userId}>
+                {userName || userId}
+            </div>
+        ))
+    }
+
+    private focusTextInput = () => {
+        this.inputRef.focus();
+    }
+
     private handleKeyPress = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
-        if (event.key === "Enter") {
+        if (event.key === "Enter" && event.currentTarget.value.trim().length !== 0) {
             this.props.onChat(event.currentTarget.value);
             event.currentTarget.value = "";
             event.preventDefault();
