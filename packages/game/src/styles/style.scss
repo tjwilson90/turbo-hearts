@@ -181,11 +181,20 @@ body {
         height: 64px;
         padding-top: 5px;
 
+        table {
+          margin: 0;
+          border-spacing: 0;
+        }
+
         th,
         td {
           padding: 2px;
           text-align: right;
           width: 28px;
+        }
+
+        td.totals {
+          border-top: 1px solid black;
         }
       }
     }
