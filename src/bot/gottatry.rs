@@ -35,7 +35,7 @@ impl Algorithm for GottaTry {
     fn play(&mut self, state: &BotState) -> Card {
         let cards = state.game.legal_plays(state.post_pass_hand);
         let our_won = state.game.won[state.seat.idx()];
-        let all_won = state.game.played;
+        let all_won = state.game.won.iter().fold(Cards::NONE, |c1, c2| c1 | *c2);
         if Cards::POINTS.contains_any(all_won - our_won) {
             return Duck::new().play(state);
         }
