@@ -5,7 +5,6 @@ import { LobbyGame, LobbyState, UsersState } from "../state/types";
 import { connect } from "react-redux";
 import { Dispatch } from "redux";
 import { BotStrategy, LobbyPlayer } from "../types";
-import { ToggleCollapseGame } from "../state/actions";
 
 export namespace GameListItem {
     export interface OwnProps {
@@ -16,15 +15,12 @@ export namespace GameListItem {
     export interface StoreProps {
         userId: string;
         users: UsersState;
-        collapsedGames: { [userId: string]: boolean };
     }
 
     export interface DispatchProps {
         joinGame(): void;
 
         leaveGame(): void;
-
-        toggleGameCollapse(): void;
 
         addBot(strategy: BotStrategy): void;
     }
@@ -35,7 +31,6 @@ export namespace GameListItem {
 function mapStateToProps(state: LobbyState): GameListItem.StoreProps {
     return {
         users: state.users,
-        collapsedGames: state.ui.collapsedGames,
         userId: state.users.ownUserId,
     }
 }
@@ -51,9 +46,6 @@ function mapDispatchToProps(dispatch: Dispatch, ownProps: GameListItem.OwnProps)
         leaveGame(): void {
             ownProps.service.leaveLobby(ownProps.game.gameId);
         },
-        toggleGameCollapse(): void {
-            dispatch(ToggleCollapseGame({ gameId: ownProps.game.gameId }));
-        }
     }
 }
 
@@ -61,15 +53,14 @@ class GameListItemInternal extends React.PureComponent<GameListItem.Props> {
     public render() {
         return <>
             <div className="game-list-item">
-                <div className="carat"/>
                 <div className="game-name">Game {this.props.game.gameId}</div>
                 <div className={classNames("players",
                     { "-full": this.props.game.players.length === 4 })}>{this.props.game.players.length}</div>
             </div>
-            {!this.props.collapsedGames[this.props.game.gameId] && <div className="game-list-sub">
+            <div className="game-list-sub">
                 {this.props.game.players.map(player => this.renderPlayer(player))}
                 {this.renderButtons()}
-            </div>}
+            </div>
         </>;
     }
 

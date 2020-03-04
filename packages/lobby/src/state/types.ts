@@ -10,8 +10,9 @@ export interface LobbyGame {
 
 export interface ChatMessage {
     date: Date;
-    userId: string;
+    userId: string | undefined;
     message: string;
+    generated: boolean;
 }
 
 export interface UsersState {
@@ -34,7 +35,6 @@ export interface GamesState {
 
 export interface UiState {
     hideOldGames: boolean;
-    collapsedGames: {[gameId: string]: boolean};
 }
 
 export interface LobbyState {

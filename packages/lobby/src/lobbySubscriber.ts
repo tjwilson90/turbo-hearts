@@ -59,6 +59,15 @@ export class LobbySubscriber {
             room: "lobby",
             userIds: [...subscriberUserIds, event.userId],
         }));
+        this.store.dispatch(AppendChat({
+            room: "lobby",
+            message: {
+                date: new Date(),
+                userId: event.userId,
+                message: "joined.",
+                generated: true,
+            }
+        }));
         this.maybeLoadUserId(event.userId);
     }
     private onExitLobbyEvent = (event: ExitLobbyEvent) => {
@@ -66,6 +75,15 @@ export class LobbySubscriber {
         this.store.dispatch(UpdateChatUserIds({
             room: "lobby",
             userIds: subscriberUserIds.filter(userId => userId !== event.userId),
+        }));
+        this.store.dispatch(AppendChat({
+            room: "lobby",
+            message: {
+                date: new Date(),
+                userId: event.userId,
+                message: "quit.",
+                generated: true,
+            }
         }));
         this.maybeLoadUserId(event.userId);
     }
@@ -83,6 +101,15 @@ export class LobbySubscriber {
                 createdBy: event.createdBy,
             }
         }));
+        this.store.dispatch(AppendChat({
+            room: "lobby",
+            message: {
+                date: new Date(),
+                userId: event.createdBy,
+                message: "created a game.",
+                generated: true,
+            }
+        }));
         this.maybeLoadUserId(event.createdBy);
     }
     private onJoinGameEvent = (event: JoinGameEvent) => {
@@ -96,6 +123,17 @@ export class LobbySubscriber {
         }));
         if (event.player.type === "human") {
             this.maybeLoadUserId(event.player.userId);
+        }
+        if (game.players.length === 3) {
+            this.store.dispatch(AppendChat({
+                room: "lobby",
+                message: {
+                    date: new Date(),
+                    userId: undefined,
+                    message: "Game started! $gameUrl=" + event.gameId,
+                    generated: true,
+                }
+            }));
         }
     }
     private onLeaveGameEvent = (event: LeaveGameEvent) => {
@@ -127,6 +165,7 @@ export class LobbySubscriber {
                 date: new Date(),
                 userId: event.userId,
                 message: event.message,
+                generated: false,
             }
         }));
         this.maybeLoadUserId(event.userId);

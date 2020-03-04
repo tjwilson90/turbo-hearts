@@ -67,35 +67,7 @@ a {
   &:hover {
     background-color: $bg2-color-secondary;
   }
-
-  > .carat {
-    flex: 0 0 auto;
-    padding: 2px 0;
-    margin-right: 6px;
-    border-radius: 2px;
-    user-select: none;
-
-    &.-closed::after {
-      content: '▲';
-    }
-
-    &::after {
-      content: '▼';
-    }
-
-    &:hover {
-      font-weight: bold;
-
-      &::after {
-        content: '▲';
-      }
-
-      &.-closed::after {
-        content: '▼';
-      }
-    }
-  }
-
+  
   > .game-name {
     flex: 1 1 auto;
     text-overflow: ellipsis;
@@ -150,6 +122,14 @@ a {
     text-indent: -10px;
     margin-left: 10px;
 
+    &.-generated {
+      font-style: italic;
+    }
+
+    .inline-message-link {
+      text-decoration: underline;
+    }
+
     > .user-name {
       font-weight: bold;
     }
@@ -159,6 +139,11 @@ a {
 .button-group {
   display: flex;
   justify-content: center;
+
+  &.-inline {
+    display: inline-flex;
+    justify-content: initial;
+  }
 
   > .button {
     flex: 0 0 auto;
@@ -228,4 +213,13 @@ a {
   width: $user-list-width;
 
   background-color: $bg2-color;
+
+  overflow: auto;
+
+  > .user-name-item {
+    white-space: nowrap;
+    overflow: auto;
+    text-overflow: ellipsis;
+    padding: 6px 8px;
+  }
 }

@@ -22,7 +22,6 @@ export function createStore(): Store<LobbyState> {
             },
         },
         ui: {
-            collapsedGames: {},
             hideOldGames: true,
         }
     }
