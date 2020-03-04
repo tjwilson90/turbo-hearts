@@ -142,7 +142,9 @@ class LobbyInternal extends React.PureComponent<Lobby.Props> {
     }
 
     private focusTextInput = () => {
-        this.inputRef.focus();
+        if (this.inputRef != null) {
+            this.inputRef.focus();
+        }
     }
 
     private handleKeyPress = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {

@@ -35,7 +35,7 @@ function mapStateToProps(state: LobbyState): GameListItem.StoreProps {
     }
 }
 
-function mapDispatchToProps(dispatch: Dispatch, ownProps: GameListItem.OwnProps): GameListItem.DispatchProps {
+function mapDispatchToProps(_dispatch: Dispatch, ownProps: GameListItem.OwnProps): GameListItem.DispatchProps {
     return {
         addBot(strategy: BotStrategy): void {
             ownProps.service.addBot(ownProps.game.gameId, "classic", strategy);
