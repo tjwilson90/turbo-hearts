@@ -4,7 +4,7 @@ import { applyMiddleware, Store } from "redux";
 import { Snapshotter } from "../game/snapshotter";
 import { TurboHeartsEventSource } from "../game/TurboHeartsEventSource";
 import { TurboHeartsService } from "../game/TurboHeartsService";
-import { AppendChat, SetGameUsers, UpdateUsers, UpdateActions, AppendTrick, ResetTricks } from "./actions";
+import { AppendChat, SetGameUsers, UpdateUsers, UpdateActions, AppendTrick, ResetTricks, AppendHandScore } from "./actions";
 import { ChatState, GameAppState, GameContext, GameState, User, UsersState } from "./types";
 import { TrickTracker } from "../game/TrickTracker";
 
@@ -64,6 +64,12 @@ const gameReducer = TypedReducer.builder<GameState>()
       tricks: [...state.tricks, trick]
     };
   })
+  .withHandler(AppendHandScore.TYPE, (state, handScores) => {
+    return {
+      ...state,
+      scores: [...state.scores, [handScores.northScore, handScores.eastScore, handScores.southScore, handScores.westScore]]
+    };
+  })
   .withHandler(ResetTricks.TYPE, state => {
     return {
       ...state,
@@ -98,6 +104,7 @@ const INITIAL_STATE: GameAppState = {
     rightAction: "none",
     bottomAction: "none",
     leftAction: "none",
+    scores: [],
     tricks: []
   },
   context: {
