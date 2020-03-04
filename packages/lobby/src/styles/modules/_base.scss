@@ -1,3 +1,5 @@
+@use "./variables" as *;
+
 *,
 *:before,
 *:after {
@@ -6,9 +8,9 @@
 
 html {
   box-sizing: border-box;
-  color: $primary-color;
+  color: $text-color;
   font-family: $primary-font;
-  background: #f1f1f1;
+  background: $bg-color;
 }
 
 .center {
