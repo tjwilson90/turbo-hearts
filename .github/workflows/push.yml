@@ -45,7 +45,7 @@ jobs:
         working-directory: packages/game
 
       - name: Yarn build (game)
-        run: yarn build
+        run: NODE_ENV=production yarn build
         working-directory: packages/game
 
       - name: Yarn install (lobby)
@@ -53,7 +53,7 @@ jobs:
         working-directory: packages/lobby
 
       - name: Yarn build (lobby)
-        run: yarn build
+        run: NODE_ENV=production yarn build
         working-directory: packages/lobby
 
       - name: Install musl
