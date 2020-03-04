@@ -6,19 +6,25 @@ import { rootReducer } from "./reducers";
 
 export function createStore(): Store<LobbyState> {
     const cookieParams = cookie.parse(document.cookie);
+    const userId = cookieParams["USER_ID"];
 
     const initialState: LobbyState = {
         chats: {
             lobby: {
-                messages: [],
+                messages: [{
+                    date: new Date(),
+                    userId,
+                    message: "joined.",
+                    generated: true,
+                }],
                 userIds: [],
             }
         },
         games: {},
         users: {
-            ownUserId: cookieParams["USER_ID"],
+            ownUserId: userId,
             userNamesByUserId: {
-                [cookieParams["USER_ID"]]: cookieParams["USER_NAME"],
+                [userId]: cookieParams["USER_NAME"],
             },
         },
         ui: {
