@@ -3,21 +3,27 @@ use crate::{
     card::Card,
     cards::Cards,
     error::CardsError,
-    game::{event::GameEvent, id::GameId, state::GameState},
+    game::{event::GameEvent, id::GameId, state::GameState, Games},
     seat::Seat,
-    server::Server,
     user::UserId,
 };
 use log::info;
 use rand::distributions::Distribution;
+use rand_distr::Gamma;
 use serde::{Deserialize, Serialize};
-use tokio::{sync::mpsc::error::TryRecvError, time, time::Duration};
+use tokio::{
+    sync::mpsc::{error::TryRecvError, UnboundedReceiver},
+    time,
+    time::Duration,
+};
 
 mod duck;
 mod gottatry;
 mod random;
 
 pub struct Bot {
+    game_id: GameId,
+    user_id: UserId,
     state: BotState,
     algorithm: Box<dyn Algorithm + Send + Sync>,
 }
@@ -32,7 +38,6 @@ pub enum Strategy {
 }
 
 pub struct BotState {
-    user_id: UserId,
     seat: Seat,
     pre_pass_hand: Cards,
     post_pass_hand: Cards,
@@ -40,15 +45,16 @@ pub struct BotState {
 }
 
 impl Bot {
-    pub fn new(user_id: UserId, strategy: Strategy) -> Self {
+    pub fn new(game_id: GameId, user_id: UserId, strategy: Strategy) -> Self {
         let algorithm: Box<dyn Algorithm + Send + Sync> = match strategy {
             Strategy::Duck => Box::new(Duck::new()),
             Strategy::GottaTry => Box::new(GottaTry::new()),
             Strategy::Random => Box::new(Random::new()),
         };
         Self {
+            game_id,
+            user_id,
             state: BotState {
-                user_id,
                 seat: Seat::North,
                 pre_pass_hand: Cards::NONE,
                 post_pass_hand: Cards::NONE,
@@ -58,8 +64,12 @@ impl Bot {
         }
     }
 
-    pub async fn run(mut self, server: Server, game_id: GameId) -> Result<(), CardsError> {
-        let mut rx = server.subscribe_game(game_id, self.state.user_id).await?;
+    pub async fn run(
+        mut self,
+        games: Games,
+        mut rx: UnboundedReceiver<GameEvent>,
+        delay: Option<Gamma<f32>>,
+    ) -> Result<(), CardsError> {
         let mut action = None;
         loop {
             loop {
@@ -72,30 +82,28 @@ impl Bot {
                 }
             }
             if action.is_some() {
-                if let Some(delay) = &server.bot_delay {
+                if let Some(delay) = delay {
                     let seconds = delay.sample(&mut rand::thread_rng());
                     time::delay_for(Duration::from_secs_f32(seconds)).await;
                 }
             }
             match action {
                 Some(Action::Pass(cards)) => {
-                    server
-                        .pass_cards(game_id, self.state.user_id, cards)
-                        .await?
+                    games.pass_cards(self.game_id, self.user_id, cards).await?
                 }
                 Some(Action::Charge(cards)) => {
-                    server
-                        .charge_cards(game_id, self.state.user_id, cards)
+                    games
+                        .charge_cards(self.game_id, self.user_id, cards)
                         .await?
                 }
                 Some(Action::Play(card)) => {
-                    let complete = server.play_card(game_id, self.state.user_id, card).await?;
+                    let complete = games.play_card(self.game_id, self.user_id, card).await?;
                     if complete {
                         return Ok(());
                     }
                 }
                 Some(Action::RejectClaim(seat)) => {
-                    let _ = server.reject_claim(game_id, self.state.user_id, seat).await;
+                    let _ = games.reject_claim(self.game_id, self.user_id, seat).await;
                 }
                 None => {}
             }
@@ -103,15 +111,16 @@ impl Bot {
                 Some(event) => {
                     action = self.handle(event);
                 }
-                None => break,
+                None => return Ok(()),
             }
         }
-
-        Ok(())
     }
 
     fn handle(&mut self, event: GameEvent) -> Option<Action> {
-        info!("Bot {} handling event {:?}", self.state.user_id, event);
+        info!(
+            "handle: game_id={}, user_id={}, event={:?}",
+            self.game_id, self.user_id, event
+        );
         self.state.game.apply(&event);
         match &event {
             GameEvent::Sit {
@@ -121,16 +130,16 @@ impl Bot {
                 west,
                 ..
             } => {
-                self.state.seat = if self.state.user_id == north.user_id() {
+                self.state.seat = if self.user_id == north.user_id() {
                     Seat::North
-                } else if self.state.user_id == east.user_id() {
+                } else if self.user_id == east.user_id() {
                     Seat::East
-                } else if self.state.user_id == south.user_id() {
+                } else if self.user_id == south.user_id() {
                     Seat::South
-                } else if self.state.user_id == west.user_id() {
+                } else if self.user_id == west.user_id() {
                     Seat::West
                 } else {
-                    panic!("Bot {} is not a player in the game", self.state.user_id);
+                    panic!("Bot {} is not a player in the game", self.user_id);
                 };
             }
             GameEvent::Deal {

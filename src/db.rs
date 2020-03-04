@@ -16,40 +16,10 @@ impl Database {
             .connection_customizer(Box::new(Customizer))
             .build(manager)
             .unwrap();
-        Database::seed(&pool.get().unwrap())?;
+        pool.get()
+            .unwrap()
+            .execute_batch(include_str!("../schema.sql"))?;
         Ok(Self { pool })
-    }
-
-    fn seed(conn: &Connection) -> Result<(), rusqlite::Error> {
-        conn.execute_batch(
-            "PRAGMA journal_mode = WAL;
-            BEGIN;
-            CREATE TABLE IF NOT EXISTS user (
-                user_id TEXT NOT NULL,
-                name TEXT NOT NULL,
-                realm TEXT NOT NULL,
-                external_id TEXT NOT NULL,
-                PRIMARY KEY (user_id)
-            );
-            CREATE UNIQUE INDEX IF NOT EXISTS idx_user ON user (realm, external_id);
-            CREATE TABLE IF NOT EXISTS auth_token (
-                token TEXT NOT NULL,
-                user_id TEXT NOT NULL,
-                PRIMARY KEY (token)
-            );
-            CREATE TABLE IF NOT EXISTS game (
-                game_id TEXT NOT NULL,
-                PRIMARY KEY (game_id)
-            );
-            CREATE TABLE IF NOT EXISTS event (
-                game_id TEXT NOT NULL,
-                event_id INTEGER NOT NULL,
-                timestamp INTEGER NOT NULL,
-                event TEXT NOT NULL,
-                PRIMARY KEY (game_id, event_id)
-            );
-            END;",
-        )
     }
 
     pub fn run_blocking_read_only<F, T>(&self, f: F) -> Result<T, CardsError>
