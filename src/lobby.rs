@@ -127,7 +127,7 @@ impl Lobby {
             if game.players.len() == 4 {
                 return Err(CardsError::GameHasStarted(game_id));
             }
-            game.players.insert(player.clone());
+            game.players.insert(player);
             game.last_updated_time = SystemTime::now()
                 .duration_since(SystemTime::UNIX_EPOCH)
                 .unwrap()

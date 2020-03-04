@@ -124,10 +124,10 @@ impl GameEvent {
                 created_by,
                 seed,
             } => GameEvent::Sit {
-                north: north.clone(),
-                east: east.clone(),
-                south: south.clone(),
-                west: west.clone(),
+                north: *north,
+                east: *east,
+                south: *south,
+                west: *west,
                 rules: *rules,
                 created_time: *created_time,
                 created_by: *created_by,
@@ -184,9 +184,12 @@ impl GameEvent {
                 },
                 _ => self.clone(),
             },
-            GameEvent::Charge { seat: s, cards } => match seat {
-                Some(seat) if *s != seat && rules.blind() => GameEvent::BlindCharge {
-                    seat: *s,
+            GameEvent::Charge {
+                seat: charger,
+                cards,
+            } => match seat {
+                Some(seat) if seat != *charger && rules.blind() => GameEvent::BlindCharge {
+                    seat: *charger,
                     count: cards.len(),
                 },
                 _ => self.clone(),
