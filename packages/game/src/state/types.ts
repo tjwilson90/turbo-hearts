@@ -26,6 +26,7 @@ export interface UsersState {
 
 export interface GameState {
   gameId: string;
+  spectatorMode: boolean;
   bottomSeat: Seat;
 
   top: User | undefined;

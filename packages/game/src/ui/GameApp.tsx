@@ -109,6 +109,12 @@ class GameAppInternal extends React.Component<GameApp.Props, GameApp.State> {
     });
   }
 
+  public componentDidUpdate(prevProps: GameApp.Props) {
+    if (prevProps.game.spectatorMode !== this.props.game.spectatorMode && this.props.game.spectatorMode) {
+      this.stage.enableSpectatorMode();
+    }
+  }
+
   private handlePass = () => {
     if (this.state.picks.length === 3) {
       this.stage.setAction("none", emptyArray(), true);

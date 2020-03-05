@@ -21,3 +21,4 @@ export const AppendChat = TypedAction.define("appendChat")<ChatMessage>();
 export const AppendTrick = TypedAction.define("appendTrick")<TurboHearts.Trick>();
 export const AppendHandScore = TypedAction.define("appendHandScore")<HandCompleteEventData>();
 export const ResetTricks = TypedAction.defineWithoutPayload("resetTricks")();
+export const EnableSpectatorMode = TypedAction.defineWithoutPayload("enableSpectatorMode")();
