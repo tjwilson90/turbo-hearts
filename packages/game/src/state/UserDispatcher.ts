@@ -3,7 +3,7 @@ import { SitEventData, Seat } from "../types";
 import { TurboHeartsService } from "../game/TurboHeartsService";
 import { SetGameUsers, UpdateUsers } from "./actions";
 
-function getBottomSeat(event: SitEventData, myUserId: string): Seat {
+export function getBottomSeat(event: SitEventData, myUserId: string): Seat {
   if (event.north.userId === myUserId) {
     return "north";
   } else if (event.east.userId === myUserId) {

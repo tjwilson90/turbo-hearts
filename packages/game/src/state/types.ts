@@ -4,6 +4,7 @@ import { Snapshotter } from "../game/snapshotter";
 import { Action, TurboHearts } from "../game/stateSnapshot";
 import { TrickTracker } from "../game/TrickTracker";
 import { Seat } from "../types";
+import { PassTracker } from "../game/PassTracker";
 
 export interface ChatMessage {
   userId: string;
@@ -41,6 +42,7 @@ export interface GameState {
 
   scores: number[][];
   tricks: TurboHearts.Trick[];
+  localPass: TurboHearts.LocalPass | undefined;
 }
 
 export interface GameContext {
@@ -48,6 +50,7 @@ export interface GameContext {
   service: TurboHeartsService;
   snapshotter: Snapshotter;
   trickTracker: TrickTracker;
+  passTracker: PassTracker;
 }
 
 export interface GameAppState {

@@ -67,6 +67,11 @@ export namespace TurboHearts {
     winner: Seat;
   }
 
+  export interface LocalPass {
+    sent: Card[] | undefined;
+    received: Card[] | undefined;
+  }
+
   export interface Game {
     snapshots: StateSnapshot[];
   }

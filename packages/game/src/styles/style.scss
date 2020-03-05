@@ -128,7 +128,31 @@ body {
       background: white;
       border-bottom: 1px solid black;
 
-      .trick-log {
+      .play-history {
+        border-right: 1px solid black;
+
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+
+        height: 100%;
+
+        .pass-section {
+          text-align: center;
+          margin-bottom: 20px;
+          &:not(:first-child) {
+            margin-bottom: 0px;
+          }
+          .pass-cards {
+            margin-top: 2px;
+            font-size: 15px;
+            * {
+              margin-right: 5px;
+            }
+          }
+        }
+
         .trick-container {
           grid-row: 1;
           grid-column: 1;
@@ -136,6 +160,7 @@ body {
           grid-template-rows: 40px 40px 40px;
           grid-template-columns: 40px 40px 40px;
           align-items: center;
+          font-size: 15px;
 
           .top {
             grid-row: 1;
@@ -169,7 +194,7 @@ body {
             grid-row: 2;
             grid-column: 2;
             justify-self: center;
-            font-size: 9px;
+            font-size: 11px;
             color: #808080;
           }
         }

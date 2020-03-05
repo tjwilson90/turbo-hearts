@@ -12,10 +12,12 @@ import {
   AppendTrick,
   ResetTricks,
   AppendHandScore,
-  EnableSpectatorMode
+  EnableSpectatorMode,
+  SetLocalPass
 } from "./actions";
 import { ChatState, GameAppState, GameContext, GameState, User, UsersState } from "./types";
 import { TrickTracker } from "../game/TrickTracker";
+import { PassTracker } from "../game/PassTracker";
 
 const chatReducer = TypedReducer.builder<ChatState>()
   .withHandler(AppendChat.TYPE, (state, msg) => {
@@ -79,6 +81,12 @@ const gameReducer = TypedReducer.builder<GameState>()
       tricks: [...state.tricks, trick]
     };
   })
+  .withHandler(SetLocalPass.TYPE, (state, localPass) => {
+    return {
+      ...state,
+      localPass
+    };
+  })
   .withHandler(AppendHandScore.TYPE, (state, handScores) => {
     return {
       ...state,
@@ -124,13 +132,15 @@ const INITIAL_STATE: GameAppState = {
     bottomAction: "none",
     leftAction: "none",
     scores: [],
-    tricks: []
+    tricks: [],
+    localPass: undefined
   },
   context: {
     eventSource: undefined!,
     service: undefined!,
     snapshotter: undefined!,
-    trickTracker: undefined!
+    trickTracker: undefined!,
+    passTracker: undefined!
   }
 };
 
@@ -146,10 +156,12 @@ export function createGameAppStore(gameId: string) {
   initialState.context.service = new TurboHeartsService(gameId);
   initialState.context.snapshotter = new Snapshotter(initialState.users.me.userId);
   initialState.context.trickTracker = new TrickTracker();
+  initialState.context.passTracker = new PassTracker(initialState.users.me.userId);
 
   initialState.context.eventSource.on("event", event => {
     initialState.context.snapshotter.onEvent(event);
     initialState.context.trickTracker.onEvent(event);
+    initialState.context.passTracker.onEvent(event);
   });
   return createStore(
     rootReducer,
