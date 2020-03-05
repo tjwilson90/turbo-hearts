@@ -194,7 +194,6 @@ export class TurboHeartsStage {
   };
 
   public endReplay = () => {
-    console.log("END REPLAY");
     this.replay = false;
     if (this.snapshot !== undefined) {
       this.animations.push(this.snapAnimation());

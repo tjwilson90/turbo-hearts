@@ -5,7 +5,7 @@ import { Nameplate } from "./Nameplate";
 import { TurboHeartsStage } from "../view/TurboHeartsStage";
 import { UserDispatcher } from "../state/UserDispatcher";
 import { ChatLog } from "./ChatLog";
-import { TrickLog } from "./TrickLog";
+import { PlayHistory } from "./PlayHistory";
 import { ScoreTable } from "./ScoreTable";
 import { ChatInput } from "./ChatInput";
 import { Action, TurboHearts, emptyStateSnapshot } from "../game/stateSnapshot";
@@ -75,7 +75,7 @@ class GameAppInternal extends React.Component<GameApp.Props, GameApp.State> {
         </div>
         <div className="sidebar">
           <div className="game-data">
-            <TrickLog />
+            <PlayHistory />
             <ScoreTable />
           </div>
           <ChatLog />

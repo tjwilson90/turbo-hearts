@@ -19,7 +19,8 @@ import {
   AppendTrick,
   ResetTricks,
   AppendHandScore,
-  EnableSpectatorMode
+  EnableSpectatorMode,
+  SetLocalPass
 } from "./state/actions";
 import { getBottomSeat } from "./view/TurboHeartsStage";
 
@@ -78,6 +79,9 @@ document.addEventListener("DOMContentLoaded", () => {
   });
   ctx.trickTracker.on("reset", () => {
     store.dispatch(ResetTricks());
+  });
+  ctx.passTracker.on("pass", pass => {
+    store.dispatch(SetLocalPass(pass));
   });
   ReactDOM.render(
     <Provider store={store}>

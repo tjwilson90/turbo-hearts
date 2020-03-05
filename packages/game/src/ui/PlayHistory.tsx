@@ -8,6 +8,7 @@ import classNames from "classnames";
 export namespace TrickLog {
   export interface StoreProps {
     tricks: TurboHearts.Trick[];
+    localPass: TurboHearts.LocalPass | undefined;
     bottomSeat: Seat;
   }
 
@@ -56,12 +57,38 @@ function NiceCard(props: { card: Card }) {
   return <span style={{ color: colorMap[suit] }}>{`${rank}${suitMap[suit]}`}</span>;
 }
 
-class TrickLogInternal extends React.Component<TrickLog.Props> {
+class PlayHistoryInternal extends React.Component<TrickLog.Props> {
   public render() {
-    if (this.props.tricks.length === 0 || this.props.bottomSeat === undefined) {
-      return <div className="trick-log"></div>;
+    if (this.props.localPass !== undefined) {
+      return (
+        <div className="play-history">
+          {this.props.localPass.sent && (
+            <div className="pass-section">
+              <div>Passed</div>
+              <div className="pass-cards">
+                {this.props.localPass.sent.map(card => (
+                  <NiceCard card={card} />
+                ))}
+              </div>
+            </div>
+          )}
+          {this.props.localPass.received && (
+            <div className="pass-section">
+              <div>Received</div>
+              <div className="pass-cards">
+                {this.props.localPass.received.map(card => (
+                  <NiceCard card={card} />
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      );
     }
-    return <div className="trick-log">{this.renderNiceTrick(this.props.tricks[this.props.tricks.length - 1])}</div>;
+    if (this.props.tricks.length === 0 || this.props.bottomSeat === undefined) {
+      return <div className="play-history"></div>;
+    }
+    return <div className="play-history">{this.renderNiceTrick(this.props.tricks[this.props.tricks.length - 1])}</div>;
   }
 
   private renderNiceTrick(trick: TurboHearts.Trick) {
@@ -114,8 +141,9 @@ class TrickLogInternal extends React.Component<TrickLog.Props> {
 function mapStateToProps(state: GameAppState): TrickLog.StoreProps {
   return {
     tricks: state.game.tricks,
+    localPass: state.game.localPass,
     bottomSeat: state.game.bottomSeat
   };
 }
 
-export const TrickLog = connect(mapStateToProps)(TrickLogInternal);
+export const PlayHistory = connect(mapStateToProps)(PlayHistoryInternal);
