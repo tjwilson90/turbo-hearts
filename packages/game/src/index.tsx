@@ -13,7 +13,14 @@ import { createGameAppStore } from "./state/createStore";
 import { UserDispatcher } from "./state/UserDispatcher";
 import { GameApp } from "./ui/GameApp";
 import { SitEventData, ChatEvent, Seat, HandCompleteEventData } from "./types";
-import { AppendChat, UpdateActions, AppendTrick, ResetTricks, AppendHandScore } from "./state/actions";
+import {
+  AppendChat,
+  UpdateActions,
+  AppendTrick,
+  ResetTricks,
+  AppendHandScore,
+  EnableSpectatorMode
+} from "./state/actions";
 import { getBottomSeat } from "./view/TurboHeartsStage";
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -32,7 +39,14 @@ document.addEventListener("DOMContentLoaded", () => {
   const ctx = store.getState().context;
   const userDispatcher = new UserDispatcher(ctx.service, userId, store.dispatch);
   ctx.eventSource.once("sit", (event: SitEventData) => {
-    // console.log(event);
+    if (
+      userId !== event.north.userId &&
+      userId !== event.east.userId &&
+      userId !== event.south.userId &&
+      userId !== event.west.userId
+    ) {
+      store.dispatch(EnableSpectatorMode());
+    }
     userDispatcher.loadUsersForGame(event);
   });
   ctx.eventSource.on("chat", (chat: ChatEvent) => {

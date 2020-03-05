@@ -4,7 +4,16 @@ import { applyMiddleware, Store } from "redux";
 import { Snapshotter } from "../game/snapshotter";
 import { TurboHeartsEventSource } from "../game/TurboHeartsEventSource";
 import { TurboHeartsService } from "../game/TurboHeartsService";
-import { AppendChat, SetGameUsers, UpdateUsers, UpdateActions, AppendTrick, ResetTricks, AppendHandScore } from "./actions";
+import {
+  AppendChat,
+  SetGameUsers,
+  UpdateUsers,
+  UpdateActions,
+  AppendTrick,
+  ResetTricks,
+  AppendHandScore,
+  EnableSpectatorMode
+} from "./actions";
 import { ChatState, GameAppState, GameContext, GameState, User, UsersState } from "./types";
 import { TrickTracker } from "../game/TrickTracker";
 
@@ -49,6 +58,12 @@ const gameReducer = TypedReducer.builder<GameState>()
       ...users
     };
   })
+  .withHandler(EnableSpectatorMode.TYPE, state => {
+    return {
+      ...state,
+      spectatorMode: true
+    };
+  })
   .withHandler(UpdateActions.TYPE, (state, actions) => {
     return {
       ...state,
@@ -67,7 +82,10 @@ const gameReducer = TypedReducer.builder<GameState>()
   .withHandler(AppendHandScore.TYPE, (state, handScores) => {
     return {
       ...state,
-      scores: [...state.scores, [handScores.northScore, handScores.eastScore, handScores.southScore, handScores.westScore]]
+      scores: [
+        ...state.scores,
+        [handScores.northScore, handScores.eastScore, handScores.southScore, handScores.westScore]
+      ]
     };
   })
   .withHandler(ResetTricks.TYPE, state => {
@@ -95,6 +113,7 @@ const INITIAL_STATE: GameAppState = {
   },
   game: {
     gameId: undefined!,
+    spectatorMode: false,
     bottomSeat: undefined!,
     top: undefined,
     right: undefined,
