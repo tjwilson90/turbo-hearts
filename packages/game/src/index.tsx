@@ -12,8 +12,16 @@ import { Provider } from "react-redux";
 import { createGameAppStore } from "./state/createStore";
 import { UserDispatcher } from "./state/UserDispatcher";
 import { GameApp } from "./ui/GameApp";
-import { SitEventData, ChatEvent, Seat } from "./types";
-import { AppendChat, UpdateActions, AppendTrick, ResetTricks } from "./state/actions";
+import { SitEventData, ChatEvent, Seat, HandCompleteEventData } from "./types";
+import {
+  AppendChat,
+  UpdateActions,
+  AppendTrick,
+  ResetTricks,
+  AppendHandScore,
+  EnableSpectatorMode,
+  SetLocalPass
+} from "./state/actions";
 import { getBottomSeat } from "./view/TurboHeartsStage";
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -32,12 +40,22 @@ document.addEventListener("DOMContentLoaded", () => {
   const ctx = store.getState().context;
   const userDispatcher = new UserDispatcher(ctx.service, userId, store.dispatch);
   ctx.eventSource.once("sit", (event: SitEventData) => {
-    // console.log(event);
+    if (
+      userId !== event.north.userId &&
+      userId !== event.east.userId &&
+      userId !== event.south.userId &&
+      userId !== event.west.userId
+    ) {
+      store.dispatch(EnableSpectatorMode());
+    }
     userDispatcher.loadUsersForGame(event);
   });
   ctx.eventSource.on("chat", (chat: ChatEvent) => {
     userDispatcher.loadUsers([chat.userId]);
     store.dispatch(AppendChat(chat));
+  });
+  ctx.eventSource.on("hand_complete", (scores: HandCompleteEventData) => {
+    store.dispatch(AppendHandScore(scores));
   });
   ctx.snapshotter.on("snapshot", snapshot => {
     // console.log(snapshot);
@@ -61,6 +79,9 @@ document.addEventListener("DOMContentLoaded", () => {
   });
   ctx.trickTracker.on("reset", () => {
     store.dispatch(ResetTricks());
+  });
+  ctx.passTracker.on("pass", pass => {
+    store.dispatch(SetLocalPass(pass));
   });
   ReactDOM.render(
     <Provider store={store}>

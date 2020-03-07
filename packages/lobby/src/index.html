@@ -1,18 +1,17 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
-    <title>❤️ Turbo Hearts</title>
-    <link
-      rel="stylesheet"
-      href="<%=htmlWebpackPlugin.files.chunks.main.css %>"
-    />
-  </head>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+  <title>play.anti.run</title>
+  <link rel="stylesheet" href="/assets/lobby/index.css" />
+  <link rel="shortcut icon" href="/assets/favicon.ico" type="image/x-icon" />
+</head>
 
-  <body>
-    <script src="<%= htmlWebpackPlugin.files.chunks.main.entry %>"></script>
-    <canvas id="turbo-hearts"></canvas>
-  </body>
+<body>
+<div id="lobby"></div>
+<script src="/assets/lobby/index.js"></script>
+</div>
+</body>
 </html>

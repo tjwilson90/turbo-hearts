@@ -107,6 +107,14 @@ export interface EndTrickEventData {
   winner: Seat;
 }
 
+export interface HandCompleteEventData {
+  type: "hand_complete";
+  northScore: number;
+  eastScore: number;
+  southScore: number;
+  westScore: number;
+}
+
 export interface GameCompleteEventData {
   type: "game_complete";
 }
@@ -160,6 +168,7 @@ export type EventData =
   | PlayStatusEventData
   | PlayEventData
   | EndTrickEventData
+  | HandCompleteEventData
   | GameCompleteEventData;
 
 export interface Animation {
