@@ -1,7 +1,3 @@
-use rusqlite::{
-    types::{FromSql, FromSqlError, ToSqlOutput, Value, ValueRef},
-    ToSql,
-};
 use serde::{Deserialize, Serialize};
 use std::{fmt, fmt::Display, str::FromStr};
 use uuid::Uuid;
@@ -26,20 +22,5 @@ impl FromStr for GameId {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Ok(GameId(s.parse()?))
-    }
-}
-
-impl ToSql for GameId {
-    fn to_sql(&self) -> Result<ToSqlOutput<'_>, rusqlite::Error> {
-        Ok(ToSqlOutput::Owned(Value::Text(self.0.to_string())))
-    }
-}
-
-impl FromSql for GameId {
-    fn column_result(value: ValueRef<'_>) -> Result<Self, FromSqlError> {
-        match value.as_str() {
-            Ok(value) => Ok(value.parse().unwrap()),
-            Err(e) => Err(e),
-        }
     }
 }

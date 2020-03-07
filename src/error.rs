@@ -39,6 +39,8 @@ pub enum CardsError {
     NoPointsOnFirstTrick,
     #[error("{0} is not claiming, or their claim has been rejected")]
     NotClaiming(UserId),
+    #[error("Games need at least 4 players to start")]
+    NotEnoughPlayers,
     #[error("your hand does not contain {0}")]
     NotYourCards(Cards),
     #[error("player {0} makes the next {1}")]
@@ -85,6 +87,7 @@ impl CardsError {
                 StatusCode::INTERNAL_SERVER_ERROR
             }
             CardsError::UnknownGame { .. } => StatusCode::NOT_FOUND,
+            CardsError::UnknownAuthToken(_) => StatusCode::UNAUTHORIZED,
             _ => StatusCode::BAD_REQUEST,
         }
     }

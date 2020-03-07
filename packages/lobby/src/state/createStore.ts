@@ -11,12 +11,7 @@ export function createStore(): Store<LobbyState> {
     const initialState: LobbyState = {
         chats: {
             lobby: {
-                messages: [{
-                    date: new Date(),
-                    userId,
-                    message: "joined.",
-                    generated: true,
-                }],
+                messages: [],
                 userIds: [],
             }
         },
