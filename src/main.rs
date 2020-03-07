@@ -89,7 +89,8 @@ async fn main() -> Result<(), CardsError> {
                 .allow_header(header::CONTENT_TYPE)
                 .build(),
         )
-        .recover(error::handle_rejection);
+        .recover(error::handle_rejection)
+        .with(warp::log("request"));
     warp::serve(app).run(([127, 0, 0, 1], CONFIG.port)).await;
     Ok(())
 }
