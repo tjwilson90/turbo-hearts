@@ -32,6 +32,10 @@ pub enum LobbyEvent {
     },
     StartGame {
         game_id: GameId,
+        north: UserId,
+        east: UserId,
+        south: UserId,
+        west: UserId,
     },
     LeaveGame {
         game_id: GameId,

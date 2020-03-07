@@ -136,8 +136,8 @@ fn start_game(
         request: Request,
     ) -> Result<impl Reply, Rejection> {
         let Request { game_id } = request;
-        games.start_game(game_id)?;
-        lobby.start_game(game_id).await;
+        let players = games.start_game(game_id)?;
+        lobby.start_game(game_id, players).await;
         Ok(warp::reply())
     }
 

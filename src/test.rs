@@ -307,8 +307,8 @@ async fn test_new_game() -> Result<(), CardsError> {
                 },
             )
             .await?;
-        games.start_game(game_id)?;
-        lobby.start_game(game_id).await;
+        let players = games.start_game(game_id)?;
+        lobby.start_game(game_id, players).await;
 
         let mut twilson = games.subscribe(game_id, *TWILSON).await?;
         match twilson.recv().await {
@@ -449,8 +449,8 @@ async fn test_bot_game() -> Result<(), CardsError> {
                 },
             )
             .await?;
-        games.start_game(game_id)?;
-        lobby.start_game(game_id).await;
+        let players = games.start_game(game_id)?;
+        lobby.start_game(game_id, players).await;
         let mut rx = games.subscribe(game_id, UserId::new()).await?;
         let mut plays = 0;
         while let Some(event) = rx.recv().await {

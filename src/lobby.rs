@@ -128,9 +128,15 @@ impl Lobby {
         Ok(())
     }
 
-    pub async fn start_game(&self, game_id: GameId) {
+    pub async fn start_game(&self, game_id: GameId, players: [UserId; 4]) {
         let mut inner = self.inner.lock().await;
-        inner.broadcast(LobbyEvent::StartGame { game_id });
+        inner.broadcast(LobbyEvent::StartGame {
+            game_id,
+            north: players[0],
+            east: players[0],
+            south: players[0],
+            west: players[0],
+        });
         info!("start_game: game_id={}", game_id);
     }
 
