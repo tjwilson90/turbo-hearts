@@ -1,5 +1,5 @@
 import * as React from "react";
-import { ChatMessage, LobbyState, UsersState } from "../state/types";
+import { ChatMessage, ISubstitutions, LobbyState, UsersState } from "../state/types";
 import { connect } from "react-redux";
 import classNames from "classnames";
 
@@ -33,7 +33,7 @@ class MessageItemInternal extends React.PureComponent<MessageItem.Props> {
                 <div className={classNames("message", {"-generated": msg.generated})}>
                     <span className="user-name">
                         {this.renderUserName(msg.userId)}
-                    </span>&nbsp;{this.renderMessage(msg.message)}
+                    </span>&nbsp;{this.renderMessage(msg.message, msg.substitutions)}
                 </div>
             </div>
         );
@@ -48,21 +48,26 @@ class MessageItemInternal extends React.PureComponent<MessageItem.Props> {
             : "Loading"
     }
 
-    private renderMessage(msg: string) {
+    private renderMessage(msg: string, subs: ISubstitutions[]) {
         const consumed: JSX.Element[] = [];
         let unconsumed = msg;
-        while (unconsumed.length > 0) {
-            const gameLinkIndex = unconsumed.indexOf("$gameUrl=");
-            if (gameLinkIndex !== -1) {
-                const gameHash = unconsumed.substr(gameLinkIndex + 9, 36);
-                consumed.push(<React.Fragment key={consumed.length}>{unconsumed.substr(0, gameLinkIndex)}</React.Fragment>);
-                consumed.push(<a key={consumed.length} className="inline-message-link" href={`/game#${gameHash}`} target="_blank">Open game</a>);
-                unconsumed = msg.slice(gameLinkIndex + 45);
-                continue;
+
+        for (let i = 0; i < subs.length; i++) {
+            const searchString = "$" + i;
+            const subIdx = unconsumed.indexOf(searchString);
+
+            consumed.push(<React.Fragment key={consumed.length}>{unconsumed.slice(0, subIdx)}</React.Fragment>);
+
+            const sub = subs[i];
+            if (sub.type === "game") {
+                consumed.push(<a key={consumed.length} className="inline-message-link" href={`/game#${sub.gameId}`} target="_blank">Open game</a>);
+            } else if (sub.type === "user") {
+                consumed.push(<React.Fragment key={consumed.length}>{this.props.users.userNamesByUserId[sub.userId] || "Loading"}</React.Fragment>);
             }
-            consumed.push(<React.Fragment key={consumed.length}>{unconsumed}</React.Fragment>);
-            unconsumed = "";
+
+            unconsumed = unconsumed.slice(subIdx + searchString.length);
         }
+        consumed.push(<React.Fragment key={consumed.length}>{unconsumed}</React.Fragment>);
         return consumed;
     }
 
