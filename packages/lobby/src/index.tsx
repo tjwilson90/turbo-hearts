@@ -1,10 +1,3 @@
-if (typeof process === "undefined") {
-  if (typeof window === "undefined") {
-    throw new Error("Ooops ...");
-  }
-  (window as any).process = { env: {} };
-}
-
 import { createStore } from "./state/createStore";
 import { TurboHeartsLobbyEventSource } from "./TurboHeartsLobbyEventSource";
 import { LobbySubscriber } from "./lobbySubscriber";
