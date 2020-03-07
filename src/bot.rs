@@ -7,7 +7,7 @@ use crate::{
     seat::Seat,
     user::UserId,
 };
-use log::info;
+use log::debug;
 use rand::distributions::Distribution;
 use rand_distr::Gamma;
 use serde::{Deserialize, Serialize};
@@ -117,7 +117,7 @@ impl Bot {
     }
 
     fn handle(&mut self, event: GameEvent) -> Option<Action> {
-        info!(
+        debug!(
             "handle: game_id={}, user_id={}, event={:?}",
             self.game_id, self.user_id, event
         );
