@@ -133,9 +133,9 @@ impl Lobby {
         inner.broadcast(LobbyEvent::StartGame {
             game_id,
             north: players[0],
-            east: players[0],
-            south: players[0],
-            west: players[0],
+            east: players[1],
+            south: players[2],
+            west: players[3],
         });
         info!("start_game: game_id={}", game_id);
     }
