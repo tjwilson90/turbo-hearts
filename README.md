@@ -343,11 +343,39 @@ The following events can be returned in the game event stream.
 
 When a client subscribes to the game stream, all pre-existing events are immediately streamed back.
 Immediately after that, an `end_replay` event is sent to that client to indicate that the client
-has caught up to the latest pre-existing event in the stream.
+has caught up to the latest pre-existing event in the stream. This event also contains the set of
+users currently subscribed to the game.
 
 ```json
 {
-  "type": "end_replay"
+  "type": "end_replay",
+  "subscribers": [
+    "3935516d-1782-49fe-afa7-1a00264798d9",
+    "e99185e6-b73e-4365-aeb8-644b71394ca8",
+    "0a86489a-0746-46bc-b8fe-dee4b8ea546f"
+  ]
+}
+```
+
+#### JoinGame
+
+When a user subscribes to a game, a `join_game` event is sent to all subscribers.
+
+```json
+{
+  "type": "join_game",
+  "user_id": "723fc477-75d3-4fef-a672-20ac6e54bdba"
+}
+```
+
+#### LeaveGame
+
+When a user unsubscribes from a game, a `leave_game` event is sent to all subscribers.
+
+```json
+{
+  "type": "leave_game",
+  "user_id": "723fc477-75d3-4fef-a672-20ac6e54bdba"
 }
 ```
 
