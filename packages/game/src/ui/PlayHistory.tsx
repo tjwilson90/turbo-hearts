@@ -29,15 +29,15 @@ const BOTTOM_OFFSET = {
   west: 1
 };
 
-type Suit = "S" | "H" | "D" | "C";
-const suitMap: { [key in Suit]: string } = {
+export type Suit = "S" | "H" | "D" | "C";
+export const suitMap: { [key in Suit]: string } = {
   S: "♠",
   H: "♥",
   D: "♦",
   C: "♣"
 };
 
-const colorMap: { [key in Suit]: string } = {
+export const colorMap: { [key in Suit]: string } = {
   S: "#000000",
   H: "#ff0000",
   D: "#0d00ff",
