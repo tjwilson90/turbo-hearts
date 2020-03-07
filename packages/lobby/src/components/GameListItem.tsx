@@ -23,6 +23,8 @@ export namespace GameListItem {
         leaveGame(): void;
 
         addBot(strategy: BotStrategy): void;
+
+        startGame(): void;
     }
 
     export type Props = OwnProps & StoreProps & DispatchProps;
@@ -46,6 +48,9 @@ function mapDispatchToProps(_dispatch: Dispatch, ownProps: GameListItem.OwnProps
         leaveGame(): void {
             ownProps.service.leaveLobby(ownProps.game.gameId);
         },
+        startGame(): void {
+            ownProps.service.startGame(ownProps.game.gameId);
+        },
     }
 }
 
@@ -65,7 +70,7 @@ class GameListItemInternal extends React.PureComponent<GameListItem.Props> {
     }
 
     private renderButtons() {
-        if (this.props.game.players.length === 4) {
+        if (this.props.game.startedAt !== undefined) {
             return <div className="button-group game-controls">
                 <a className="button" href={`/game/#${this.props.game.gameId}`} target="_blank">
                     Open
@@ -83,15 +88,23 @@ class GameListItemInternal extends React.PureComponent<GameListItem.Props> {
                         Join
                     </div>
                 }
-                <div className="button" onClick={this.addRandomBot}>
-                    + Random
-                </div>
-                <div className="button" onClick={this.addDuckBot}>
-                    + Duck
-                </div>
-                <div className="button" onClick={this.addGottaTryBot}>
-                    + GT
-                </div>
+                {this.props.game.players.length >= 4
+                    ?
+                        <div className="button" onClick={this.props.startGame}>
+                            Start!
+                        </div>
+                    : <>
+                        <div className="button" onClick={this.addRandomBot}>
+                            + Random
+                        </div>
+                        <div className="button" onClick={this.addDuckBot}>
+                            + Duck
+                        </div>
+                        <div className="button" onClick={this.addGottaTryBot}>
+                            + GT
+                        </div>
+                    </>
+                }
             </div>
         )
     }

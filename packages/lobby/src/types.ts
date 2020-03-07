@@ -27,8 +27,14 @@ export interface LobbyStateEvent {
             createdAt: Date;
             players: LobbyPlayer[];
             createdBy: string;
+            startedAt: Date | undefined;
         };
-    }
+    };
+    chat: {
+        timestamp: Date,
+        userId: string,
+        message: string,
+    }[];
     userId: string;
     gameId: string;
 }
@@ -66,6 +72,15 @@ export interface FinishGameEvent {
     gameId: string;
 }
 
+export interface StartGameEvent {
+    type: "start_game";
+    gameId: string;
+    north: string;
+    east: string;
+    south: string;
+    west: string;
+}
+
 export interface ChatEvent {
     type: "chat";
     userId: string;
@@ -80,4 +95,5 @@ export type LobbyEvent =
     | JoinGameEvent
     | LeaveGameEvent
     | FinishGameEvent
+    | StartGameEvent
     | ChatEvent
