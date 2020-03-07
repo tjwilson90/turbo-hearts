@@ -122,7 +122,7 @@ impl Games {
         }
     }
 
-    pub fn start_game(&self, game_id: GameId) -> Result<(), CardsError> {
+    pub fn start_game(&self, game_id: GameId) -> Result<[UserId; 4], CardsError> {
         let result = self.db.run_with_retry(|tx| {
             let mut stmt = tx.prepare(
                 "SELECT user_id, strategy, rules, seat FROM game_player
@@ -180,7 +180,12 @@ impl Games {
                 "UPDATE game SET started_time = ? WHERE game_id = ?",
                 &[&timestamp, &game_id],
             )?;
-            Ok(())
+            Ok([
+                players[0].player.user_id(),
+                players[1].player.user_id(),
+                players[2].player.user_id(),
+                players[3].player.user_id(),
+            ])
         });
         info!(
             "start_game: game_id={}, error={:?}",
