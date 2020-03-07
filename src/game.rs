@@ -17,7 +17,7 @@ use rand::seq::SliceRandom;
 use rand_distr::Gamma;
 use rusqlite::{ToSql, Transaction};
 use std::{
-    collections::{hash_map::Entry, HashMap},
+    collections::{hash_map::Entry, HashMap, HashSet},
     sync::Arc,
 };
 use tokio::{
@@ -55,7 +55,7 @@ impl Games {
     pub async fn ping(&self) {
         let mut inner = self.inner.lock().await;
         let mut unwatched = Vec::new();
-        for (game_id, game) in inner.iter_mut() {
+        for (game_id, game) in inner.iter() {
             let mut game = game.lock().await;
             game.broadcast(&GameEvent::Ping);
             if game.subscribers.is_empty() {
@@ -203,8 +203,17 @@ impl Games {
         let (tx, rx) = unbounded_channel();
         self.with_game(game_id, |game| {
             let seat = game.seat(user_id);
+            let mut subscribers = game
+                .subscribers
+                .iter()
+                .map(|(user_id, _)| *user_id)
+                .collect::<HashSet<_>>();
+            if subscribers.insert(user_id) {
+                game.broadcast(&GameEvent::JoinGame { user_id });
+            }
+            game.subscribers.push((user_id, tx.clone()));
             self.replay_events(&game, &tx, seat);
-            game.subscribers.push((seat, tx));
+            tx.send(GameEvent::EndReplay { subscribers }).unwrap();
             Ok(())
         })
         .await?;
@@ -219,7 +228,6 @@ impl Games {
                 tx.send(e.redact(seat, g.state.rules)).unwrap();
             });
         }
-        tx.send(GameEvent::EndReplay).unwrap();
     }
 
     pub async fn pass_cards(
@@ -506,7 +514,7 @@ impl Games {
 #[derive(Debug)]
 struct Game {
     events: Vec<GameEvent>,
-    subscribers: Vec<(Option<Seat>, UnboundedSender<GameEvent>)>,
+    subscribers: Vec<(UserId, UnboundedSender<GameEvent>)>,
     bots: Vec<(Seat, UnboundedSender<GameEvent>)>,
     pre_pass_hand: [Cards; 4],
     post_pass_hand: [Cards; 4],
@@ -538,19 +546,32 @@ impl Game {
 
     fn broadcast(&mut self, event: &GameEvent) {
         let rules = self.state.rules;
-        self.subscribers
-            .retain(|(seat, tx)| tx.send(event.redact(*seat, rules)).is_ok());
+        let players = self.state.players;
+        let mut disconnects = HashSet::new();
+        self.subscribers.retain(|(user_id, tx)| {
+            let seat = seat(players, *user_id);
+            if tx.send(event.redact(seat, rules)).is_ok() {
+                true
+            } else {
+                disconnects.insert(*user_id);
+                false
+            }
+        });
+        if !disconnects.is_empty() {
+            for (user_id, _) in &self.subscribers {
+                disconnects.remove(user_id);
+            }
+            for user_id in disconnects {
+                self.broadcast(&GameEvent::LeaveGame { user_id });
+            }
+        }
         for (seat, bot) in &self.bots {
             bot.send(event.redact(Some(*seat), rules)).unwrap();
         }
     }
 
     fn seat(&self, user_id: UserId) -> Option<Seat> {
-        self.state
-            .players
-            .iter()
-            .position(|id| *id == user_id)
-            .map(|idx| Seat::VALUES[idx])
+        seat(self.state.players, user_id)
     }
 
     fn play_status_event(&self, leader: Seat) -> GameEvent {
@@ -842,6 +863,13 @@ impl Game {
         }
         Ok(())
     }
+}
+
+fn seat(players: [UserId; 4], user_id: UserId) -> Option<Seat> {
+    players
+        .iter()
+        .position(|id| *id == user_id)
+        .map(|idx| Seat::VALUES[idx])
 }
 
 fn deal(seed: [u8; 32], pass: PassDirection) -> GameEvent {

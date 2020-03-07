@@ -12,7 +12,7 @@ use log::info;
 use rusqlite::{ToSql, Transaction, NO_PARAMS};
 use serde::Serialize;
 use std::{
-    collections::{HashMap, HashSet, VecDeque},
+    collections::{HashMap, HashSet},
     sync::Arc,
 };
 use tokio::sync::{
@@ -34,7 +34,7 @@ impl Lobby {
         Ok(Self {
             db,
             inner: Arc::new(Mutex::new(Inner {
-                subscribers: HashMap::new(),
+                subscribers: Vec::new(),
             })),
         })
     }
@@ -55,16 +55,17 @@ impl Lobby {
             Ok((chat, games))
         })?;
         let mut inner = self.inner.lock().await;
-        if !inner.subscribers.contains_key(&user_id) {
+        let mut subscribers = inner
+            .subscribers
+            .iter()
+            .map(|(user_id, _)| *user_id)
+            .collect::<HashSet<_>>();
+        if subscribers.insert(user_id) {
             inner.broadcast(LobbyEvent::JoinLobby { user_id });
         }
-        inner
-            .subscribers
-            .entry(user_id)
-            .or_insert(Vec::new())
-            .push(tx.clone());
+        inner.subscribers.push((user_id, tx.clone()));
         tx.send(LobbyEvent::LobbyState {
-            subscribers: inner.subscribers.keys().cloned().collect(),
+            subscribers,
             chat,
             games,
         })
@@ -182,23 +183,27 @@ impl Lobby {
 }
 
 struct Inner {
-    subscribers: HashMap<UserId, Vec<UnboundedSender<LobbyEvent>>>,
+    subscribers: Vec<(UserId, UnboundedSender<LobbyEvent>)>,
 }
 
 impl Inner {
     fn broadcast(&mut self, event: LobbyEvent) {
-        let mut events = VecDeque::new();
-        events.push_back(event);
-        while let Some(event) = events.pop_front() {
-            self.subscribers.retain(|user_id, txs| {
-                txs.retain(|tx| tx.send(event.clone()).is_ok());
-                if txs.is_empty() {
-                    events.push_back(LobbyEvent::LeaveLobby { user_id: *user_id });
-                    false
-                } else {
-                    true
-                }
-            });
+        let mut disconnects = HashSet::new();
+        self.subscribers.retain(|(user_id, tx)| {
+            if tx.send(event.clone()).is_ok() {
+                true
+            } else {
+                disconnects.insert(*user_id);
+                false
+            }
+        });
+        if !disconnects.is_empty() {
+            for (user_id, _) in &self.subscribers {
+                disconnects.remove(user_id);
+            }
+            for user_id in disconnects {
+                self.broadcast(LobbyEvent::LeaveLobby { user_id });
+            }
         }
     }
 }

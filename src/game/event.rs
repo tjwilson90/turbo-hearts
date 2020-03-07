@@ -8,12 +8,21 @@ use crate::{
     user::UserId,
 };
 use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
 
 #[serde(tag = "type", rename_all = "snake_case")]
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub enum GameEvent {
     Ping,
-    EndReplay,
+    EndReplay {
+        subscribers: HashSet<UserId>,
+    },
+    JoinGame {
+        user_id: UserId,
+    },
+    LeaveGame {
+        user_id: UserId,
+    },
     Chat {
         user_id: UserId,
         message: String,
