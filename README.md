@@ -127,7 +127,6 @@ id of the game and the id of the player who created the game.
 {
   "type": "new_game",
   "game_id": "8c9e2ff7-dcf3-49be-86f0-315f469840bc",
-  "game": {
   "player": {
     "player": {
       "type": "human",
@@ -172,10 +171,23 @@ containing the id of the game.
 {
   "type": "start_game",
   "game_id": "8c9e2ff7-dcf3-49be-86f0-315f469840bc",
-  "north": "11f26260-092a-4a56-bc07-24719c551503",
-  "east": "1b90134b-4e6f-4b20-a18b-2a1a7ccc8d1d",
-  "south": "3c72e8ac-ae38-4306-a78b-acdc4369eaf0",
-  "west": "a35b9169-cdf9-4912-967a-445f5502f7d7"
+  "north": {
+    "type": "human",
+    "user_id": "11f26260-092a-4a56-bc07-24719c551503"
+  },
+  "east": {
+    "type": "human",
+    "user_id": "1b90134b-4e6f-4b20-a18b-2a1a7ccc8d1d"
+  },
+  "south": {
+    "type": "bot",
+    "user_id": "3c72e8ac-ae38-4306-a78b-acdc4369eaf0",
+    "strategy": "random"
+  },
+  "west": {
+    "type": "human",
+    "user_id": "a35b9169-cdf9-4912-967a-445f5502f7d7"
+  }
 }
 ```
 
@@ -188,7 +200,10 @@ containing the id of the game and the id of the player who left.
 {
   "type": "leave_game",
   "game_id": "8c9e2ff7-dcf3-49be-86f0-315f469840bc",
-  "user_id": "d33b08ca-4d34-44f8-8643-cbf7fce5a91c"
+  "player": {
+    "type": "human",
+    "user_id": "d33b08ca-4d34-44f8-8643-cbf7fce5a91c"
+  }
 }
 ```
 

@@ -122,7 +122,7 @@ impl Games {
         }
     }
 
-    pub fn start_game(&self, game_id: GameId) -> Result<[UserId; 4], CardsError> {
+    pub fn start_game(&self, game_id: GameId) -> Result<[Player; 4], CardsError> {
         let result = self.db.run_with_retry(|tx| {
             let mut stmt = tx.prepare(
                 "SELECT user_id, strategy, rules, seat FROM game_player
@@ -181,10 +181,10 @@ impl Games {
                 &[&timestamp, &game_id],
             )?;
             Ok([
-                players[0].player.user_id(),
-                players[1].player.user_id(),
-                players[2].player.user_id(),
-                players[3].player.user_id(),
+                players[0].player,
+                players[1].player,
+                players[2].player,
+                players[3].player,
             ])
         });
         info!(
