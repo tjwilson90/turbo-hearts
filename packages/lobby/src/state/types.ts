@@ -6,13 +6,25 @@ export interface LobbyGame {
     createdBy: string;
     updatedAt: Date;
     createdAt: Date;
+    startedAt: Date | undefined;
 }
+
+export interface IGameLinkSubstitutions {
+    type: "game";
+    gameId: string;
+}
+export interface IUserNameSubstitutions {
+    type: "user";
+    userId: string;
+}
+export type ISubstitutions = IGameLinkSubstitutions | IUserNameSubstitutions;
 
 export interface ChatMessage {
     date: Date;
     userId: string | undefined;
     message: string;
     generated: boolean;
+    substitutions: ISubstitutions[];
 }
 
 export interface UsersState {

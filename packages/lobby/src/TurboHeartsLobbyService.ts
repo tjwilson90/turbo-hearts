@@ -28,6 +28,10 @@ export class TurboHeartsLobbyService {
         return fetch(`/lobby/add_bot`, this.requestWithBody({ game_id: gameId, rules, strategy }));
     }
 
+    public startGame(gameId: string) {
+        return fetch(`/lobby/start`, this.requestWithBody({ game_id: gameId }));
+    }
+
     public chat(message: string) {
         return fetch(`/lobby/chat`, this.requestWithBody({ message }));
     }

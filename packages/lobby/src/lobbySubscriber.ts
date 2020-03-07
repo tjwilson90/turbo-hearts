@@ -6,7 +6,7 @@ import {
     JoinGameEvent,
     LeaveGameEvent,
     LobbyStateEvent,
-    NewGameEvent
+    NewGameEvent, StartGameEvent
 } from "./types";
 import { Store } from "redux";
 import { TurboHeartsLobbyEventSource } from "./TurboHeartsLobbyEventSource";
@@ -25,6 +25,7 @@ export class LobbySubscriber {
         eventSource.on("join_game", this.onJoinGameEvent);
         eventSource.on("leave_game", this.onLeaveGameEvent);
         eventSource.on("finish_game", this.onFinishGameEvent);
+        eventSource.on("start_game", this.onStartGame);
         eventSource.on("chat", this.onChatEvent);
     }
 
@@ -41,7 +42,8 @@ export class LobbySubscriber {
                     createdAt: game.createdAt,
                     updatedAt: game.updatedAt,
                     createdBy: game.createdBy,
-                    players: game.players
+                    players: game.players,
+                    startedAt: game.startedAt,
                 },
             }))
 
@@ -51,6 +53,19 @@ export class LobbySubscriber {
             for (const player of humanPlayers) {
                 collectedUserIds.add(player.userId);
             }
+        }
+
+        for (const chat of event.chat) {
+            this.store.dispatch(AppendChat({
+                room: "lobby",
+                message: {
+                    date: chat.timestamp,
+                    userId: chat.userId,
+                    message: chat.message,
+                    generated: false,
+                    substitutions: [],
+                }
+            }));
         }
 
         this.store.dispatch(UpdateChatUserIds({
@@ -65,6 +80,17 @@ export class LobbySubscriber {
         for (const userId of collectedUserIds) {
             this.maybeLoadUserId(userId);
         }
+
+        this.store.dispatch(AppendChat({
+            room: "lobby",
+            message: {
+                date: new Date(),
+                userId: this.store.getState().users.ownUserId,
+                message: "joined.",
+                generated: true,
+                substitutions: [],
+            }
+        }));
     }
     private onEnterLobbyEvent = (event: EnterLobbyEvent) => {
         const subscriberUserIds = this.store.getState().chats.lobby.userIds;
@@ -79,6 +105,7 @@ export class LobbySubscriber {
                 userId: event.userId,
                 message: "joined.",
                 generated: true,
+                substitutions: [],
             }
         }));
         this.maybeLoadUserId(event.userId);
@@ -96,6 +123,7 @@ export class LobbySubscriber {
                 userId: event.userId,
                 message: "quit.",
                 generated: true,
+                substitutions: [],
             }
         }));
         this.maybeLoadUserId(event.userId);
@@ -112,6 +140,7 @@ export class LobbySubscriber {
                 createdAt: new Date(),
                 updatedAt: new Date(),
                 createdBy: event.createdBy,
+                startedAt: undefined,
             }
         }));
         this.store.dispatch(AppendChat({
@@ -121,6 +150,7 @@ export class LobbySubscriber {
                 userId: event.createdBy,
                 message: "created a game.",
                 generated: true,
+                substitutions: [],
             }
         }));
         this.maybeLoadUserId(event.createdBy);
@@ -137,17 +167,35 @@ export class LobbySubscriber {
         if (event.player.type === "human") {
             this.maybeLoadUserId(event.player.userId);
         }
-        if (game.players.length === 3) {
-            this.store.dispatch(AppendChat({
-                room: "lobby",
-                message: {
-                    date: new Date(),
-                    userId: undefined,
-                    message: "Game started! $gameUrl=" + event.gameId,
-                    generated: true,
-                }
-            }));
+    }
+    private onStartGame = (event: StartGameEvent) => {
+        const game = this.store.getState().games[event.gameId];
+        this.store.dispatch(UpdateLobbyGame({
+            gameId: event.gameId,
+            lobbyGame:  {
+                ...game,
+                startedAt: new Date(),
+            }
+        }));
+        for (const player of [event.north, event.east, event.south, event.west]) {
+            this.maybeLoadUserId(player);
         }
+        this.store.dispatch(AppendChat({
+            room: "lobby",
+            message: {
+                date: new Date(),
+                userId: undefined,
+                message: "Game started between $0, $1, $2, and $3! $4",
+                generated: true,
+                substitutions: [
+                    { type: "user", userId: event.north },
+                    { type: "user", userId: event.east },
+                    { type: "user", userId: event.south },
+                    { type: "user", userId: event.west },
+                    { type: "game", gameId: event.gameId },
+                ],
+            }
+        }));
     }
     private onLeaveGameEvent = (event: LeaveGameEvent) => {
         const game = this.store.getState().games[event.gameId];
@@ -179,6 +227,7 @@ export class LobbySubscriber {
                 userId: event.userId,
                 message: event.message,
                 generated: false,
+                substitutions: [],
             }
         }));
         this.maybeLoadUserId(event.userId);

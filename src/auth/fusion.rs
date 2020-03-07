@@ -36,7 +36,7 @@ pub async fn exchange_code(http_client: &Client, code: &str) -> ExternalUser {
     } = serde_json::from_slice::<Jwt>(&jwt).unwrap();
     ExternalUser {
         name: preferred_username,
-        realm: "google".to_string(),
+        realm: "fusion".to_string(),
         external_id: sub,
     }
 }
