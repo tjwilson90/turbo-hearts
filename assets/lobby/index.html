@@ -1,28 +1,17 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Turbo Hearts</title>
-    <script type="text/javascript" src="/assets/lobby.js"></script>
-    <link href="/assets/favicon.ico" rel="shortcut icon" type="image/x-icon" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+  <title>play.anti.run</title>
+  <link rel="stylesheet" href="/assets/lobby/index.css" />
+  <link rel="shortcut icon" href="/assets/favicon.ico" type="image/x-icon" />
 </head>
+
 <body>
-    <form id="new-game">
-        <label><input type="radio" name="rules" id="classic" value="classic" checked />Classic</label>
-        <label><input type="radio" name="rules" id="blind" value="blind">Blind</label>
-        <label><input type="radio" name="rules" id="bridge" value="bridge">Bridge</label>
-        <label><input type="radio" name="rules" id="blind-bridge" value="blind_bridge">Blind Bridge</label>
-        <label><input type="radio" name="rules" id="chain" value="chain">Chain</label>
-        <label><input type="radio" name="rules" id="blind-chain" value="blind_chain">Blind Chain</label>
-        <button type="submit">New Game</button>
-    </form>
-    <div>
-        <h1>Players</h1>
-        <ul id="players"></ul>
-    </div>
-    <div>
-        <h1>Games</h1>
-        <ul id="games"></ul>
-    </div>
+<div id="lobby"></div>
+<script src="/assets/lobby/index.js"></script>
+</div>
 </body>
 </html>

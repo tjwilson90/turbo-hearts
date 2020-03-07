@@ -5,7 +5,8 @@ import { Nameplate } from "./Nameplate";
 import { TurboHeartsStage } from "../view/TurboHeartsStage";
 import { UserDispatcher } from "../state/UserDispatcher";
 import { ChatLog } from "./ChatLog";
-import { TrickLog } from "./TrickLog";
+import { PlayHistory } from "./PlayHistory";
+import { ScoreTable } from "./ScoreTable";
 import { ChatInput } from "./ChatInput";
 import { Action, TurboHearts, emptyStateSnapshot } from "../game/stateSnapshot";
 import { Card, Pass } from "../types";
@@ -73,7 +74,10 @@ class GameAppInternal extends React.Component<GameApp.Props, GameApp.State> {
           )}
         </div>
         <div className="sidebar">
-          <TrickLog />
+          <div className="game-data">
+            <PlayHistory />
+            <ScoreTable />
+          </div>
           <ChatLog />
           <ChatInput onChat={this.handleChat} />
         </div>
@@ -103,6 +107,12 @@ class GameAppInternal extends React.Component<GameApp.Props, GameApp.State> {
     this.stage.on("action", action => {
       this.setState({ action });
     });
+  }
+
+  public componentDidUpdate(prevProps: GameApp.Props) {
+    if (prevProps.game.spectatorMode !== this.props.game.spectatorMode && this.props.game.spectatorMode) {
+      this.stage.enableSpectatorMode();
+    }
   }
 
   private handlePass = () => {

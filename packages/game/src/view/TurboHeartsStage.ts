@@ -138,6 +138,7 @@ export function getBottomSeat(state: TurboHearts.StateSnapshot, userId: string) 
 export class TurboHeartsStage {
   public app: PIXI.Application;
 
+  private spectatorMode = false;
   private replay = true;
 
   private background: PIXI.Sprite | undefined;
@@ -186,6 +187,11 @@ export class TurboHeartsStage {
     this.canvas.style.height = TABLE_SIZE + "px";
     this.loadCards();
   }
+
+  public enableSpectatorMode = () => {
+    console.log("SPECTATOR MODE SET");
+    this.spectatorMode = true;
+  };
 
   public endReplay = () => {
     this.replay = false;
@@ -255,6 +261,7 @@ export class TurboHeartsStage {
           this.app.loader.resources,
           this.createCard,
           () => this.cardContainer.sortChildren(),
+          this.spectatorMode,
           this.getBottomSeat(next),
           previous,
           next,
@@ -391,7 +398,7 @@ export class TurboHeartsStage {
   }
 
   private setActionInternal() {
-    if (this.actionToSet === undefined) {
+    if (this.spectatorMode || this.actionToSet === undefined) {
       return;
     }
     if (this.action === this.actionToSet.action && this.legalPlays === this.actionToSet.legalPlays) {
@@ -409,7 +416,7 @@ export class TurboHeartsStage {
   }
 
   private enableCardInteraction(legalPlays: Card[]) {
-    if (this.snapshot === undefined) {
+    if (this.spectatorMode || this.snapshot === undefined) {
       return;
     }
 

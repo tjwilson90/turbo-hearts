@@ -40,13 +40,21 @@ jobs:
       - name: Install pax
         run: cargo install pax
 
-      - name: Yarn install
+      - name: Yarn install (game)
         run: yarn install
         working-directory: packages/game
 
-      - name: Yarn build
-        run: yarn build
+      - name: Yarn build (game)
+        run: NODE_ENV=production yarn build
         working-directory: packages/game
+
+      - name: Yarn install (lobby)
+        run: yarn install
+        working-directory: packages/lobby
+
+      - name: Yarn build (lobby)
+        run: NODE_ENV=production yarn build
+        working-directory: packages/lobby
 
       - name: Install musl
         run: sudo apt-get install musl-tools

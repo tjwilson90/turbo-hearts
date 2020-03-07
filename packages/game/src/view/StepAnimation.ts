@@ -48,6 +48,7 @@ export class StepAnimation implements Animation {
     private cardTextures: PIXI.IResourceDictionary,
     private cardCreator: (card: Card, hidden: boolean) => SpriteCard,
     private zSort: () => void,
+    private spectatorMode: boolean,
     private bottomSeat: Seat,
     private previous: TurboHearts.StateSnapshot,
     private next: TurboHearts.StateSnapshot,
@@ -188,8 +189,10 @@ export class StepAnimation implements Animation {
       cardsToMove = spriteCardsOf(fromPlayer.sprites.hand, event.cards);
       removeAll(fromPlayer.sprites.hand, cardsToMove);
       pushAll(fromPlayer.sprites.limbo, cardsToMove);
-      for (const card of cardsToMove) {
-        card.sprite.texture = this.cardTextures["BACK"].texture;
+      if (!this.spectatorMode) {
+        for (const card of cardsToMove) {
+          card.sprite.texture = this.cardTextures["BACK"].texture;
+        }
       }
     }
     const layout = LIMBO_POSITIONS_FOR_BOTTOM_SEAT[this.bottomSeat][event.from][this.next.pass];
