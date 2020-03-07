@@ -71,10 +71,11 @@ class ChatLogInternal extends React.Component<ChatLog.Props> {
     let result;
     let last = 0;
     const chunks = [];
+    let i = 0;
     while ((result = cardRegex.exec(message.message))) {
       const sub = message.message.substring(last, result.index);
       chunks.push(sub);
-      chunks.push(<NiceCardRun cardRun={result[0]} />);
+      chunks.push(<NiceCardRun key={i++} cardRun={result[0]} />);
       last = result.index + result[0].length;
     }
     chunks.push(message.message.substring(last));
