@@ -28,7 +28,9 @@ class ScoreTableInternal extends React.Component<ScoreTable.Props> {
           <thead>
             <tr>
               {POSITION_FOR_BOTTOM_SEAT[this.props.bottomSeat].map(position => (
-                <th title={this.props[position]?.name ?? "loading..."}>{nameToInitials(this.props[position])}</th>
+                <th key={position} title={this.props[position]?.name ?? "loading..."}>
+                  {nameToInitials(this.props[position])}
+                </th>
               ))}
             </tr>
           </thead>
