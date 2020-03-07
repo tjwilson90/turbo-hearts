@@ -67,11 +67,13 @@ function unrustify(event: any): LobbyEvent {
 export class TurboHeartsLobbyEventSource {
     private eventSource: EventSource | undefined;
     private emitter = new EventEmitter();
+    private connectionOpenedSuccessfully = false;
 
     public connect() {
         this.eventSource = new EventSource(`/lobby/subscribe`);
         this.eventSource.addEventListener("message", this.handleEvent);
-        this.eventSource.addEventListener("error", this.panic);
+        this.eventSource.addEventListener("error", this.handleDisconnect);
+        this.eventSource.addEventListener("open", this.handleOpen);
     }
 
     public on<K extends LobbyEvent>(event: K["type"], fn: (event: K) => void) {
@@ -98,10 +100,20 @@ export class TurboHeartsLobbyEventSource {
         this.emitter.emit(rawEvent.type, rawEvent);
     };
 
-    private panic = () => {
-        document.cookie = "AUTH_TOKEN=; expires = Thu, 01 Jan 1970 00:00:00 GMT";
-        document.cookie = "USER_ID=; expires = Thu, 01 Jan 1970 00:00:00 GMT";
-        document.cookie = "USER_NAME=; expires = Thu, 01 Jan 1970 00:00:00 GMT";
-        location.reload();
+    private handleOpen = () => {
+        this.connectionOpenedSuccessfully = true;
+    }
+
+    private handleDisconnect = () => {
+        if (!this.connectionOpenedSuccessfully) {
+            document.cookie = "AUTH_TOKEN=; expires = Thu, 01 Jan 1970 00:00:00 GMT";
+            document.cookie = "USER_ID=; expires = Thu, 01 Jan 1970 00:00:00 GMT";
+            document.cookie = "USER_NAME=; expires = Thu, 01 Jan 1970 00:00:00 GMT";
+            location.reload();
+        } else {
+            this.eventSource!.close();
+            this.connectionOpenedSuccessfully = false;
+            setTimeout(this.connect, 1000);
+        }
     }
 }
