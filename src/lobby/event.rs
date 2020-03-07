@@ -1,7 +1,7 @@
 use crate::{
     game::id::GameId,
     lobby::{LobbyChat, LobbyGame},
-    player::PlayerWithOptions,
+    player::{Player, PlayerWithOptions},
     seed::Seed,
     types::Event,
     user::UserId,
@@ -32,14 +32,14 @@ pub enum LobbyEvent {
     },
     StartGame {
         game_id: GameId,
-        north: UserId,
-        east: UserId,
-        south: UserId,
-        west: UserId,
+        north: Player,
+        east: Player,
+        south: Player,
+        west: Player,
     },
     LeaveGame {
         game_id: GameId,
-        user_id: UserId,
+        player: Player,
     },
     FinishGame {
         game_id: GameId,
