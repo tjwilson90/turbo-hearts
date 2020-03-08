@@ -67,14 +67,14 @@ impl Bot {
     pub async fn run(
         mut self,
         games: Games,
-        mut rx: UnboundedReceiver<GameEvent>,
+        mut rx: UnboundedReceiver<(GameEvent, usize)>,
         delay: Option<Gamma<f32>>,
     ) -> Result<(), CardsError> {
         let mut action = None;
         loop {
             loop {
                 match rx.try_recv() {
-                    Ok(event) => {
+                    Ok((event, _)) => {
                         action = self.handle(event);
                     }
                     Err(TryRecvError::Empty) => break,
@@ -108,7 +108,7 @@ impl Bot {
                 None => {}
             }
             match rx.recv().await {
-                Some(event) => {
+                Some((event, _)) => {
                     action = self.handle(event);
                 }
                 None => return Ok(()),

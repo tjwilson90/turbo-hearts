@@ -1,16 +1,19 @@
 use crate::{
     auth,
     bot::Strategy,
-    endpoint,
     game::{id::GameId, Games},
-    lobby::Lobby,
+    lobby::{event::LobbyEvent, Lobby},
     player::{Player, PlayerWithOptions},
     seat::Seat,
     types::ChargingRules,
     user::UserId,
 };
 use serde::Deserialize;
-use warp::{sse, Filter, Rejection, Reply};
+use tokio::{
+    stream::{Stream, StreamExt},
+    sync::mpsc::UnboundedReceiver,
+};
+use warp::{sse, sse::ServerSentEvent, Filter, Rejection, Reply};
 
 pub fn router(
     lobby: infallible!(Lobby),
@@ -43,7 +46,19 @@ fn html() -> reply!() {
 fn subscribe(lobby: infallible!(Lobby), user_id: rejection!(UserId)) -> reply!() {
     async fn handle(lobby: Lobby, user_id: UserId) -> Result<impl Reply, Rejection> {
         let rx = lobby.subscribe(user_id).await?;
-        Ok(sse::reply(endpoint::as_stream(rx)))
+        Ok(sse::reply(stream(rx)))
+    }
+
+    fn stream(
+        rx: UnboundedReceiver<LobbyEvent>,
+    ) -> impl Stream<Item = Result<impl ServerSentEvent, warp::Error>> {
+        rx.map(|event| {
+            Ok(if event.is_ping() {
+                sse::comment(String::new()).into_a()
+            } else {
+                sse::json(event).into_b()
+            })
+        })
     }
 
     warp::path!("subscribe")
