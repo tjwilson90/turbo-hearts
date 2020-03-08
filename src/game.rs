@@ -4,7 +4,12 @@ use crate::{
     cards::Cards,
     db::Database,
     error::CardsError,
-    game::{event::GameEvent, id::GameId, phase::GamePhase, state::GameState},
+    game::{
+        event::{GameEvent, Sender},
+        id::GameId,
+        phase::GamePhase,
+        state::GameState,
+    },
     player::{Player, PlayerWithOptions},
     seat::Seat,
     seed::Seed,
@@ -21,11 +26,7 @@ use std::{
     sync::Arc,
 };
 use tokio::{
-    sync::{
-        mpsc,
-        mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender},
-        Mutex,
-    },
+    sync::{mpsc, mpsc::UnboundedReceiver, Mutex},
     task,
 };
 
@@ -112,6 +113,7 @@ impl Games {
     fn run_bot(&self, game_id: GameId, seat: Seat, player: Player, game: &mut Game) {
         if let Player::Bot { user_id, strategy } = player {
             let (tx, rx) = mpsc::unbounded_channel();
+            let tx = Sender::new(tx, None);
             task::spawn(Bot::new(game_id, user_id, strategy).run(self.clone(), rx, self.bot_delay));
             self.replay_events(&game, &tx, Some(seat));
             game.bots.push((seat, tx));
@@ -199,8 +201,10 @@ impl Games {
         &self,
         game_id: GameId,
         user_id: UserId,
-    ) -> Result<UnboundedReceiver<GameEvent>, CardsError> {
-        let (tx, rx) = unbounded_channel();
+        last_event_id: Option<usize>,
+    ) -> Result<UnboundedReceiver<(GameEvent, usize)>, CardsError> {
+        let (tx, rx) = mpsc::unbounded_channel();
+        let tx = Sender::new(tx, last_event_id);
         self.with_game(game_id, |game| {
             let seat = game.seat(user_id);
             let mut subscribers = game
@@ -211,9 +215,9 @@ impl Games {
             if subscribers.insert(user_id) {
                 game.broadcast(&GameEvent::JoinGame { user_id });
             }
-            game.subscribers.push((user_id, tx.clone()));
             self.replay_events(&game, &tx, seat);
-            tx.send(GameEvent::EndReplay { subscribers }).unwrap();
+            tx.send(GameEvent::EndReplay { subscribers });
+            game.subscribers.push((user_id, tx));
             Ok(())
         })
         .await?;
@@ -221,11 +225,11 @@ impl Games {
         Ok(rx)
     }
 
-    fn replay_events(&self, game: &Game, tx: &UnboundedSender<GameEvent>, seat: Option<Seat>) {
+    fn replay_events(&self, game: &Game, tx: &Sender, seat: Option<Seat>) {
         let mut copy = Game::new();
         for event in &game.events {
             copy.apply(event, |g, e| {
-                tx.send(e.redact(seat, g.state.rules)).unwrap();
+                tx.send(e.redact(seat, g.state.rules));
             });
         }
     }
@@ -514,8 +518,8 @@ impl Games {
 #[derive(Debug)]
 struct Game {
     events: Vec<GameEvent>,
-    subscribers: Vec<(UserId, UnboundedSender<GameEvent>)>,
-    bots: Vec<(Seat, UnboundedSender<GameEvent>)>,
+    subscribers: Vec<(UserId, Sender)>,
+    bots: Vec<(Seat, Sender)>,
     pre_pass_hand: [Cards; 4],
     post_pass_hand: [Cards; 4],
     state: GameState,
@@ -550,7 +554,7 @@ impl Game {
         let mut disconnects = HashSet::new();
         self.subscribers.retain(|(user_id, tx)| {
             let seat = seat(players, *user_id);
-            if tx.send(event.redact(seat, rules)).is_ok() {
+            if tx.send(event.redact(seat, rules)) {
                 true
             } else {
                 disconnects.insert(*user_id);
@@ -566,7 +570,7 @@ impl Game {
             }
         }
         for (seat, bot) in &self.bots {
-            bot.send(event.redact(Some(*seat), rules)).unwrap();
+            bot.send(event.redact(Some(*seat), rules));
         }
     }
 

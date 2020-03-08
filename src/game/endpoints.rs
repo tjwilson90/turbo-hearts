@@ -2,14 +2,17 @@ use crate::{
     auth,
     card::Card,
     cards::Cards,
-    endpoint,
-    game::{id::GameId, Games},
+    game::{event::GameEvent, id::GameId, Games},
     lobby::Lobby,
     seat::Seat,
     user::UserId,
 };
 use serde::Deserialize;
-use warp::{sse, Filter, Rejection, Reply};
+use tokio::{
+    stream::{Stream, StreamExt},
+    sync::mpsc::UnboundedReceiver,
+};
+use warp::{sse, sse::ServerSentEvent, Filter, Rejection, Reply};
 
 pub fn router(
     lobby: infallible!(Lobby),
@@ -44,15 +47,31 @@ fn subscribe(games: infallible!(Games), user_id: rejection!(UserId)) -> reply!()
         game_id: GameId,
         games: Games,
         user_id: UserId,
+        last_event_id: Option<usize>,
     ) -> Result<impl Reply, Rejection> {
-        let rx = games.subscribe(game_id, user_id).await?;
-        Ok(sse::reply(endpoint::as_stream(rx)))
+        let rx = games.subscribe(game_id, user_id, last_event_id).await?;
+        Ok(sse::reply(stream(rx)))
+    }
+
+    fn stream(
+        rx: UnboundedReceiver<(GameEvent, usize)>,
+    ) -> impl Stream<Item = Result<impl ServerSentEvent, warp::Error>> {
+        rx.map(|(event, id)| {
+            if event.is_ping() {
+                return Ok(sse::comment(String::new()).into_a());
+            }
+            if event.is_stable() {
+                return Ok((sse::json(event), sse::id(id)).into_a().into_b());
+            }
+            Ok(sse::json(event).into_b().into_b())
+        })
     }
 
     warp::path!("subscribe" / GameId)
         .and(warp::get())
         .and(games)
         .and(user_id)
+        .and(warp::sse::last_event_id())
         .and_then(handle)
 }
 
