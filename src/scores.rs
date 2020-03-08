@@ -152,6 +152,7 @@ fn read_games(mut rows: Rows<'_>) -> Result<Vec<CompleteGame>, rusqlite::Error> 
             }
         }
     }
+    games.sort_by_key(|game| -game.completed_time);
     Ok(games)
 }
 
