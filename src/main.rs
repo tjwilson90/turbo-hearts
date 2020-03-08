@@ -28,6 +28,7 @@ mod game;
 mod lobby;
 mod player;
 mod rank;
+mod scores;
 mod seat;
 mod seed;
 mod sql_types;
@@ -63,10 +64,11 @@ async fn main() -> Result<(), CardsError> {
     let bot_delay = Gamma::new(2.0, 1.0).unwrap();
     let lobby = Lobby::new(db.clone())?;
     let games = Games::new(db.clone(), Some(bot_delay));
-    let users = Users::new(db);
+    let users = Users::new(db.clone());
     let http_client = Client::new();
     start_background_pings(lobby.clone(), games.clone());
 
+    let db = warp::any().map(move || db.clone());
     let lobby = warp::any().map(move || lobby.clone());
     let games = warp::any().map(move || games.clone());
     let users = warp::any().map(move || users.clone());
@@ -82,6 +84,7 @@ async fn main() -> Result<(), CardsError> {
         .or(lobby::endpoints::router(lobby, games, user_id))
         .or(auth::endpoints::router(users.clone(), http_client))
         .or(endpoint::users(users))
+        .or(scores::scores(db))
         .with(
             warp::cors()
                 .allow_any_origin()
