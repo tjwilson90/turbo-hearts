@@ -1,5 +1,5 @@
 use crate::{
-    bot::{duck::Duck, gottatry::GottaTry, random::Random},
+    bot::{duck::Duck, gottatry::GottaTry, heuristic::Heuristic, random::Random},
     card::Card,
     cards::Cards,
     error::CardsError,
@@ -19,6 +19,7 @@ use tokio::{
 
 mod duck;
 mod gottatry;
+mod heuristic;
 mod random;
 
 pub struct Bot {
@@ -34,6 +35,7 @@ pub struct Bot {
 pub enum Strategy {
     Duck,
     GottaTry,
+    Heuristic,
     Random,
 }
 
@@ -49,6 +51,7 @@ impl Bot {
         let algorithm: Box<dyn Algorithm + Send + Sync> = match strategy {
             Strategy::Duck => Box::new(Duck::new()),
             Strategy::GottaTry => Box::new(GottaTry::new()),
+            Strategy::Heuristic => Box::new(Heuristic::new()),
             Strategy::Random => Box::new(Random::new()),
         };
         Self {
