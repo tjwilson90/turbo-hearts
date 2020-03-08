@@ -34,8 +34,8 @@ CREATE TABLE IF NOT EXISTS game (
     completed_time INTEGER,
     PRIMARY KEY (game_id)
 ) WITHOUT ROWID;
-CREATE INDEX IF NOT EXISTS idx_game_started ON game(game_id) WHERE started_time IS NULL;
 CREATE INDEX IF NOT EXISTS idx_game_completed ON game(game_id) WHERE completed_time IS NULL;
+CREATE INDEX IF NOT EXISTS idx_game_completed_time ON game(completed_time) WHERE completed_time IS NOT NULL;
 
 CREATE TABLE IF NOT EXISTS game_player (
     game_id TEXT NOT NULL,
