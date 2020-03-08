@@ -41,18 +41,22 @@ class LeagueScoresInternal extends React.PureComponent<LeagueScores.Props> {
         return (
             <div>
                 <table>
-                    <tr>
-                        <th>User</th>
-                        <th>Points</th>
-                        <th>Games</th>
-                    </tr>
-                    {leaderboard.map(entry => (
-                        <tr key={entry.userId}>
-                            <td>{this.renderUserName(entry.userId)}</td>
-                            <td>{entry.points}</td>
-                            <td>{entry.games}</td>
+                    <thead>
+                        <tr>
+                            <th>User</th>
+                            <th>Points</th>
+                            <th>Games</th>
                         </tr>
-                    ))}
+                    </thead>
+                    <tbody>
+                        {leaderboard.map(entry => (
+                            <tr key={entry.userId}>
+                                <td>{this.renderUserName(entry.userId)}</td>
+                                <td>{entry.points}</td>
+                                <td>{entry.games}</td>
+                            </tr>
+                        ))}
+                    </tbody>
                 </table>
             </div>
         );
@@ -68,7 +72,7 @@ class LeagueScoresInternal extends React.PureComponent<LeagueScores.Props> {
     }
 
     private renderGames(_allScores: GameScores[]) {
-        return <div>Future game list</div>;
+        return <div>Future recent game list</div>;
     }
 }
 

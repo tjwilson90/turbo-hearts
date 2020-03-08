@@ -22,7 +22,8 @@ export interface LeaderboardEntry {
 export function calculateScores(game: GameResult): GameScores {
     const handScores = [];
     for (const hand of game.hands) {
-        const chargeSet = new Set(hand.charges);
+        // TODO: fix with backend changes
+        const chargeSet = new Set(hand.charges.map(c => c[0]));
         const qsCharged = chargeSet.has("QS");
         const jdCharged = chargeSet.has("JD");
         const tcCharged = chargeSet.has("TC");
@@ -70,7 +71,8 @@ export function calculateScores(game: GameResult): GameScores {
             totals[player.userId].delta += hand[player.userId].delta;
         }
     }
-    return { totals, scores: handScores, userIds: game.players.map(p => p.userId) };
+    const finalResult = { totals, scores: handScores, userIds: game.players.map(p => p.userId) };
+    return finalResult;
 }
 
 export function calculateLeaderboard(scores: GameScores[]) {
