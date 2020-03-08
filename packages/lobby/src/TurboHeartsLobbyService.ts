@@ -1,6 +1,7 @@
-import { BotStrategy, Rules } from "./types";
+import { BotStrategy, Rules, GameResult } from "./types";
 
 export class TurboHeartsLobbyService {
+    private userNames: { [key: string]: string } = {};
     private requestWithBody(body: any): RequestInit {
         return {
             credentials: "include",
@@ -36,12 +37,71 @@ export class TurboHeartsLobbyService {
         return fetch(`/lobby/chat`, this.requestWithBody({ message }));
     }
 
+    public getRecentGames() {
+        return fetch(`/scores`, {
+            credentials: "include",
+            method: "GET",
+            headers: {
+                "Content-Type": "application/json"
+            }
+        })
+            .then(resp => resp.json())
+            .then((json: any[]) => {
+                const seenGameIds = new Set<string>();
+                const results: GameResult[] = [];
+                for (const game of json) {
+                    // TODO: remove when backend fixed
+                    if (seenGameIds.has(game.game_id)) {
+                        continue;
+                    }
+                    seenGameIds.add(game.game_id);
+                    results.push({
+                        gameId: game.game_id,
+                        time: game.completed_time,
+                        players: game.players.map((player: any) => ({
+                            userId: player.user_id
+                        })),
+                        hands: game.hands.map((hand: any) => ({
+                            charges: hand.charges,
+                            hearts: hand.hearts_won,
+                            qsWinnerId: hand.queen_winner,
+                            tcWinnerId: hand.ten_winner,
+                            jdWinnerId: hand.jack_winner
+                        }))
+                    });
+                }
+                return results;
+            });
+    }
+
     public getUser = async (userId: string) => {
-        const resp = await fetch(`/users`, this.requestWithBody({ ids: [userId] }));
+        return this.getUsers([userId]).then(users => users[userId]);
+    };
+
+    public getUsers = async (userIds: string[]) => {
+        const result: { [key: string]: string } = {};
+        const toRequest: string[] = [];
+        for (const userId of userIds) {
+            if (this.userNames[userId] !== undefined) {
+                result[userId] = this.userNames[userId];
+            } else {
+                toRequest.push(userId);
+            }
+        }
+        if (toRequest.length === 0) {
+            return result;
+        }
+        const resp = await fetch(`/users`, this.requestWithBody({ ids: toRequest }));
         const json = (await resp.json()) as { name: string; id: string }[];
         for (const item of json) {
-            return item.name;
+            result[item.id] = item.name;
+            this.userNames[item.id] = item.name;
         }
-        return "Unknown";
+        for (const userId of userIds) {
+            if (result[userId] === undefined) {
+                result[userId] = "Unknown";
+            }
+        }
+        return result;
     };
 }
