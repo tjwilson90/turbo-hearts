@@ -120,6 +120,20 @@ impl Cards {
     pub fn contains_all(self, other: Cards) -> bool {
         self == self | other
     }
+
+    pub fn above(self, card: Card) -> Self {
+        (self & card.suit().cards())
+            .into_iter()
+            .filter(|c| *c > card)
+            .collect()
+    }
+
+    pub fn below(self, card: Card) -> Self {
+        (self & card.suit().cards())
+            .into_iter()
+            .filter(|c| *c < card)
+            .collect()
+    }
 }
 
 impl Display for Cards {
