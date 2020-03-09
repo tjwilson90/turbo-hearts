@@ -40,6 +40,7 @@ class LeagueScoresInternal extends React.PureComponent<LeagueScores.Props> {
         leaderboard.sort((a, b) => b.points - a.points);
         return (
             <div>
+                <h3>Leaderboard</h3>
                 <table>
                     <thead>
                         <tr>
@@ -72,7 +73,31 @@ class LeagueScoresInternal extends React.PureComponent<LeagueScores.Props> {
     }
 
     private renderGames(_allScores: GameScores[]) {
-        return <div>Future recent game list</div>;
+        return (
+            <div className="welcome-notes">
+                <h3>Welcome</h3>
+                <p>Note two differences to WotC style Turbo Hearts:</p>
+                <ol>
+                    <li>A "game" is always 4 hands.</li>
+                    <li>
+                        We've modified the Keeper. It's colloquially known as the "Keep It Interesting". It works like
+                        so:
+                        <ul>
+                            <li>There's a round of charging.</li>
+                            <li>If there's a charge, then play proceeds as if it was a Keeper.</li>
+                            <li>If there isn't a charge, then all players pass three cards to the center.</li>
+                            <li>Each player receives three random cards from the center.</li>
+                            <li>There's another round of charging.</li>
+                            <li>Play proceeds regardless of whether there is a charge.</li>
+                        </ul>
+                    </li>
+                </ol>
+                <p>
+                    Also, if you add more than 4 players to a game and press Start, 4 players will be randomly chosen to
+                    play.
+                </p>
+            </div>
+        );
     }
 }
 
