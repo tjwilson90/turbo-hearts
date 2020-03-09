@@ -142,6 +142,16 @@ export class Snapshotter {
         break;
       }
 
+      case "claim": {
+        this.snapshots.push({
+          ...previous,
+          index: previous.index + 1,
+          event,
+          [event.seat]: withDeal(previous[event.seat], event.hand),
+        });
+        break;
+      }
+
       case "end_trick": {
         const winner = previous[event.winner];
         const allPlays = [

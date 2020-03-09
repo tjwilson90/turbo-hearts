@@ -94,8 +94,17 @@ export class StepAnimation implements Animation {
     const deckCards: SpriteCard[] = [];
     for (let i = 0; i < 4; i++) {
       const spriteCards = this[POSITION_ORDER[i]];
+      // Clear all areas that could contain cards, as claims can be accepted mid-game and mid-play.
       pushAll(deckCards, spriteCards.pile);
+      pushAll(deckCards, spriteCards.hand);
+      pushAll(deckCards, spriteCards.charged);
+      pushAll(deckCards, spriteCards.plays);
+      pushAll(deckCards, spriteCards.limbo);
       spriteCards.pile = [];
+      spriteCards.hand = [];
+      spriteCards.charged = [];
+      spriteCards.plays = [];
+      spriteCards.limbo = [];
     }
     if (deckCards.length === 0) {
       for (let i = 0; i < 52; i++) {

@@ -275,7 +275,7 @@ export class TurboHeartsStage {
     if (next.event.type === "charge_status" || next.event.type === "pass_status" || next.event.type === "play_status") {
       return noopAnimation();
     }
-    if (next.event.type === "sit") {
+    if (next.event.type === "sit" || next.event.type === "claim") {
       return this.snapAnimation();
     }
     throw new Error("");
