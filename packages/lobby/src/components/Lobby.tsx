@@ -54,6 +54,7 @@ function mapDispatchToProps(dispatch: Dispatch, ownProps: Lobby.OwnProps) {
 
 class LobbyInternal extends React.PureComponent<Lobby.Props> {
     private inputRef: HTMLTextAreaElement | null = null;
+    private scrollRef: HTMLDivElement | null = null;
 
     public render() {
         return (
@@ -75,7 +76,7 @@ class LobbyInternal extends React.PureComponent<Lobby.Props> {
                     </div>
                 </div>
                 <div className="message-list">
-                    <div className="list" onClick={this.focusTextInput}>
+                    <div className="list" onClick={this.focusTextInput} ref={el => (this.scrollRef = el)}>
                         {this.renderMessages()}
                     </div>
                     <div className="entry">{this.renderChatInput()}</div>
@@ -86,6 +87,12 @@ class LobbyInternal extends React.PureComponent<Lobby.Props> {
                 <div className="user-list">{this.renderUserList()}</div>
             </div>
         );
+    }
+
+    public componentDidUpdate(prevProps: Lobby.Props) {
+        if (prevProps.chat.messages.length !== this.props.chat.messages.length && this.scrollRef != null) {
+            this.scrollRef.scrollTop = this.scrollRef.scrollHeight;
+        }
     }
 
     private renderGamesList() {
