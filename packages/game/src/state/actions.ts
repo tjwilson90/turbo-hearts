@@ -1,7 +1,7 @@
 import { TypedAction } from "redoodle";
 import { User, ChatMessage } from "./types";
 import { Action, TurboHearts } from "../game/stateSnapshot";
-import { Seat, HandCompleteEventData } from "../types";
+import { Seat, HandCompleteEventData, ClaimEventData, AcceptClaimEventData, RejectClaimEventData } from "../types";
 
 export const SetGameUsers = TypedAction.define("setGameUsers")<{
   bottomSeat: Seat;
@@ -21,5 +21,7 @@ export const AppendChat = TypedAction.define("appendChat")<ChatMessage>();
 export const AppendTrick = TypedAction.define("appendTrick")<TurboHearts.Trick>();
 export const AppendHandScore = TypedAction.define("appendHandScore")<HandCompleteEventData>();
 export const SetLocalPass = TypedAction.define("setLocalPass")<TurboHearts.LocalPass | undefined>();
+export const UpdateClaims = TypedAction.define("updateClaims")<ClaimEventData | AcceptClaimEventData | RejectClaimEventData>();
+export const ResetClaims = TypedAction.defineWithoutPayload("resetClaims")();
 export const ResetTricks = TypedAction.defineWithoutPayload("resetTricks")();
 export const EnableSpectatorMode = TypedAction.defineWithoutPayload("enableSpectatorMode")();

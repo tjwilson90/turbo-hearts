@@ -639,7 +639,7 @@ rejected and who rejected the claim.
 {
   "type": "reject_claim",
   "claimer": "west",
-  "acceptor": "north"
+  "rejector": "north"
 }
 ```
 

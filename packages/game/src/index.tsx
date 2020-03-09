@@ -5,7 +5,7 @@ import { Provider } from "react-redux";
 import { createGameAppStore } from "./state/createStore";
 import { UserDispatcher } from "./state/UserDispatcher";
 import { GameApp } from "./ui/GameApp";
-import { SitEventData, ChatEvent, Seat, HandCompleteEventData } from "./types";
+import { SitEventData, ChatEvent, Seat, HandCompleteEventData, ClaimEventData, AcceptClaimEventData, RejectClaimEventData } from "./types";
 import {
   AppendChat,
   UpdateActions,
@@ -13,7 +13,9 @@ import {
   ResetTricks,
   AppendHandScore,
   EnableSpectatorMode,
-  SetLocalPass
+  SetLocalPass,
+  UpdateClaims,
+  ResetClaims
 } from "./state/actions";
 import { getBottomSeat } from "./view/TurboHeartsStage";
 
@@ -47,7 +49,17 @@ document.addEventListener("DOMContentLoaded", () => {
     userDispatcher.loadUsers([chat.userId]);
     store.dispatch(AppendChat(chat));
   });
+  ctx.eventSource.on("claim", (event: ClaimEventData) => {
+    store.dispatch(UpdateClaims(event));
+  });
+  ctx.eventSource.on("accept_claim", (event: AcceptClaimEventData) => {
+    store.dispatch(UpdateClaims(event));
+  });
+  ctx.eventSource.on("reject_claim", (event: RejectClaimEventData) => {
+    store.dispatch(UpdateClaims(event));
+  });
   ctx.eventSource.on("hand_complete", (scores: HandCompleteEventData) => {
+    store.dispatch(ResetClaims());
     store.dispatch(AppendHandScore(scores));
   });
   ctx.snapshotter.on("snapshot", snapshot => {

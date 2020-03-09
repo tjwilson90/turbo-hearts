@@ -11,6 +11,7 @@ import { ChatInput } from "./ChatInput";
 import { Action, TurboHearts, emptyStateSnapshot } from "../game/stateSnapshot";
 import { Card, Pass } from "../types";
 import { emptyArray } from "../util/array";
+import { ClaimResponse } from "./ClaimResponse";
 
 const directionText: { [P in Pass]: string } = {
   left: "left",
@@ -72,6 +73,10 @@ class GameAppInternal extends React.Component<GameApp.Props, GameApp.State> {
               <button onClick={this.handleCharge}>Charge</button>
             </div>
           )}
+          <ClaimResponse game={this.props.game} context={this.props.context} />
+          <div className="claim">
+            <button onClick={this.handleClaim}>Claim</button>
+          </div>
         </div>
         <div className="sidebar">
           <div className="game-data">
@@ -129,6 +134,10 @@ class GameAppInternal extends React.Component<GameApp.Props, GameApp.State> {
 
   private handleChat = (message: string) => {
     this.props.context.service.chat(message);
+  };
+
+  private handleClaim = () => {
+    this.props.context.service.claim();
   };
 }
 
