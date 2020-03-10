@@ -38,7 +38,7 @@ export class TurboHeartsLobbyService {
     }
 
     public getRecentGames() {
-        return fetch(`/scores`, {
+        return fetch(`/summary/leaderboard`, {
             credentials: "include",
             method: "GET",
             headers: {
@@ -47,14 +47,8 @@ export class TurboHeartsLobbyService {
         })
             .then(resp => resp.json())
             .then((json: any[]) => {
-                const seenGameIds = new Set<string>();
                 const results: GameResult[] = [];
                 for (const game of json) {
-                    // TODO: remove when backend fixed
-                    if (seenGameIds.has(game.game_id)) {
-                        continue;
-                    }
-                    seenGameIds.add(game.game_id);
                     results.push({
                         gameId: game.game_id,
                         time: game.completed_time,

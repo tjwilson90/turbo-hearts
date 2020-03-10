@@ -516,18 +516,18 @@ impl Games {
 }
 
 #[derive(Debug)]
-struct Game {
-    events: Vec<GameEvent>,
-    subscribers: Vec<(UserId, Sender)>,
-    bots: Vec<(Seat, Sender)>,
-    pre_pass_hand: [Cards; 4],
-    post_pass_hand: [Cards; 4],
-    state: GameState,
-    seed: [u8; 32],
+pub struct Game {
+    pub events: Vec<GameEvent>,
+    pub subscribers: Vec<(UserId, Sender)>,
+    pub bots: Vec<(Seat, Sender)>,
+    pub pre_pass_hand: [Cards; 4],
+    pub post_pass_hand: [Cards; 4],
+    pub state: GameState,
+    pub seed: [u8; 32],
 }
 
 impl Game {
-    fn new() -> Self {
+    pub fn new() -> Self {
         Self {
             events: Vec::new(),
             subscribers: Vec::new(),
@@ -587,7 +587,7 @@ impl Game {
         }
     }
 
-    fn apply<F>(&mut self, event: &GameEvent, mut broadcast: F)
+    pub fn apply<F>(&mut self, event: &GameEvent, mut broadcast: F)
     where
         F: FnMut(&mut Game, &GameEvent),
     {

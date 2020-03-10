@@ -2,11 +2,13 @@ use crate::{
     card::Card,
     cards::Cards,
     db::Database,
-    game::{id::GameId, state::GameState},
+    error::CardsError,
+    game::{event::GameEvent, id::GameId, state::GameState, Game},
     player::Player,
+    types::{ChargingRules, PassDirection},
     user::UserId,
 };
-use rusqlite::{Rows, NO_PARAMS};
+use rusqlite::{Rows, ToSql};
 use serde::{Deserialize, Serialize};
 use std::mem;
 use warp::{Filter, Rejection, Reply};
@@ -21,7 +23,7 @@ WITH ids AS
          AND      e.event_id = 0
          AND      g.completed_time IS NOT NULL
          AND      NOT e.event LIKE '%"type":"bot"%'
-         ORDER BY g.completed_time DESC limit 100)
+         ORDER BY g.completed_time DESC limit ?)
 SELECT   game_id,
          timestamp,
          event
@@ -45,7 +47,7 @@ WITH ids AS
                          FROM   game
                          WHERE  game_id = ?)
          AND      NOT e.event LIKE '%"type":"bot"%'
-         ORDER BY g.completed_time DESC limit 100)
+         ORDER BY g.completed_time DESC limit ?)
 SELECT   game_id,
          timestamp,
          event
@@ -71,24 +73,32 @@ struct CompleteHand {
     jack_winner: UserId,
 }
 
-pub fn scores(db: infallible!(Database)) -> reply!() {
+pub fn router(db: infallible!(Database)) -> reply!() {
+    warp::path("summary")
+        .and(leaderboard(db.clone()).or(hand(db)))
+        .boxed()
+}
+
+fn leaderboard(db: infallible!(Database)) -> reply!() {
     #[derive(Debug, Deserialize)]
     struct Request {
         game_id: Option<GameId>,
+        page_size: Option<u32>,
     }
 
     async fn handle(db: Database, request: Request) -> Result<impl Reply, Rejection> {
-        let Request { game_id } = request;
+        let Request { game_id, page_size } = request;
+        let page_size = page_size.unwrap_or(100);
         let games = db.run_read_only(|tx| {
             Ok(match game_id {
                 None => {
                     let mut stmt = tx.prepare(INITIAL_SCORES)?;
-                    let rows = stmt.query(NO_PARAMS)?;
+                    let rows = stmt.query(&[page_size])?;
                     read_games(rows)?
                 }
                 Some(game_id) => {
                     let mut stmt = tx.prepare(PAGED_SCORES)?;
-                    let rows = stmt.query(&[game_id])?;
+                    let rows = stmt.query::<&[&dyn ToSql]>(&[&game_id, &page_size])?;
                     read_games(rows)?
                 }
             })
@@ -96,7 +106,7 @@ pub fn scores(db: infallible!(Database)) -> reply!() {
         Ok(warp::reply::json(&games))
     }
 
-    warp::path!("scores")
+    warp::path!("leaderboard")
         .and(db)
         .and(warp::query())
         .and_then(handle)
@@ -163,4 +173,108 @@ fn winner_of(state: &GameState, card: Card) -> UserId {
         }
     }
     unreachable!()
+}
+
+fn hand(db: infallible!(Database)) -> reply!() {
+    #[derive(Debug, Deserialize)]
+    struct Request {
+        game_id: GameId,
+        hand: PassDirection,
+    }
+
+    #[derive(Debug, Serialize)]
+    struct Response {
+        north: Player,
+        east: Player,
+        south: Player,
+        west: Player,
+        rules: ChargingRules,
+        events: Vec<Event>,
+    }
+
+    #[derive(Debug, Serialize)]
+    struct Event {
+        timestamp: i64,
+        event: GameEvent,
+        synthetic_events: Vec<GameEvent>,
+    }
+
+    async fn handle(
+        game_id: GameId,
+        hand: PassDirection,
+        db: Database,
+    ) -> Result<impl Reply, Rejection> {
+        let reply = db.run_read_only(|tx| {
+            let mut stmt = tx.prepare(
+                "SELECT timestamp, event FROM event WHERE game_id = ? ORDER BY event_id",
+            )?;
+            let mut rows = stmt.query(&[game_id])?;
+            let mut game = Game::new();
+            let mut start = false;
+            let mut end = false;
+            let mut events = Vec::new();
+            while let Some(row) = rows.next()? {
+                let timestamp = row.get(0)?;
+                let event = row.get(1)?;
+                if !start {
+                    start = match event {
+                        GameEvent::Deal { pass, .. } if pass == hand => true,
+                        _ => false,
+                    }
+                }
+                let mut synthetic_events = Vec::new();
+                game.apply(&event, |_, e| {
+                    if start && !end {
+                        if e != &event {
+                            synthetic_events.push(e.clone());
+                        }
+                        if let GameEvent::HandComplete { .. } = e {
+                            end = true;
+                        }
+                    }
+                });
+                if start {
+                    events.push(Event {
+                        timestamp,
+                        event,
+                        synthetic_events,
+                    });
+                }
+                if end {
+                    break;
+                }
+            }
+            if !start {
+                Err(CardsError::UnknownHand(game_id, hand))
+            } else if !end {
+                Err(CardsError::IncompleteHand(game_id, hand))
+            } else {
+                if let GameEvent::Sit {
+                    north,
+                    east,
+                    south,
+                    west,
+                    rules,
+                    ..
+                } = &game.events[0]
+                {
+                    Ok(Response {
+                        north: *north,
+                        east: *east,
+                        south: *south,
+                        west: *west,
+                        rules: *rules,
+                        events,
+                    })
+                } else {
+                    panic!("first event must be a sit event");
+                }
+            }
+        })?;
+        Ok(warp::reply::json(&reply))
+    }
+
+    warp::path!("hand" / GameId / PassDirection)
+        .and(db)
+        .and_then(handle)
 }
