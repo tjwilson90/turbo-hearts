@@ -79,25 +79,10 @@ impl FromStr for PassDirection {
     }
 }
 
-pub enum RandomEvent {
-    Deal(PassDirection),
-    KeeperPass,
-}
-
-impl RandomEvent {
-    fn id(&self) -> u64 {
-        match self {
-            RandomEvent::Deal(PassDirection::Left) => 0,
-            RandomEvent::Deal(PassDirection::Right) => 1,
-            RandomEvent::Deal(PassDirection::Across) => 2,
-            RandomEvent::Deal(PassDirection::Keeper) => 3,
-            RandomEvent::KeeperPass => 4,
-        }
-    }
-
+impl PassDirection {
     pub fn rng(&self, seed: [u8; 32]) -> ChaCha20Rng {
         let mut rng = ChaCha20Rng::from_seed(seed);
-        rng.set_stream(self.id());
+        rng.set_stream(*self as u8 as u64);
         rng
     }
 }
