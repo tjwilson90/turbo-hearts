@@ -76,6 +76,9 @@ class LeagueScoresInternal extends React.PureComponent<LeagueScores.Props> {
         return (
             <div className="welcome-notes">
                 <h3>Welcome</h3>
+                <p className="announcement">
+                    Feel free to play anytime, but look for regular games at <b>noon</b> and <b>8:30pm</b> Pacific.
+                </p>
                 <p>Note two differences to WotC style Turbo Hearts:</p>
                 <ol>
                     <li>A "game" is always 4 hands.</li>
