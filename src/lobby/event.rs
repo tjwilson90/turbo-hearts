@@ -3,7 +3,6 @@ use crate::{
     lobby::{LobbyChat, LobbyGame},
     player::PlayerWithOptions,
     seed::Seed,
-    types::Event,
     user::UserId,
 };
 use serde::Serialize;
@@ -53,8 +52,8 @@ pub enum LobbyEvent {
     },
 }
 
-impl Event for LobbyEvent {
-    fn is_ping(&self) -> bool {
+impl LobbyEvent {
+    pub fn is_ping(&self) -> bool {
         match self {
             LobbyEvent::Ping => true,
             _ => false,

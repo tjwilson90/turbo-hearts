@@ -1,4 +1,4 @@
-import { LobbyPlayer } from "../types";
+import { LobbyPlayer, GameResult } from "../types";
 
 export interface LobbyGame {
     gameId: string;
@@ -38,7 +38,7 @@ export interface ChatState {
 }
 
 export interface ChatsState {
-    lobby: ChatState
+    lobby: ChatState;
 }
 
 export interface GamesState {
@@ -49,9 +49,14 @@ export interface UiState {
     hideOldGames: boolean;
 }
 
+export interface LeaguesState {
+    games: GameResult[];
+}
+
 export interface LobbyState {
     chats: ChatsState;
     games: GamesState;
     users: UsersState;
+    leagues: LeaguesState;
     ui: UiState;
 }

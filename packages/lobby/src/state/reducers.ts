@@ -1,11 +1,13 @@
 import { combineReducers, TypedReducer } from "redoodle";
-import { ChatsState, GamesState, UiState, UsersState } from "./types";
+import { ChatsState, GamesState, UiState, UsersState, LeaguesState } from "./types";
 import {
-    AppendChat, DeleteLobbyGame,
+    AppendChat,
+    DeleteLobbyGame,
     ToggleHideOldGames,
     UpdateChatUserIds,
     UpdateLobbyGame,
-    UpdateUserNames
+    UpdateUserNames,
+    SetLeagueGames
 } from "./actions";
 
 const usersReducer = TypedReducer.builder<UsersState>()
@@ -18,9 +20,9 @@ const usersReducer = TypedReducer.builder<UsersState>()
 const gamesReducer = TypedReducer.builder<GamesState>()
     .withHandler(UpdateLobbyGame.TYPE, (state, { gameId, lobbyGame }) => ({
         ...state,
-        [gameId]: lobbyGame,
+        [gameId]: lobbyGame
     }))
-    .withHandler(DeleteLobbyGame.TYPE, (state, { gameId}) => {
+    .withHandler(DeleteLobbyGame.TYPE, (state, { gameId }) => {
         const newState = { ...state };
         delete newState[gameId];
         return newState;
@@ -32,22 +34,29 @@ const chatsReducer = TypedReducer.builder<ChatsState>()
         ...state,
         [room]: {
             ...state[room],
-            messages: state[room].messages.concat([message]),
+            messages: state[room].messages.concat([message])
         }
     }))
     .withHandler(UpdateChatUserIds.TYPE, (state, { room, userIds }) => ({
         ...state,
         [room]: {
             ...state[room],
-            userIds,
+            userIds
         }
     }))
     .build();
 
 const uiReducer = TypedReducer.builder<UiState>()
-    .withHandler(ToggleHideOldGames.TYPE, (state) => ({
+    .withHandler(ToggleHideOldGames.TYPE, state => ({
         ...state,
-        hideOldGames: !state.hideOldGames,
+        hideOldGames: !state.hideOldGames
+    }))
+    .build();
+
+const leaguesReducer = TypedReducer.builder<LeaguesState>()
+    .withHandler(SetLeagueGames.TYPE, (state, games) => ({
+        ...state,
+        games
     }))
     .build();
 
@@ -56,4 +65,5 @@ export const rootReducer = combineReducers({
     users: usersReducer,
     games: gamesReducer,
     ui: uiReducer,
-})
+    leagues: leaguesReducer
+});
