@@ -28,11 +28,11 @@ mod game;
 mod lobby;
 mod player;
 mod rank;
-mod scores;
 mod seat;
 mod seed;
 mod sql_types;
 mod suit;
+mod summary;
 #[cfg(test)]
 mod test;
 mod types;
@@ -84,7 +84,7 @@ async fn main() -> Result<(), CardsError> {
         .or(lobby::endpoints::router(lobby, games, user_id))
         .or(auth::endpoints::router(users.clone(), http_client))
         .or(endpoint::users(users))
-        .or(scores::scores(db))
+        .or(summary::router(db))
         .with(
             warp::cors()
                 .allow_any_origin()

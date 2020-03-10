@@ -3,6 +3,7 @@ use crate::{
     cards::Cards,
     config::CONFIG,
     game::{id::GameId, phase::GamePhase},
+    types::PassDirection,
     user::UserId,
 };
 use http::{header, Response, StatusCode};
@@ -31,6 +32,8 @@ pub enum CardsError {
     IllegalAction(&'static str, GamePhase),
     #[error("{0} is not a legal pass, passes must have 3 cards")]
     IllegalPassSize(Cards),
+    #[error("The {1} hand in game {0} hasn't completed yet")]
+    IncompleteHand(GameId, PassDirection),
     #[error("{0} is not a member of game {1}")]
     InvalidPlayer(UserId, GameId),
     #[error("charged cards cannot be played on the first trick of their suit")]
@@ -69,6 +72,8 @@ pub enum CardsError {
     UnknownAuthToken(String),
     #[error("{0} is not a known game id")]
     UnknownGame(GameId),
+    #[error("Either {0} is not a known game id, or the {1} hand hasn't started yet")]
+    UnknownHand(GameId, PassDirection),
 }
 
 impl CardsError {

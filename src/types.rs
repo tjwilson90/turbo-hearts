@@ -1,9 +1,11 @@
 use rand::SeedableRng;
 use rand_chacha::ChaCha20Rng;
-use serde::{Deserialize, Serialize};
+use serde::{export::Formatter, Deserialize, Serialize};
 use std::{
+    convert::Infallible,
     fmt,
     fmt::{Debug, Display},
+    str::FromStr,
 };
 
 #[repr(u8)]
@@ -49,12 +51,32 @@ impl Display for ChargingRules {
 
 #[repr(u8)]
 #[serde(rename_all = "snake_case")]
-#[derive(Copy, Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Serialize, Deserialize)]
 pub enum PassDirection {
     Left,
     Right,
     Across,
     Keeper,
+}
+
+impl Display for PassDirection {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), fmt::Error> {
+        Debug::fmt(&self, f)
+    }
+}
+
+impl FromStr for PassDirection {
+    type Err = Infallible;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "left" => Ok(PassDirection::Left),
+            "right" => Ok(PassDirection::Right),
+            "across" => Ok(PassDirection::Across),
+            "keeper" => Ok(PassDirection::Keeper),
+            _ => panic!("Invalid pass direction {}", s),
+        }
+    }
 }
 
 pub enum RandomEvent {
