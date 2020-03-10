@@ -210,6 +210,7 @@ impl Bot {
                 Some(
                     if self.state.game.current_trick.is_empty()
                         && !self.state.game.claims.is_claiming(self.state.seat)
+                        && self.state.game.played.len() < 48
                         && must_claim(
                             self.state.post_pass_hand - self.state.game.played,
                             self.state.game.played,
