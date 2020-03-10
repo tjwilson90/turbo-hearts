@@ -1,15 +1,10 @@
 use crate::{
     auth,
-    types::Event,
     user::{User, UserId, Users},
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
-use tokio::{
-    stream::{Stream, StreamExt},
-    sync::mpsc::UnboundedReceiver,
-};
-use warp::{sse, sse::ServerSentEvent, Filter, Rejection, Reply};
+use warp::{Filter, Rejection, Reply};
 
 pub fn assets() -> reply!() {
     warp::path("assets")
@@ -40,19 +35,4 @@ pub fn users(users: infallible!(Users)) -> reply!() {
         .and(users)
         .and(warp::body::json())
         .and_then(handle)
-}
-
-pub fn as_stream<E>(
-    rx: UnboundedReceiver<E>,
-) -> impl Stream<Item = Result<impl ServerSentEvent, warp::Error>>
-where
-    E: Event + Serialize + Send + Sync + 'static,
-{
-    rx.map(|event| {
-        Ok(if event.is_ping() {
-            sse::comment(String::new()).into_a()
-        } else {
-            sse::json(event).into_b()
-        })
-    })
 }

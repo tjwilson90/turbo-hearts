@@ -1,14 +1,56 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
+  <head>
+    <meta charset="UTF-8" />
     <title>Turbo Hearts</title>
-</head>
-<body>
-    <ul>
-        <li><a href="/auth/fusion">Sign in with Fusion</a></li>
-        <li><a href="/auth/github">Sign in with Github</a></li>
-        <li><a href="/auth/google">Sign in with Google</a></li>
-    </ul>
-</body>
+    <style>
+      body {
+        background: #222831;
+        color: #eee;
+        font-family: Helvetica, sans-serif;
+      }
+
+      a {
+        color: #bbf;
+      }
+
+      a:visited {
+        color: #bbf;
+      }
+
+      .welcome {
+        margin-bottom: 30px;
+      }
+
+      .auth-sources {
+        display: flex;
+        flex-direction: column;
+      }
+
+      .auth-source {
+        margin-bottom: 30px;
+        display: flex;
+        flex-direction: column;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="welcome">
+      <code>❤️ play.anti.run</code>
+    </div>
+    <div class="auth-sources">
+      <div class="auth-source">
+        <a href="/auth/fusion">Sign in with Fusion</a>
+        <div>Simple user name and password authentication.</div>
+      </div>
+      <div class="auth-source">
+        <a href="/auth/github">Sign in with Github</a>
+        <div>Authenticate with GitHub. We don't collect any information.</div>
+      </div>
+      <div class="auth-source">
+        <a href="/auth/google">Sign in with Google</a>
+        <div>Authenticate with Google. We don't collect any information.</div>
+      </div>
+    </div>
+  </body>
 </html>

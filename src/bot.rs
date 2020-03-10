@@ -1,5 +1,5 @@
 use crate::{
-    bot::{duck::Duck, gottatry::GottaTry, random::Random},
+    bot::{duck::Duck, gottatry::GottaTry, heuristic::Heuristic, random::Random},
     card::Card,
     cards::Cards,
     error::CardsError,
@@ -21,6 +21,7 @@ use tokio::{
 
 mod duck;
 mod gottatry;
+mod heuristic;
 mod random;
 
 pub struct Bot {
@@ -36,6 +37,7 @@ pub struct Bot {
 pub enum Strategy {
     Duck,
     GottaTry,
+    Heuristic,
     Random,
 }
 
@@ -51,6 +53,7 @@ impl Bot {
         let algorithm: Box<dyn Algorithm + Send + Sync> = match strategy {
             Strategy::Duck => Box::new(Duck::new()),
             Strategy::GottaTry => Box::new(GottaTry::new()),
+            Strategy::Heuristic => Box::new(Heuristic::new()),
             Strategy::Random => Box::new(Random::new()),
         };
         Self {
@@ -69,14 +72,14 @@ impl Bot {
     pub async fn run(
         mut self,
         games: Games,
-        mut rx: UnboundedReceiver<GameEvent>,
+        mut rx: UnboundedReceiver<(GameEvent, usize)>,
         delay: Option<Gamma<f32>>,
     ) -> Result<(), CardsError> {
         let mut action = None;
         loop {
             loop {
                 match rx.try_recv() {
-                    Ok(event) => {
+                    Ok((event, _)) => {
                         action = self.handle(event);
                     }
                     Err(TryRecvError::Empty) => break,
@@ -117,7 +120,7 @@ impl Bot {
                 None => {}
             }
             match rx.recv().await {
-                Some(event) => {
+                Some((event, _)) => {
                     action = self.handle(event);
                 }
                 None => return Ok(()),

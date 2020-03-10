@@ -6,6 +6,7 @@ import { GameListItem } from "./GameListItem";
 import { Dispatch } from "redux";
 import { ToggleHideOldGames } from "../state/actions";
 import { MessageItem } from "./MessageItem";
+import { LeagueScores } from "./LeagueScores";
 
 export namespace Lobby {
     export interface OwnProps {
@@ -33,8 +34,8 @@ function mapStateToProps(state: LobbyState): Lobby.StoreProps {
         chat: state.chats.lobby,
         games: state.games,
         users: state.users,
-        hideOldGames: state.ui.hideOldGames,
-    }
+        hideOldGames: state.ui.hideOldGames
+    };
 }
 
 function mapDispatchToProps(dispatch: Dispatch, ownProps: Lobby.OwnProps) {
@@ -48,11 +49,12 @@ function mapDispatchToProps(dispatch: Dispatch, ownProps: Lobby.OwnProps) {
         onChat(msg: string): void {
             ownProps.service.chat(msg);
         }
-    }
+    };
 }
 
 class LobbyInternal extends React.PureComponent<Lobby.Props> {
     private inputRef: HTMLTextAreaElement | null = null;
+    private scrollRef: HTMLDivElement | null = null;
 
     public render() {
         return (
@@ -61,30 +63,36 @@ class LobbyInternal extends React.PureComponent<Lobby.Props> {
                     <div className="header">
                         <div className="game-list-item -selected">Lobby</div>
                     </div>
-                    <div className="list">
-                        {this.renderGamesList()}
-                    </div>
+                    <div className="list">{this.renderGamesList()}</div>
                     <div className="footer">
                         <div className="button-group">
-                            <div className="button" onClick={this.props.createNewGame}>New game</div>
-                            <div className="button" onClick={this.props.toggleHideOlderGames}>{this.props.hideOldGames
-                                ? "Show older games" : "Hide older games"}</div>
+                            <div className="button" onClick={this.props.createNewGame}>
+                                New game
+                            </div>
+                            <div className="button" onClick={this.props.toggleHideOlderGames}>
+                                {this.props.hideOldGames ? "Show older games" : "Hide older games"}
+                            </div>
                         </div>
                     </div>
                 </div>
                 <div className="message-list">
-                    <div className="list" onClick={this.focusTextInput}>
+                    <div className="list" onClick={this.focusTextInput} ref={el => (this.scrollRef = el)}>
                         {this.renderMessages()}
                     </div>
-                    <div className="entry">
-                        {this.renderChatInput()}
-                    </div>
+                    <div className="entry">{this.renderChatInput()}</div>
                 </div>
-                <div className="user-list">
-                    {this.renderUserList()}
+                <div className="league-scores">
+                    <LeagueScores />
                 </div>
+                <div className="user-list">{this.renderUserList()}</div>
             </div>
         );
+    }
+
+    public componentDidUpdate(prevProps: Lobby.Props) {
+        if (prevProps.chat.messages.length !== this.props.chat.messages.length && this.scrollRef != null) {
+            this.scrollRef.scrollTop = this.scrollRef.scrollHeight;
+        }
     }
 
     private renderGamesList() {
@@ -93,17 +101,14 @@ class LobbyInternal extends React.PureComponent<Lobby.Props> {
         sortedGames.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 
         if (this.props.hideOldGames) {
-            sortedGames = sortedGames
-                .filter(game => Date.now() - 1000 * 60 * 10 < game.updatedAt.getTime());
+            sortedGames = sortedGames.filter(game => Date.now() - 1000 * 60 * 10 < game.updatedAt.getTime());
         }
 
-        return sortedGames.map(game => <GameListItem game={game} service={this.props.service}/>);
+        return sortedGames.map(game => <GameListItem game={game} service={this.props.service} />);
     }
 
     private renderMessages() {
-        return this.props.chat.messages.map((message, index) =>
-            <MessageItem key={index} message={message}/>
-        );
+        return this.props.chat.messages.map((message, index) => <MessageItem key={index} message={message} />);
     }
 
     private renderChatInput() {
@@ -113,9 +118,9 @@ class LobbyInternal extends React.PureComponent<Lobby.Props> {
                 placeholder="Enter chat message..."
                 onKeyPress={this.handleKeyPress}
                 autoFocus={true}
-                ref={el => this.inputRef = el}
+                ref={el => (this.inputRef = el)}
             />
-        )
+        );
     }
 
     private renderUserList() {
@@ -138,14 +143,14 @@ class LobbyInternal extends React.PureComponent<Lobby.Props> {
             <div className="user-name-item" key={userId}>
                 {userName || userId}
             </div>
-        ))
+        ));
     }
 
     private focusTextInput = () => {
         if (this.inputRef != null) {
             this.inputRef.focus();
         }
-    }
+    };
 
     private handleKeyPress = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
         if (event.key === "Enter" && event.currentTarget.value.trim().length !== 0) {

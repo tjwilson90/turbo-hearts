@@ -79,7 +79,3 @@ impl RandomEvent {
         rng
     }
 }
-
-pub trait Event {
-    fn is_ping(&self) -> bool;
-}
