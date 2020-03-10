@@ -13,7 +13,7 @@ use crate::{
     player::{Player, PlayerWithOptions},
     seat::Seat,
     seed::Seed,
-    types::{PassDirection, RandomEvent},
+    types::PassDirection,
     user::UserId,
     util,
 };
@@ -273,7 +273,7 @@ impl Games {
                             - game.post_pass_hand[3]
                             | cards;
                         let mut passes = passes.into_iter().collect::<Vec<_>>();
-                        passes.shuffle(&mut RandomEvent::KeeperPass.rng(game.seed));
+                        passes.shuffle(&mut rand::thread_rng());
                         events.push(GameEvent::RecvPass {
                             to: Seat::North,
                             cards: passes[0..3].iter().cloned().collect(),
@@ -877,7 +877,7 @@ fn seat(players: [UserId; 4], user_id: UserId) -> Option<Seat> {
 }
 
 fn deal(seed: [u8; 32], pass: PassDirection) -> GameEvent {
-    let mut rng = RandomEvent::Deal(pass).rng(seed);
+    let mut rng = pass.rng(seed);
     let mut deck = Cards::ALL.into_iter().collect::<Vec<_>>();
     deck.shuffle(&mut rng);
     GameEvent::Deal {
