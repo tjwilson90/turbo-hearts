@@ -1,6 +1,6 @@
 import * as React from "react";
 import { Seat } from "../types";
-import { GameState, GameContext } from "../state/types";
+import { GameState, GameContext, ClaimStatus } from "../state/types";
 import { POSITIONS } from "../util/seatPositions";
 
 export namespace ClaimResponse {
@@ -19,31 +19,51 @@ export class ClaimResponse extends React.Component<ClaimResponse.Props> {
     if (claimsAwaitingResponse.length === 0) {
       return null;
     }
+    const activePlayerSeat = this.props.game.spectatorMode ? undefined : this.props.game.bottomSeat;
     const positions = POSITIONS[this.props.game.bottomSeat];
     return (
       <div className="claim-response">
-        {claimsAwaitingResponse.map(seat => [
-          <div key={seat}>
-            {this.props.game[positions[seat]]?.name ?? "loading..."} has claimed the rest of the tricks.
-          </div>,
-          <div key={seat + "accept"}>
-            {!this.props.game.spectatorMode && <button onClick={this.handleAccept(seat)}>Accept</button>}
-          </div>,
-          <div key={seat + "reject"}>
-            {!this.props.game.spectatorMode && <button onClick={this.handleReject(seat)}>Reject</button>}
-          </div>
-        ])}
+        {claimsAwaitingResponse.map(([seat, claimStatus]) => {
+          const currentUserMadeClaim = seat === activePlayerSeat;
+          const currentUserHasResponded = activePlayerSeat !== undefined && claimStatus[activePlayerSeat] === "ACCEPT";
+          return [
+            <div key={seat}>
+              {currentUserMadeClaim ? "You have claimed" : (this.props.game[positions[seat]]?.name ?? seat) + " has claimed"} the rest of the tricks.
+              <br />
+              {this.getAcceptCountText(claimStatus)}
+            </div>,
+            <div key={seat + "accept"}>
+              {!this.props.game.spectatorMode && !currentUserHasResponded && (
+                <button onClick={this.handleAccept(seat)}>Accept</button>
+              )}
+            </div>,
+            <div key={seat + "reject"}>
+              {!this.props.game.spectatorMode && !currentUserHasResponded && (
+                <button onClick={this.handleReject(seat)}>Reject</button>
+              )}
+            </div>
+          ];
+        })}
       </div>
     );
   }
 
-  private getClaimsAwaitingResponse(): Seat[] {
-    const activePlayerSeat = this.props.game.spectatorMode ? undefined : this.props.game.bottomSeat;
+  private getAcceptCountText(claimStatus: ClaimStatus): string {
+    const count = Object.entries(claimStatus).reduce((acc, entry) => (entry[1] ? acc + 1 : acc), 0) - 1; // -1: don't count the player who made the claim
+    if (count == 0) {
+      return "Waiting for responses...";
+    }
+    if (count == 1) {
+      return "1 player has accepted.";
+    }
+    return `${count} players have accepted.`;
+  }
+
+  private getClaimsAwaitingResponse(): [Seat, ClaimStatus][] {
     return Object.entries(this.props.game.claims)
-      .filter(([seat, claimStatus]) => seat !== activePlayerSeat && claimStatus !== undefined)
-      .filter(([_seat, claimStatus]) => activePlayerSeat !== undefined && claimStatus![activePlayerSeat] !== "ACCEPT")
+      .filter(([_seat, claimStatus]) => claimStatus !== undefined)
       .filter(([_seat, claimStatus]) => Object.entries(claimStatus!).every(([_key, value]) => value !== "REJECT"))
-      .map(([seat, _claimStatus]) => seat as Seat);
+      .map(([seat, claimStatus]) => [seat as Seat, claimStatus!]);
   }
 
   private handleAccept = (claimer: Seat) => () => {

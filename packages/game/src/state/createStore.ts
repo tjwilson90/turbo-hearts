@@ -97,7 +97,7 @@ const gameReducer = TypedReducer.builder<GameState>()
           claims: {
             ...state.claims,
             [claimUpdate.seat]: {
-              [claimUpdate.seat]: true,
+              [claimUpdate.seat]: "ACCEPT",
             },
           }
         };
