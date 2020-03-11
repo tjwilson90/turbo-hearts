@@ -75,7 +75,7 @@ class GameAppInternal extends React.Component<GameApp.Props, GameApp.State> {
           )}
           <ClaimResponse game={this.props.game} context={this.props.context} />
           <div className="claim">
-            <button onClick={this.handleClaim}>Claim</button>
+            <button disabled={!this.isLegalClaimPhase()} onClick={this.handleClaim}>Claim</button>
           </div>
         </div>
         <div className="sidebar">
@@ -118,6 +118,13 @@ class GameAppInternal extends React.Component<GameApp.Props, GameApp.State> {
     if (prevProps.game.spectatorMode !== this.props.game.spectatorMode && this.props.game.spectatorMode) {
       this.stage.enableSpectatorMode();
     }
+  }
+
+  private isLegalClaimPhase() {
+    if ([this.props.game.topAction, this.props.game.rightAction, this.props.game.bottomAction, this.props.game.leftAction].some(action => action === "charge" || action === "pass")) {
+      return false;
+    }
+    return true;
   }
 
   private handlePass = () => {
