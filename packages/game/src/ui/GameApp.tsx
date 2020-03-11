@@ -11,6 +11,7 @@ import { ChatInput } from "./ChatInput";
 import { Action, TurboHearts, emptyStateSnapshot } from "../game/stateSnapshot";
 import { Card, Pass } from "../types";
 import { emptyArray } from "../util/array";
+import { ClaimResponse } from "./ClaimResponse";
 
 const directionText: { [P in Pass]: string } = {
   left: "left",
@@ -72,6 +73,10 @@ class GameAppInternal extends React.Component<GameApp.Props, GameApp.State> {
               <button onClick={this.handleCharge}>Charge</button>
             </div>
           )}
+          <ClaimResponse game={this.props.game} context={this.props.context} />
+          <div className="claim">
+            <button disabled={!this.isLegalClaimPhase()} onClick={this.handleClaim}>Claim</button>
+          </div>
         </div>
         <div className="sidebar">
           <div className="game-data">
@@ -115,6 +120,13 @@ class GameAppInternal extends React.Component<GameApp.Props, GameApp.State> {
     }
   }
 
+  private isLegalClaimPhase() {
+    if ([this.props.game.topAction, this.props.game.rightAction, this.props.game.bottomAction, this.props.game.leftAction].some(action => action === "charge" || action === "pass")) {
+      return false;
+    }
+    return true;
+  }
+
   private handlePass = () => {
     if (this.state.picks.length === 3) {
       this.stage.setAction("none", emptyArray(), true);
@@ -129,6 +141,10 @@ class GameAppInternal extends React.Component<GameApp.Props, GameApp.State> {
 
   private handleChat = (message: string) => {
     this.props.context.service.chat(message);
+  };
+
+  private handleClaim = () => {
+    this.props.context.service.claim();
   };
 }
 

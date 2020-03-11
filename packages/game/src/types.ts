@@ -107,6 +107,24 @@ export interface EndTrickEventData {
   winner: Seat;
 }
 
+export interface ClaimEventData {
+  type: "claim";
+  seat: Seat;
+  hand: Card[];
+}
+
+export interface AcceptClaimEventData {
+  type: "accept_claim";
+  claimer: Seat;
+  acceptor: Seat;
+}
+
+export interface RejectClaimEventData {
+  type: "reject_claim";
+  claimer: Seat;
+  rejector: Seat;
+}
+
 export interface HandCompleteEventData {
   type: "hand_complete";
   northScore: number;
@@ -168,6 +186,9 @@ export type EventData =
   | PlayStatusEventData
   | PlayEventData
   | EndTrickEventData
+  | ClaimEventData
+  | AcceptClaimEventData
+  | RejectClaimEventData
   | HandCompleteEventData
   | GameCompleteEventData;
 

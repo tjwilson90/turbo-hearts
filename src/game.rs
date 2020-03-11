@@ -353,29 +353,14 @@ impl Games {
                 Some(seat) => {
                     game.verify_play(game_id, seat, card)?;
                     let mut events = vec![GameEvent::Play { seat, card }];
-                    if game.state.played | card == Cards::ALL {
-                        match game.state.phase {
-                            GamePhase::PlayLeft => {
-                                events.push(deal(game.seed, PassDirection::Right))
-                            }
-                            GamePhase::PlayRight => {
-                                events.push(deal(game.seed, PassDirection::Across))
-                            }
-                            GamePhase::PlayAcross => {
-                                events.push(deal(game.seed, PassDirection::Keeper))
-                            }
-                            _ => {}
-                        };
+                    let ends_hand = game.state.played | card == Cards::ALL;
+                    if ends_hand {
+                        game.add_deal_event(&mut events);
                     }
                     self.db.run_with_retry(|tx| {
                         persist_events(&tx, game_id, game.events.len(), &events)?;
-                        if game.state.played | card == Cards::ALL
-                            && game.state.phase == GamePhase::PlayKeeper
-                        {
-                            tx.execute::<&[&dyn ToSql]>(
-                                "UPDATE game SET completed_time = ? WHERE game_id = ?",
-                                &[&util::timestamp(), &game_id],
-                            )?;
+                        if ends_hand {
+                            game.finish_if_keeper(&tx, game_id)?;
                         }
                         Ok(())
                     })?;
@@ -428,21 +413,31 @@ impl Games {
         game_id: GameId,
         user_id: UserId,
         claimer: Seat,
-    ) -> Result<(), CardsError> {
+    ) -> Result<bool, CardsError> {
         let result = self
             .with_game(game_id, |game| match game.seat(user_id) {
                 None => Err(CardsError::InvalidPlayer(user_id, game_id)),
                 Some(seat) => {
                     game.verify_accept_claim(game_id, claimer, seat)?;
-                    let event = GameEvent::AcceptClaim {
+                    let mut events = vec![GameEvent::AcceptClaim {
                         claimer,
                         acceptor: seat,
-                    };
+                    }];
+                    let ends_hand = game.state.claims.will_successfully_claim(claimer, seat);
+                    if ends_hand {
+                        game.add_deal_event(&mut events);
+                    }
                     self.db.run_with_retry(|tx| {
-                        persist_events(&tx, game_id, game.events.len(), &[event.clone()])
+                        persist_events(&tx, game_id, game.events.len(), &events)?;
+                        if ends_hand {
+                            game.finish_if_keeper(&tx, game_id)?;
+                        }
+                        Ok(())
                     })?;
-                    game.apply(&event, |g, e| g.broadcast(e));
-                    Ok(())
+                    for event in events {
+                        game.apply(&event, |g, e| g.broadcast(e));
+                    }
+                    Ok(game.state.phase == GamePhase::Complete)
                 }
             })
             .await;
@@ -674,24 +669,36 @@ impl Game {
                     let play_status = self.play_status_event(self.state.next_player.unwrap());
                     broadcast(&mut *self, &play_status);
                 } else {
-                    let hand_complete = GameEvent::HandComplete {
-                        north_score: self.state.score(Seat::North),
-                        east_score: self.state.score(Seat::East),
-                        south_score: self.state.score(Seat::South),
-                        west_score: self.state.score(Seat::West),
-                    };
-                    broadcast(&mut *self, &hand_complete);
+                    self.finish_hand(broadcast);
                 }
-                if self.state.phase.is_complete() {
-                    let seed = if let GameEvent::Sit { seed, .. } = &self.events[0] {
-                        seed.clone()
-                    } else {
-                        panic!("First event must be a sit event");
-                    };
-                    broadcast(&mut *self, &GameEvent::GameComplete { seed });
+            }
+            GameEvent::AcceptClaim { claimer, .. } => {
+                if self.state.claims.successfully_claimed(*claimer) {
+                    self.finish_hand(broadcast);
                 }
             }
             _ => {}
+        }
+    }
+
+    fn finish_hand<F>(&mut self, mut broadcast: F)
+    where
+        F: FnMut(&mut Game, &GameEvent),
+    {
+        let hand_complete = GameEvent::HandComplete {
+            north_score: self.state.score(Seat::North),
+            east_score: self.state.score(Seat::East),
+            south_score: self.state.score(Seat::South),
+            west_score: self.state.score(Seat::West),
+        };
+        broadcast(&mut *self, &hand_complete);
+        if self.state.phase.is_complete() {
+            let seed = if let GameEvent::Sit { seed, .. } = &self.events[0] {
+                seed.clone()
+            } else {
+                panic!("First event must be a sit event");
+            };
+            broadcast(&mut *self, &GameEvent::GameComplete { seed });
         }
     }
 
@@ -864,6 +871,25 @@ impl Game {
         }
         if !self.state.claims.is_claiming(claimer) {
             return Err(CardsError::NotClaiming(self.state.players[claimer.idx()]));
+        }
+        Ok(())
+    }
+
+    fn add_deal_event(&self, events: &mut Vec<GameEvent>) {
+        match self.state.phase {
+            GamePhase::PlayLeft => events.push(deal(self.seed, PassDirection::Right)),
+            GamePhase::PlayRight => events.push(deal(self.seed, PassDirection::Across)),
+            GamePhase::PlayAcross => events.push(deal(self.seed, PassDirection::Keeper)),
+            _ => {}
+        };
+    }
+
+    fn finish_if_keeper(&self, tx: &Transaction, game_id: GameId) -> Result<(), CardsError> {
+        if self.state.phase == GamePhase::PlayKeeper {
+            tx.execute::<&[&dyn ToSql]>(
+                "UPDATE game SET completed_time = ? WHERE game_id = ?",
+                &[&util::timestamp(), &game_id],
+            )?;
         }
         Ok(())
     }

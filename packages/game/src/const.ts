@@ -31,6 +31,7 @@ export const FAST_ANIMATION_DELAY = ANIMATION_DELAY / 2;
 export const FASTER_ANIMATION_DURATION = ANIMATION_DURATION / 4;
 
 export const TRICK_COLLECTION_PAUSE = 1000;
+export const CLAIM_PAUSE = 75;
 
 export const TABLE_CARD_UNDERLAP = -0.1;
 export const CARD_MARGIN = 10;

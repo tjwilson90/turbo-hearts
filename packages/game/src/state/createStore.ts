@@ -13,7 +13,9 @@ import {
   ResetTricks,
   AppendHandScore,
   EnableSpectatorMode,
-  SetLocalPass
+  SetLocalPass,
+  UpdateClaims,
+  ResetClaims
 } from "./actions";
 import { ChatState, GameAppState, GameContext, GameState, User, UsersState } from "./types";
 import { TrickTracker } from "../game/TrickTracker";
@@ -87,6 +89,48 @@ const gameReducer = TypedReducer.builder<GameState>()
       localPass
     };
   })
+  .withHandler(UpdateClaims.TYPE, (state, claimUpdate) => {
+    switch (claimUpdate.type) {
+      case "claim":
+        return {
+          ...state,
+          claims: {
+            ...state.claims,
+            [claimUpdate.seat]: {
+              [claimUpdate.seat]: true,
+            },
+          }
+        };
+      case "accept_claim":
+        return {
+          ...state,
+          claims: {
+            ...state.claims,
+            [claimUpdate.claimer]: {
+              ...state.claims[claimUpdate.claimer],
+              [claimUpdate.acceptor]: "ACCEPT",
+            },
+          }
+        };
+      case "reject_claim":
+        return {
+          ...state,
+          claims: {
+            ...state.claims,
+            [claimUpdate.claimer]: {
+              ...state.claims[claimUpdate.claimer],
+              [claimUpdate.rejector]: "REJECT",
+            },
+          }
+        };
+      }
+  })
+  .withHandler(ResetClaims.TYPE, (state) => {
+    return {
+      ...state,
+      claims: {},
+    }
+  })
   .withHandler(AppendHandScore.TYPE, (state, handScores) => {
     return {
       ...state,
@@ -133,7 +177,8 @@ const INITIAL_STATE: GameAppState = {
     leftAction: "none",
     scores: [],
     tricks: [],
-    localPass: undefined
+    localPass: undefined,
+    claims: {},
   },
   context: {
     eventSource: undefined!,
