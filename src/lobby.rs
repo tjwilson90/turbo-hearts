@@ -44,6 +44,27 @@ impl Lobby {
         inner.broadcast(LobbyEvent::Ping);
     }
 
+    pub async fn delete_stale_games(&self) -> Result<(), CardsError> {
+        self.db.run_with_retry(|tx| {
+            let rows = tx.execute(
+                "DELETE FROM game WHERE started_time IS NULL AND last_updated_time < ?",
+                &[util::timestamp() - 24 * 60 * 60 * 1000],
+            )?;
+            if rows > 0 {
+                info!("Deleted {} stale game(s)", rows);
+            }
+            let rows = tx.execute(
+                "DELETE FROM game_player WHERE game_id NOT IN (SELECT game_id FROM game)",
+                NO_PARAMS,
+            )?;
+            if rows > 0 {
+                info!("Deleted {} stale game player(s)", rows);
+            }
+            Ok(())
+        })?;
+        Ok(())
+    }
+
     pub async fn subscribe(
         &self,
         user_id: UserId,
@@ -113,8 +134,8 @@ impl Lobby {
         let joined = self.db.run_with_retry(|tx| {
             if insert_player(&tx, game_id, &player)? {
                 tx.execute::<&[&dyn ToSql]>(
-                    "UPDATE game SET last_updated_time = ?, last_updated_by = ?",
-                    &[&util::timestamp(), &player.player.user_id()],
+                    "UPDATE game SET last_updated_time = ?, last_updated_by = ? WHERE game_id = ?",
+                    &[&util::timestamp(), &player.player.user_id(), &game_id],
                 )?;
                 Ok(true)
             } else {
@@ -145,8 +166,8 @@ impl Lobby {
         let left = self.db.run_with_retry(|tx| {
             if remove_player(&tx, game_id, user_id)? {
                 tx.execute::<&[&dyn ToSql]>(
-                    "UPDATE game SET last_updated_time = ?, last_updated_by = ?",
-                    &[&util::timestamp(), &user_id],
+                    "UPDATE game SET last_updated_time = ?, last_updated_by = ? WHERE game_id = ?",
+                    &[&util::timestamp(), &user_id, &game_id],
                 )?;
                 Ok(true)
             } else {
@@ -248,9 +269,9 @@ fn load_games(tx: &Transaction) -> Result<HashMap<GameId, LobbyGame>, CardsError
     let mut stmt = tx.prepare(
         "SELECT game_id, seed, created_time, created_by,
                 last_updated_time, last_updated_by, started_time
-                FROM game WHERE completed_time IS NULL",
+                FROM game WHERE completed_time IS NULL AND last_updated_time > ?",
     )?;
-    let mut rows = stmt.query(NO_PARAMS)?;
+    let mut rows = stmt.query(&[util::timestamp() - 8 * 60 * 60 * 1000])?;
     while let Some(row) = rows.next()? {
         games.insert(
             row.get(0)?,
@@ -286,6 +307,7 @@ fn load_games(tx: &Transaction) -> Result<HashMap<GameId, LobbyGame>, CardsError
             });
         }
     }
+    games.retain(|_, game| !game.players.is_empty());
     Ok(games)
 }
 
