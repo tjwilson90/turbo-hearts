@@ -7,6 +7,7 @@ use crate::{
     user::{UserId, Users},
 };
 use http::header;
+use log::error;
 use r2d2_sqlite::SqliteConnectionManager;
 use rand_distr::Gamma;
 use reqwest::Client;
@@ -47,6 +48,17 @@ pub fn user_id(users: infallible!(Users)) -> rejection!(UserId) {
     users.and(warp::cookie("AUTH_TOKEN")).and_then(handle)
 }
 
+pub fn start_stale_game_cleanup(lobby: Lobby) {
+    tokio::task::spawn(async move {
+        let mut stream = time::interval(Duration::from_secs(60 * 60));
+        while let Some(_) = stream.next().await {
+            if let Err(e) = lobby.delete_stale_games().await {
+                error!("Failed to delete stale games {}", e);
+            }
+        }
+    });
+}
+
 pub fn start_background_pings(lobby: Lobby, games: Games) {
     tokio::task::spawn(async move {
         let mut stream = time::interval(Duration::from_secs(15));
@@ -66,6 +78,7 @@ async fn main() -> Result<(), CardsError> {
     let games = Games::new(db.clone(), Some(bot_delay));
     let users = Users::new(db.clone());
     let http_client = Client::new();
+    start_stale_game_cleanup(lobby.clone());
     start_background_pings(lobby.clone(), games.clone());
 
     let db = warp::any().map(move || db.clone());
