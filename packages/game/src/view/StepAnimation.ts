@@ -17,7 +17,8 @@ import {
   Z_HAND_CARDS,
   Z_PILE_CARDS,
   Z_PLAYED_CARDS,
-  Z_TRANSIT_CARDS
+  Z_TRANSIT_CARDS,
+  CLAIM_PAUSE
 } from "../const";
 import { sortCards, sortSpriteCards } from "../game/sortCards";
 import { TurboHearts } from "../game/stateSnapshot";
@@ -31,7 +32,8 @@ import {
   ReceivePassEventData,
   Seat,
   SendPassEventData,
-  SpriteCard
+  SpriteCard,
+  ClaimEventData
 } from "../types";
 import { pushAll, removeAll } from "../util/array";
 import { groupCards } from "../util/groupCards";
@@ -74,6 +76,9 @@ export class StepAnimation implements Animation {
         break;
       case "play":
         this.animatePlay();
+        break;
+      case "claim":
+        this.animateClaim(this.next.event);
         break;
       case "end_trick":
         this.animateEndTrick(this.next.event.winner);
@@ -315,6 +320,34 @@ export class StepAnimation implements Animation {
         break;
       }
     }
+  }
+
+  private async animateClaim(event: ClaimEventData) {
+    if (event.seat === this.bottomSeat) {
+      this.finished = true;
+      return;
+    }
+
+    const player = this.getSpritePlayer(event.seat);
+    const cardSet = new Set(event.hand);
+    for (const spriteCard of player.sprites.charged) {
+      cardSet.delete(spriteCard.card);
+    }
+    if (cardSet.size !== player.sprites.hand.length) {
+      throw new Error("illegal hand size for claim");
+    }
+    const cards = Array.from(cardSet.values());
+    sortCards(cards);
+    for (let i = 0; i < cards.length; i++) {
+      const spriteCard = player.sprites.hand[i];
+      const card = cards[i];
+      spriteCard.card = card;
+      spriteCard.hidden = false;
+      spriteCard.sprite.texture = this.cardTextures[card].texture;
+      // Do it with style
+      await sleep(CLAIM_PAUSE);
+    }
+    this.finished = true;
   }
 
   private async animateEndTrick(winner: Seat) {
