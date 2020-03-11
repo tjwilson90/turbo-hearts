@@ -255,6 +255,7 @@ export class TurboHeartsStage {
         next.event.type === "end_trick" ||
         next.event.type === "recv_pass" ||
         next.event.type === "send_pass" ||
+        next.event.type === "claim" ||
         next.event.type === "charge"
       ) {
         return new StepAnimation(
@@ -275,7 +276,7 @@ export class TurboHeartsStage {
     if (next.event.type === "charge_status" || next.event.type === "pass_status" || next.event.type === "play_status") {
       return noopAnimation();
     }
-    if (next.event.type === "sit" || next.event.type === "claim") {
+    if (next.event.type === "sit") {
       return this.snapAnimation();
     }
     throw new Error("");
