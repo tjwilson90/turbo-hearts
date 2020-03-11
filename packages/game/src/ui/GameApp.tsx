@@ -74,9 +74,9 @@ class GameAppInternal extends React.Component<GameApp.Props, GameApp.State> {
             </div>
           )}
           <ClaimResponse game={this.props.game} context={this.props.context} />
-          <div className="claim">
-            <button disabled={!this.isLegalClaimPhase()} onClick={this.handleClaim}>Claim</button>
-          </div>
+          {!this.props.game.spectatorMode && <div className="claim">
+            <button disabled={!this.isClaimButtonEnabled()} onClick={this.handleClaim}>Claim</button>
+          </div>}
         </div>
         <div className="sidebar">
           <div className="game-data">
@@ -120,11 +120,17 @@ class GameAppInternal extends React.Component<GameApp.Props, GameApp.State> {
     }
   }
 
-  private isLegalClaimPhase() {
+  private isClaimButtonEnabled() {
+    // Only allow claims during play, not during pass or charge.
     if ([this.props.game.topAction, this.props.game.rightAction, this.props.game.bottomAction, this.props.game.leftAction].some(action => action === "charge" || action === "pass")) {
       return false;
     }
-    return true;
+    // Only allow claim if current player does not have an active claim (one that has not yet been rejected).
+    const currentPlayerClaimStatus = this.props.game.claims[this.props.game.bottomSeat];
+    if (currentPlayerClaimStatus === undefined) {
+      return true;
+    }
+    return !Object.entries(currentPlayerClaimStatus!).every(([_key, value]) => value !== "REJECT");
   }
 
   private handlePass = () => {
