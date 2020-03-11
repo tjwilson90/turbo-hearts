@@ -18,7 +18,8 @@ import {
   Z_PILE_CARDS,
   Z_PLAYED_CARDS,
   Z_TRANSIT_CARDS,
-  CLAIM_PAUSE
+  CLAIM_PAUSE,
+  TABLE_SIZE
 } from "../const";
 import { sortCards, sortSpriteCards } from "../game/sortCards";
 import { TurboHearts } from "../game/stateSnapshot";
@@ -83,6 +84,9 @@ export class StepAnimation implements Animation {
       case "end_trick":
         this.animateEndTrick(this.next.event.winner);
         break;
+      case "game_complete":
+        this.animateGameComplete();
+        break;
       default:
         this.finished = true;
         return;
@@ -93,9 +97,7 @@ export class StepAnimation implements Animation {
     return this.finished;
   }
 
-  private animateDeal() {
-    const backTexture = this.cardTextures["BACK"].texture;
-    const seatOrder = SEAT_ORDER_FOR_BOTTOM_SEAT[this.bottomSeat];
+  private collectDeckCards() {
     const deckCards: SpriteCard[] = [];
     for (let i = 0; i < 4; i++) {
       const spriteCards = this[POSITION_ORDER[i]];
@@ -111,6 +113,13 @@ export class StepAnimation implements Animation {
       spriteCards.plays = [];
       spriteCards.limbo = [];
     }
+    return deckCards;
+  }
+
+  private animateDeal() {
+    const backTexture = this.cardTextures["BACK"].texture;
+    const seatOrder = SEAT_ORDER_FOR_BOTTOM_SEAT[this.bottomSeat];
+    const deckCards: SpriteCard[] = this.collectDeckCards();
     if (deckCards.length === 0) {
       for (let i = 0; i < 52; i++) {
         deckCards.push(this.cardCreator("BACK", false));
@@ -386,6 +395,55 @@ export class StepAnimation implements Animation {
       0
     );
     this.finished = true;
+  }
+
+  private async animateGameComplete() {
+    const deckCards: SpriteCard[] = this.collectDeckCards();
+    const dests = [];
+    if (deckCards.length === 52) {
+      const spread = TABLE_SIZE / 2;
+      for (let i = 0; i < 52; i++) {
+        deckCards[i].hidden = false;
+        deckCards[i].card = "BACK";
+        const x = Math.random() * spread - spread / 2 + TABLE_CENTER_X;
+        const y = Math.random() * spread - spread / 2 + TABLE_CENTER_Y;
+        dests.push({ x, y, rotation: -Math.PI + Math.random() * 2 * Math.PI });
+      }
+    } else {
+      throw new Error("illegal deck");
+    }
+    let delay = 0;
+    let started = 0;
+    let finished = 0;
+    const animateDeckCard = (card: SpriteCard, dest: Point & { rotation: number }) => {
+      card.sprite.zIndex = Z_DEALING_CARDS - started;
+
+      new TWEEN.Tween(card.sprite.position)
+        .to(dest, FAST_ANIMATION_DURATION)
+        .easing(TWEEN.Easing.Quadratic.Out)
+        .delay(delay)
+        .onStart(() => {
+          card.sprite.filters = [CARD_DROP_SHADOW];
+        })
+        .onComplete(() => {
+          finished++;
+          if (finished === started) {
+            this.finished = true;
+          }
+        })
+        .start();
+      new TWEEN.Tween(card.sprite)
+        .to({ rotation: dest.rotation }, FAST_ANIMATION_DURATION)
+        .delay(delay)
+        .easing(TWEEN.Easing.Quadratic.Out)
+        .start();
+      started++;
+      delay += FAST_ANIMATION_DELAY;
+    };
+
+    for (let i = 0; i < 52; i++) {
+      animateDeckCard(deckCards[i], dests[i]);
+    }
   }
 
   private animateCards(

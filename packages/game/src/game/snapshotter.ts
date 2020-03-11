@@ -147,7 +147,7 @@ export class Snapshotter {
           ...previous,
           index: previous.index + 1,
           event,
-          [event.seat]: withDeal(previous[event.seat], event.hand),
+          [event.seat]: withDeal(previous[event.seat], event.hand)
         });
         break;
       }
@@ -170,6 +170,19 @@ export class Snapshotter {
           east: withEndTrick(previous.east, allPlays, previous.east === winner),
           south: withEndTrick(previous.south, allPlays, previous.south === winner),
           west: withEndTrick(previous.west, allPlays, previous.west === winner)
+        });
+        break;
+      }
+
+      case "game_complete": {
+        this.snapshots.push({
+          ...previous,
+          index: previous.index + 1,
+          event,
+          north: withDeal(previous.north, []),
+          east: withDeal(previous.east, []),
+          south: withDeal(previous.south, []),
+          west: withDeal(previous.west, [])
         });
         break;
       }
