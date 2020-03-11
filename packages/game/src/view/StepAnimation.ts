@@ -405,6 +405,7 @@ export class StepAnimation implements Animation {
       for (let i = 0; i < 52; i++) {
         deckCards[i].hidden = false;
         deckCards[i].card = "BACK";
+        deckCards[i].sprite.texture = this.cardTextures["BACK"].texture;
         const x = Math.random() * spread - spread / 2 + TABLE_CENTER_X;
         const y = Math.random() * spread - spread / 2 + TABLE_CENTER_Y;
         dests.push({ x, y, rotation: -Math.PI + Math.random() * 2 * Math.PI });
