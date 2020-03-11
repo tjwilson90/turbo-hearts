@@ -256,7 +256,8 @@ export class TurboHeartsStage {
         next.event.type === "recv_pass" ||
         next.event.type === "send_pass" ||
         next.event.type === "claim" ||
-        next.event.type === "charge"
+        next.event.type === "charge" ||
+        next.event.type === "game_complete"
       ) {
         return new StepAnimation(
           this.app.loader.resources,
@@ -279,7 +280,8 @@ export class TurboHeartsStage {
     if (next.event.type === "sit") {
       return this.snapAnimation();
     }
-    throw new Error("");
+    console.warn("didn't handle event", next.event)
+    return noopAnimation();
   }
 
   private getBottomSeat(state: TurboHearts.StateSnapshot) {
