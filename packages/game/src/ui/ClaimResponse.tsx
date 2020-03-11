@@ -1,6 +1,6 @@
 import * as React from "react";
 import { Seat } from "../types";
-import { GameState, GameContext, ClaimStatus } from "../state/types";
+import { GameState, GameContext } from "../state/types";
 import { POSITIONS } from "../util/seatPositions";
 
 export namespace ClaimResponse {
