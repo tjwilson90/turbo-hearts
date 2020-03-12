@@ -20,6 +20,7 @@ import {
 import { ChatState, GameAppState, GameContext, GameState, User, UsersState } from "./types";
 import { TrickTracker } from "../game/TrickTracker";
 import { PassTracker } from "../game/PassTracker";
+import { GAME_BOT } from "../types";
 
 const chatReducer = TypedReducer.builder<ChatState>()
   .withHandler(AppendChat.TYPE, (state, msg) => {
@@ -97,8 +98,8 @@ const gameReducer = TypedReducer.builder<GameState>()
           claims: {
             ...state.claims,
             [claimUpdate.seat]: {
-              [claimUpdate.seat]: "ACCEPT",
-            },
+              [claimUpdate.seat]: "ACCEPT"
+            }
           }
         };
       case "accept_claim":
@@ -108,8 +109,8 @@ const gameReducer = TypedReducer.builder<GameState>()
             ...state.claims,
             [claimUpdate.claimer]: {
               ...state.claims[claimUpdate.claimer],
-              [claimUpdate.acceptor]: "ACCEPT",
-            },
+              [claimUpdate.acceptor]: "ACCEPT"
+            }
           }
         };
       case "reject_claim":
@@ -119,17 +120,17 @@ const gameReducer = TypedReducer.builder<GameState>()
             ...state.claims,
             [claimUpdate.claimer]: {
               ...state.claims[claimUpdate.claimer],
-              [claimUpdate.rejector]: "REJECT",
-            },
+              [claimUpdate.rejector]: "REJECT"
+            }
           }
         };
-      }
+    }
   })
-  .withHandler(ResetClaims.TYPE, (state) => {
+  .withHandler(ResetClaims.TYPE, state => {
     return {
       ...state,
-      claims: {},
-    }
+      claims: {}
+    };
   })
   .withHandler(AppendHandScore.TYPE, (state, handScores) => {
     return {
@@ -160,7 +161,9 @@ const INITIAL_STATE: GameAppState = {
     messages: []
   },
   users: {
-    users: {},
+    users: {
+      [GAME_BOT]: { userId: GAME_BOT, name: GAME_BOT }
+    },
     me: undefined!
   },
   game: {
@@ -178,7 +181,7 @@ const INITIAL_STATE: GameAppState = {
     scores: [],
     tricks: [],
     localPass: undefined,
-    claims: {},
+    claims: {}
   },
   context: {
     eventSource: undefined!,
