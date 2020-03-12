@@ -140,7 +140,7 @@ body {
     user-select: none;
   }
 
-.sidebar {
+  .sidebar {
     width: 256px;
     height: 768px;
     background: white;
@@ -261,6 +261,11 @@ body {
 
       .chat-message-container {
         margin-bottom: 5px;
+
+        &.game-bot {
+          font-style: italic;
+          color: gray;
+        }
 
         .chat-user {
           font-weight: bold;

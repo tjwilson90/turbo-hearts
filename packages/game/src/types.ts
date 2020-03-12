@@ -315,3 +315,5 @@ export const CARDS = [
   "KS",
   "AS"
 ];
+
+export const GAME_BOT = "game-bot";
