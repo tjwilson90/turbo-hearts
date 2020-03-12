@@ -210,7 +210,7 @@ export class TurboHeartsStage {
     if (player.action === "pass") {
       legalPlays = player.hand;
     } else if (player.action === "charge") {
-      legalPlays = CHARGEABLE_CARDS.filter(card => !player.charged.includes(card))
+      legalPlays = CHARGEABLE_CARDS;
     } else if (player.action === "play") {
       legalPlays = player.legalPlays;
     }
