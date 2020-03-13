@@ -422,6 +422,11 @@ export class TurboHeartsStage {
     if (this.spectatorMode || this.snapshot === undefined) {
       return;
     }
+    // Don't allow interaction with already charged cards.
+    if (this.action === "charge") {
+      const player = this.snapshot[getBottomSeat(this.snapshot, this.userId)];
+      legalPlays = legalPlays.filter(card => !player.charged.includes(card));
+    }
 
     const spriteCards = spriteCardsOf([...this.bottom.hand, ...this.bottom.charged], legalPlays);
     for (const card of spriteCards) {
