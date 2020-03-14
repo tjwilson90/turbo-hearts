@@ -133,7 +133,12 @@ impl Bot {
             "handle: game_id={}, user_id={}, event={:?}",
             self.game_id, self.user_id, event
         );
+        let phase = self.state.game.phase;
         self.state.game.apply(&event);
+        if phase.is_playing() && !self.state.game.phase.is_playing() {
+            self.state.pre_pass_hand = Cards::NONE;
+            self.state.post_pass_hand = Cards::NONE;
+        }
         match &event {
             GameEvent::Sit {
                 north,
@@ -188,8 +193,9 @@ impl Bot {
         self.algorithm.on_event(&self.state, &event);
 
         if self.state.game.phase.is_charging() {
-            if self.state.game.can_charge(self.state.seat)
-                && !self.state.game.done_charging[self.state.seat.idx()]
+            if !self.state.pre_pass_hand.is_empty()
+                && self.state.game.can_charge(self.state.seat)
+                && !self.state.game.done_with_phase[self.state.seat.idx()]
             {
                 Some(Action::Charge(self.algorithm.charge(&self.state)))
             } else {
@@ -197,7 +203,7 @@ impl Bot {
             }
         } else if self.state.game.phase.is_passing() {
             if !self.state.pre_pass_hand.is_empty()
-                && !self.state.game.sent_pass[self.state.seat.idx()]
+                && !self.state.game.done_with_phase[self.state.seat.idx()]
             {
                 Some(Action::Pass(self.algorithm.pass(&self.state)))
             } else {
@@ -205,7 +211,7 @@ impl Bot {
             }
         } else if self.state.game.phase.is_playing() {
             if (self.state.post_pass_hand - self.state.game.played).contains(Card::TwoClubs)
-                || Some(self.state.seat) == self.state.game.next_player
+                || Some(self.state.seat) == self.state.game.next_actor
             {
                 Some(
                     if self.state.game.current_trick.is_empty()
@@ -283,7 +289,7 @@ fn losers(suit: Suit, hand: Cards, state: &GameState) -> i8 {
     let mut legal_plays = if hand.len() == 1 || state.led_suits.contains_any(suit.cards()) {
         hand
     } else {
-        hand - state.charged_cards()
+        hand - state.all_charged()
     };
     let mut had_winner = false;
 

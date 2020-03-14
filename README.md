@@ -230,6 +230,9 @@ other active subscribers.
 
 Create a new game with the proposed charging rules and return its id. The actual charging rules
 will be selected randomly from the proposed rules of all players once the game has four players.
+The seed is an optional string that if present will be used to seed the rng that determines what
+hands are dealt. This can be used to replay a previous game, or to play the same hands
+simultaneously with more than four players.
 
 Request:
 ```json
@@ -394,7 +397,8 @@ When a chat message is sent to a game a `chat` event is sent to all subscribers.
 
 When a game starts, a `sit` event is be sent indicating where each player is sitting and what the
 charging rules are. The charging rules will be the rules proposed by the player in the `north`
-seat.
+seat. If the game was initially created with a chosen seed, that seed will also be returned.
+Otherwise a redacted seed will be returned.
 
 ```json
 {
@@ -403,7 +407,10 @@ seat.
   "east": {"type": "human", "user_id": "56da6b82-ff02-4c53-be8f-773dc2931df0"},
   "south": {"type": "human", "user_id": "c34f709e-97b4-4bce-946e-fafe0005276b"},
   "west": {"type": "bot", "user_id": "723fc477-75d3-4fef-a672-20ac6e54bdba", "algorithm": "random"},
-  "rules": "blind"
+  "rules": "blind",
+  "seed": {
+    "type": "redacted"
+  }
 }
 ```
 
@@ -642,7 +649,7 @@ rejected and who rejected the claim.
 }
 ```
 
-#### Hand Complete
+#### HandComplete
 
 A `hand_complete` event is sent after the last trick in a hand ends and includes the scores for all
 players in the hand. This event is sent for convenience; the information it imparts can be inferred
@@ -658,15 +665,20 @@ from other events.
 }
 ```
 
-#### Game Complete
+#### GameComplete
 
 A `game_complete` event is sent after all four hands are complete. The only events that can occur
-after this event are chat events. This event is sent for convenience; the information it imparts
-can be inferred from other events.
+after this event are chat events. This event will contain the unredacted seed that was used to
+generate the deals in the game. This seed can be used as a chosen seed in a future game to replay
+the same hands.
 
 ```json
 {
-  "type": "game_complete"
+  "type": "game_complete",
+  "seed": {
+    "type": "random",
+    "value": "a3839486-ce09-44fe-baa3-35115b93389f"
+  }
 }
 ```
 

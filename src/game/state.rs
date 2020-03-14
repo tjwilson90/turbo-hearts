@@ -1,8 +1,7 @@
 use crate::{
     card::Card,
     cards::Cards,
-    game::{claim::ClaimState, event::GameEvent, phase::GamePhase},
-    rank::Rank,
+    game::{claim::ClaimState, event::GameEvent, phase::GamePhase, trick::Trick},
     seat::Seat,
     types::ChargingRules,
     user::UserId,
@@ -13,18 +12,15 @@ pub struct GameState {
     pub players: [UserId; 4],
     pub rules: ChargingRules,
     pub phase: GamePhase,
-    pub sent_pass: [bool; 4],
-    pub received_pass: [bool; 4],
+    pub done_with_phase: [bool; 4],
     pub charge_count: usize,
     pub charged: [Cards; 4],
-    pub done_charging: [bool; 4],
-    pub next_charger: Option<Seat>,
+    pub next_actor: Option<Seat>,
     pub played: Cards,
     pub claims: ClaimState,
     pub won: [Cards; 4],
     pub led_suits: Cards,
-    pub next_player: Option<Seat>,
-    pub current_trick: Vec<Card>,
+    pub current_trick: Trick,
 }
 
 impl GameState {
@@ -33,46 +29,51 @@ impl GameState {
             players: [UserId::null(); 4],
             rules: ChargingRules::Classic,
             phase: GamePhase::PassLeft,
-            sent_pass: [false; 4],
-            received_pass: [false; 4],
+            done_with_phase: [false; 4],
             charge_count: 0,
             charged: [Cards::NONE; 4],
-            done_charging: [false; 4],
-            next_charger: None,
+            next_actor: None,
             played: Cards::NONE,
             claims: ClaimState::new(),
             won: [Cards::NONE; 4],
             led_suits: Cards::NONE,
-            next_player: None,
-            current_trick: Vec::with_capacity(8),
+            current_trick: Trick::new(),
         }
     }
 
-    pub fn charged_cards(&self) -> Cards {
+    pub fn all_charged(&self) -> Cards {
         self.charged.iter().cloned().collect()
+    }
+
+    pub fn all_done(&self) -> bool {
+        self.done_with_phase.iter().all(|b| *b)
+    }
+
+    pub fn all_won(&self) -> Cards {
+        self.won.iter().cloned().collect()
     }
 
     pub fn pass_status_event(&self) -> GameEvent {
         GameEvent::PassStatus {
-            north_done: self.sent_pass[Seat::North.idx()],
-            east_done: self.sent_pass[Seat::East.idx()],
-            south_done: self.sent_pass[Seat::South.idx()],
-            west_done: self.sent_pass[Seat::West.idx()],
+            north_done: self.done_with_phase[Seat::North.idx()],
+            east_done: self.done_with_phase[Seat::East.idx()],
+            south_done: self.done_with_phase[Seat::South.idx()],
+            west_done: self.done_with_phase[Seat::West.idx()],
         }
     }
 
     pub fn charge_status_event(&self) -> GameEvent {
         GameEvent::ChargeStatus {
-            next_charger: self.next_charger,
-            north_done: self.done_charging[Seat::North.idx()],
-            east_done: self.done_charging[Seat::East.idx()],
-            south_done: self.done_charging[Seat::South.idx()],
-            west_done: self.done_charging[Seat::West.idx()],
+            next_charger: self.next_actor,
+            north_done: self.done_with_phase[Seat::North.idx()],
+            east_done: self.done_with_phase[Seat::East.idx()],
+            south_done: self.done_with_phase[Seat::South.idx()],
+            west_done: self.done_with_phase[Seat::West.idx()],
         }
     }
 
     pub fn score(&self, seat: Seat) -> i16 {
-        let charged = self.charged_cards();
+        let charged = self.all_charged();
         let won = self.won[seat.idx()];
         let hearts = match (
             (won & Cards::HEARTS).len() as i16,
@@ -113,7 +114,7 @@ impl GameState {
     }
 
     pub fn can_charge(&self, seat: Seat) -> bool {
-        match self.next_charger {
+        match self.next_actor {
             Some(s) if s != seat => false,
             _ => true,
         }
@@ -138,11 +139,7 @@ impl GameState {
             GameEvent::Deal { .. } => {
                 self.charge_count = 0;
                 self.charged = [Cards::NONE; 4];
-                self.done_charging = [false; 4];
-                self.next_charger = self.phase.first_charger(self.rules);
-                self.sent_pass = [false; 4];
-                self.received_pass = [false; 4];
-                self.next_player = None;
+                self.next_actor = self.phase.first_charger(self.rules);
                 self.played = Cards::NONE;
                 self.claims = ClaimState::new();
                 self.won = [Cards::NONE; 4];
@@ -150,14 +147,13 @@ impl GameState {
                 self.current_trick.clear();
             }
             GameEvent::SendPass { from, .. } => {
-                self.sent_pass[from.idx()] = true;
+                self.done_with_phase[from.idx()] = true;
             }
-            GameEvent::RecvPass { to, .. } => {
-                self.received_pass[to.idx()] = true;
-                if self.received_pass.iter().all(|b| *b) {
+            GameEvent::RecvPass { .. } => {
+                if self.all_done() {
                     self.phase = self.phase.next(self.charge_count != 0);
-                    self.done_charging = [false, false, false, false];
-                    self.next_charger = self.phase.first_charger(self.rules);
+                    self.done_with_phase = [false; 4];
+                    self.next_actor = self.phase.first_charger(self.rules);
                 }
             }
             GameEvent::BlindCharge { seat, count } => {
@@ -183,22 +179,16 @@ impl GameState {
             GameEvent::Play { seat, card } => {
                 self.played |= *card;
                 self.current_trick.push(*card);
-                self.next_player = Some(seat.left());
-                if self.current_trick.len() == 8
-                    || self.played == Cards::ALL
-                    || (self.current_trick.len() == 4
-                        && !self
-                            .current_trick
-                            .contains(&self.current_trick[0].with_rank(Rank::Nine)))
-                {
-                    self.led_suits |= self.current_trick[0].suit().cards();
-                    let winning_seat = self.trick_winner();
-                    self.won[winning_seat.idx()] |=
-                        self.current_trick.iter().cloned().collect::<Cards>();
-                    self.next_player = Some(winning_seat);
+                self.next_actor = Some(seat.left());
+                if self.current_trick.is_complete() || self.played == Cards::ALL {
+                    self.led_suits |= self.current_trick.suit().cards();
+                    let winning_seat = self.current_trick.winning_seat(seat.left());
+                    self.won[winning_seat.idx()] |= self.current_trick.cards();
                     self.current_trick.clear();
+                    self.next_actor = Some(winning_seat);
                     if self.played == Cards::ALL {
                         self.phase = self.phase.next(self.charge_count != 0);
+                        self.done_with_phase = [false; 4];
                     }
                 }
             }
@@ -207,10 +197,12 @@ impl GameState {
             }
             GameEvent::AcceptClaim { claimer, acceptor } => {
                 if self.claims.accept(*claimer, *acceptor) {
-                    self.won[claimer.idx()] |=
-                        self.current_trick.iter().cloned().collect::<Cards>();
                     self.won[claimer.idx()] |= Cards::ALL - self.played;
+                    self.won[claimer.idx()] |= self.current_trick.cards();
+                    self.current_trick.clear();
                     self.phase = self.phase.next(self.charge_count != 0);
+                    self.done_with_phase = [false; 4];
+                    self.next_actor = None;
                 }
             }
             GameEvent::RejectClaim { claimer, .. } => {
@@ -220,43 +212,27 @@ impl GameState {
         }
     }
 
-    pub fn trick_winner(&self) -> Seat {
-        let suit = self.current_trick[0].suit();
-        let (index, _) = self
-            .current_trick
-            .iter()
-            .enumerate()
-            .filter(|(_, c)| c.suit() == suit)
-            .max_by_key(|(_, c)| **c)
-            .unwrap();
-        let next = self.next_player.unwrap();
-        match (self.current_trick.len() - index) % 4 {
-            0 => next,
-            1 => next.right(),
-            2 => next.across(),
-            _ => next.left(),
-        }
-    }
-
     fn charge(&mut self, seat: Seat, count: usize) {
-        if let Some(charger) = &mut self.next_charger {
+        if let Some(charger) = &mut self.next_actor {
             *charger = charger.left();
         }
         if count == 0 {
-            self.done_charging[seat.idx()] = true;
-            if self.done_charging.iter().all(|b| *b) {
+            self.done_with_phase[seat.idx()] = true;
+            if self.all_done() {
                 self.phase = self.phase.next(self.charge_count != 0);
+                self.done_with_phase = [false; 4];
+                self.next_actor = None;
             }
         } else {
-            self.done_charging.iter_mut().for_each(|b| *b = false);
-            self.done_charging[seat.idx()] = !self.rules.chain();
+            self.done_with_phase = [false; 4];
+            self.done_with_phase[seat.idx()] = !self.rules.chain();
         }
     }
 
     pub fn legal_plays(&self, cards: Cards) -> Cards {
         let mut plays = cards - self.played;
         // if this is the first trick
-        if self.current_trick.len() == self.played.len() {
+        if self.all_won().is_empty() {
             // if you have the two of clubs
             if plays.contains(Card::TwoClubs) {
                 // you must play it
@@ -282,7 +258,7 @@ impl GameState {
 
         // if this is not the first card in the trick
         if !self.current_trick.is_empty() {
-            let suit = self.current_trick[0].suit();
+            let suit = self.current_trick.suit();
 
             // and you have any cards in suit
             if suit.cards().contains_any(plays) {
@@ -295,7 +271,7 @@ impl GameState {
                     && plays.len() > 1
                 {
                     // you cannot play charged cards from the suit
-                    plays -= self.charged_cards();
+                    plays -= self.all_charged();
                 }
             }
 
@@ -310,7 +286,7 @@ impl GameState {
                 plays -= Cards::HEARTS;
             }
 
-            let unled_charges = self.charged_cards() - self.led_suits;
+            let unled_charges = self.all_charged() - self.led_suits;
             // if you have cards other than charged cards from unled suits
             if !unled_charges.contains_all(plays) {
                 // you must lead one of them
