@@ -176,7 +176,7 @@ export function withCharge(player: TurboHearts.Player, cards: Card[]) {
   }
   return {
     ...player,
-    charged: cards,
+    charged: [...player.charged, ...cards],
     hand
   };
 }
