@@ -155,7 +155,7 @@ impl Users {
         let mut uncached = HashSet::new();
         self.db.run_read_only(|tx| {
             let mut stmt =
-                tx.prepare("SELECT name, realm, external_id FROM user WHERE user_id = ?")?;
+                tx.prepare_cached("SELECT name, realm, external_id FROM user WHERE user_id = ?")?;
             for id in &ids {
                 let user = stmt
                     .query_row(&[id], |row| {

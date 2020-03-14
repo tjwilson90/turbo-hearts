@@ -37,21 +37,15 @@ impl Algorithm for Duck {
         if state.game.current_trick.is_empty() {
             return Random::new().play(state);
         }
-        let suit = state.game.current_trick[0].suit();
+        let suit = state.game.current_trick.suit();
         if !suit.cards().contains_any(cards) {
             return cards
                 .into_iter()
                 .max_by_key(|card| score(*card, state.post_pass_hand - state.game.played))
                 .unwrap();
         }
-        let winner = state
-            .game
-            .current_trick
-            .iter()
-            .filter(|card| card.suit() == suit)
-            .max()
-            .unwrap();
-        let duck = cards.into_iter().filter(|card| card < winner).max();
+        let winner = state.game.current_trick.winning_card();
+        let duck = cards.into_iter().filter(|card| *card < winner).max();
         match duck {
             Some(card) => card,
             _ => cards.into_iter().max().unwrap(),
