@@ -66,10 +66,6 @@ function cardRuns(cardRun: string) {
     cardRun = "JD";
   } else if (cardRun === "T") {
     cardRun = "TC";
-  } else if (cardRun === "QT") {
-    cardRun = "QSTC";
-  } else if (cardRun === "JT") {
-    cardRun = "JDTC";
   }
   const runs: string[] = [];
   let start = 0;
