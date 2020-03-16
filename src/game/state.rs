@@ -1,7 +1,9 @@
 use crate::{
     card::Card,
     cards::Cards,
-    game::{claim::ClaimState, event::GameEvent, phase::GamePhase, trick::Trick},
+    game::{
+        charge::ChargeState, claim::ClaimState, event::GameEvent, phase::GamePhase, trick::Trick,
+    },
     seat::Seat,
     types::ChargingRules,
     user::UserId,
@@ -9,18 +11,18 @@ use crate::{
 
 #[derive(Debug)]
 pub struct GameState {
-    pub players: [UserId; 4],
-    pub rules: ChargingRules,
-    pub phase: GamePhase,
-    pub done_with_phase: [bool; 4],
-    pub charge_count: usize,
-    pub charged: [Cards; 4],
-    pub next_actor: Option<Seat>,
-    pub played: Cards,
-    pub claims: ClaimState,
-    pub won: [Cards; 4],
-    pub led_suits: Cards,
-    pub current_trick: Trick,
+    pub players: [UserId; 4],       // 64
+    pub rules: ChargingRules,       // 1
+    pub phase: GamePhase,           // 1
+    pub done_with_phase: [bool; 4], // 4
+    pub charge_count: usize,        // 8
+    pub charges: ChargeState,       // 2
+    pub next_actor: Option<Seat>,   // 1
+    pub played: Cards,              // 8
+    pub claims: ClaimState,         // 2
+    pub won: [Cards; 4],            // 32
+    pub led_suits: Cards,           // 8
+    pub current_trick: Trick,       // 9
 }
 
 impl GameState {
@@ -31,7 +33,7 @@ impl GameState {
             phase: GamePhase::PassLeft,
             done_with_phase: [false; 4],
             charge_count: 0,
-            charged: [Cards::NONE; 4],
+            charges: ChargeState::new(),
             next_actor: None,
             played: Cards::NONE,
             claims: ClaimState::new(),
@@ -39,10 +41,6 @@ impl GameState {
             led_suits: Cards::NONE,
             current_trick: Trick::new(),
         }
-    }
-
-    pub fn all_charged(&self) -> Cards {
-        self.charged.iter().cloned().collect()
     }
 
     pub fn all_done(&self) -> bool {
@@ -73,7 +71,7 @@ impl GameState {
     }
 
     pub fn score(&self, seat: Seat) -> i16 {
-        let charged = self.all_charged();
+        let charged = self.charges.all_charges();
         let won = self.won[seat.idx()];
         let hearts = match (
             (won & Cards::HEARTS).len() as i16,
@@ -138,7 +136,7 @@ impl GameState {
             }
             GameEvent::Deal { .. } => {
                 self.charge_count = 0;
-                self.charged = [Cards::NONE; 4];
+                self.charges.clear();
                 self.next_actor = self.phase.first_charger(self.rules);
                 self.played = Cards::NONE;
                 self.claims = ClaimState::new();
@@ -162,7 +160,7 @@ impl GameState {
             }
             GameEvent::Charge { seat, cards } => {
                 self.charge_count += cards.len();
-                self.charged[seat.idx()] |= *cards;
+                self.charges.charge(*seat, *cards);
                 self.charge(*seat, cards.len());
             }
             GameEvent::RevealCharges {
@@ -171,10 +169,10 @@ impl GameState {
                 south,
                 west,
             } => {
-                self.charged[0] = *north;
-                self.charged[1] = *east;
-                self.charged[2] = *south;
-                self.charged[3] = *west;
+                self.charges.charge(Seat::North, *north);
+                self.charges.charge(Seat::East, *east);
+                self.charges.charge(Seat::South, *south);
+                self.charges.charge(Seat::West, *west);
             }
             GameEvent::Play { seat, card } => {
                 self.played |= *card;
@@ -271,7 +269,7 @@ impl GameState {
                     && plays.len() > 1
                 {
                     // you cannot play charged cards from the suit
-                    plays -= self.all_charged();
+                    plays -= self.charges.all_charges();
                 }
             }
 
@@ -286,7 +284,7 @@ impl GameState {
                 plays -= Cards::HEARTS;
             }
 
-            let unled_charges = self.all_charged() - self.led_suits;
+            let unled_charges = self.charges.all_charges() - self.led_suits;
             // if you have cards other than charged cards from unled suits
             if !unled_charges.contains_all(plays) {
                 // you must lead one of them
@@ -294,5 +292,16 @@ impl GameState {
             }
         }
         plays
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use std::mem::size_of;
+
+    #[test]
+    fn state_size() {
+        println!("{}", size_of::<GameState>());
     }
 }

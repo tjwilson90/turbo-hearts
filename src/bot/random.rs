@@ -28,7 +28,7 @@ impl Algorithm for Random {
             return Cards::NONE;
         }
         let cards =
-            (state.post_pass_hand & Cards::CHARGEABLE) - state.game.charged[state.seat.idx()];
+            (state.post_pass_hand & Cards::CHARGEABLE) - state.game.charges.charges(state.seat);
         cards
             .into_iter()
             .filter(|_| rand::thread_rng().gen())

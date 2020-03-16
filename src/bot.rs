@@ -289,7 +289,7 @@ fn losers(suit: Suit, hand: Cards, state: &GameState) -> i8 {
     let mut legal_plays = if hand.len() == 1 || state.led_suits.contains_any(suit.cards()) {
         hand
     } else {
-        hand - state.all_charged()
+        hand - state.charges.all_charges()
     };
     let mut had_winner = false;
 
@@ -352,7 +352,7 @@ mod test {
             let mut state = GameState::new();
             state.played = Cards::SPADES - hand - remaining;
             if !can_lead_charged {
-                state.charged[0] = Cards::QUEEN_SPADES;
+                state.charges.charge(Seat::North, Cards::QUEEN_SPADES);
             }
             losers(Suit::Spades, hand, &state)
         }

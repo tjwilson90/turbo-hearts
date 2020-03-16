@@ -5,6 +5,7 @@ use crate::{
     error::CardsError,
     game::{event::GameEvent, id::GameId, state::GameState, Game},
     player::Player,
+    seat::Seat,
     types::{ChargingRules, PassDirection},
     user::UserId,
 };
@@ -125,7 +126,12 @@ fn read_games(mut rows: Rows<'_>) -> Result<Vec<CompleteGame>, rusqlite::Error> 
         let is_playing = state.phase.is_playing();
         if was_playing && !is_playing {
             hands.push(CompleteHand {
-                charges: state.charged,
+                charges: [
+                    state.charges.charges(Seat::North),
+                    state.charges.charges(Seat::East),
+                    state.charges.charges(Seat::South),
+                    state.charges.charges(Seat::West),
+                ],
                 hearts_won: [
                     (state.won[0] & Cards::HEARTS).len() as u8,
                     (state.won[1] & Cards::HEARTS).len() as u8,

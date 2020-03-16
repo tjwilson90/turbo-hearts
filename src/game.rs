@@ -30,6 +30,7 @@ use tokio::{
     task,
 };
 
+pub mod charge;
 pub mod claim;
 pub mod endpoints;
 pub mod event;
@@ -641,10 +642,10 @@ impl Game {
                     self.state.next_actor = Some(leader);
                     if self.state.rules.blind() {
                         let reveal = GameEvent::RevealCharges {
-                            north: self.state.charged[0],
-                            east: self.state.charged[1],
-                            south: self.state.charged[2],
-                            west: self.state.charged[3],
+                            north: self.state.charges.charges(Seat::North),
+                            east: self.state.charges.charges(Seat::East),
+                            south: self.state.charges.charges(Seat::South),
+                            west: self.state.charges.charges(Seat::West),
                         };
                         broadcast(&mut *self, &reveal);
                         self.state.apply(&reveal);
@@ -740,9 +741,9 @@ impl Game {
         if !Cards::CHARGEABLE.contains_all(cards) {
             return Err(CardsError::Unchargeable(cards - Cards::CHARGEABLE));
         }
-        if self.state.charged[seat.idx()].contains_any(cards) {
+        if self.state.charges.charges(seat).contains_any(cards) {
             return Err(CardsError::AlreadyCharged(
-                self.state.charged[seat.idx()] & cards,
+                self.state.charges.charges(seat) & cards,
             ));
         }
         if !self.state.can_charge(seat) {
@@ -797,7 +798,7 @@ impl Game {
                     return Err(CardsError::MustFollowSuit);
                 }
                 if !self.state.led_suits.contains_any(suit.cards()) && plays.len() > 1 {
-                    plays -= self.state.charged[seat.idx()];
+                    plays -= self.state.charges.charges(seat);
                     if !plays.contains(card) {
                         return Err(CardsError::NoChargeOnFirstTrickOfSuit);
                     }
@@ -811,7 +812,7 @@ impl Game {
                     return Err(CardsError::HeartsNotBroken);
                 }
             }
-            let unled_charges = self.state.charged[seat.idx()] - self.state.led_suits;
+            let unled_charges = self.state.charges.charges(seat) - self.state.led_suits;
             if !unled_charges.contains_all(plays) {
                 plays -= unled_charges;
                 if !plays.contains(card) {
