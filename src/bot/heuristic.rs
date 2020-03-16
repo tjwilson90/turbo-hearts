@@ -70,7 +70,7 @@ impl Algorithm for Heuristic {
 
     fn charge(&mut self, state: &BotState) -> Cards {
         let hand = state.post_pass_hand;
-        let chargeable = hand - state.game.charged[state.seat.idx()];
+        let chargeable = hand - state.game.charges.charges(state.seat);
         let mut charge = Cards::NONE;
         if chargeable.contains(Card::QueenSpades) {
             let spades = hand & Cards::SPADES;
@@ -144,7 +144,7 @@ impl Algorithm for Heuristic {
                 // We don't believe in fake charges (and we have few enough low
                 // spades that the test above didn't trigger).
                 if !high_spades.is_empty()
-                    && state.game.all_charged().contains(Card::QueenSpades)
+                    && state.game.charges.is_charged(Card::QueenSpades)
                     && !state.game.led_suits.contains_any(Cards::SPADES)
                 {
                     return random(high_spades);

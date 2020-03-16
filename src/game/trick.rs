@@ -3,7 +3,7 @@ use crate::{card::Card, cards::Cards, rank::Rank, seat::Seat, suit::Suit};
 #[derive(Debug)]
 pub struct Trick {
     cards: [Card; 8],
-    len: usize,
+    len: u8,
 }
 
 impl Trick {
@@ -24,7 +24,7 @@ impl Trick {
 
     pub fn nined(&self) -> bool {
         let nine = self.suit().with_rank(Rank::Nine);
-        self.cards[..self.len].contains(&nine)
+        self.slice().contains(&nine)
     }
 
     pub fn is_complete(&self) -> bool {
@@ -32,12 +32,12 @@ impl Trick {
     }
 
     pub fn cards(&self) -> Cards {
-        self.cards[..self.len].iter().cloned().collect()
+        self.slice().iter().cloned().collect()
     }
 
     pub fn winning_card(&self) -> Card {
         let suit = self.suit();
-        self.cards[..self.len]
+        self.slice()
             .iter()
             .cloned()
             .filter(|c| c.suit() == suit)
@@ -47,13 +47,14 @@ impl Trick {
 
     pub fn winning_seat(&self, next: Seat) -> Seat {
         let suit = self.suit();
-        let (index, _) = self.cards[..self.len]
+        let (index, _) = self
+            .slice()
             .iter()
             .enumerate()
             .filter(|(_, c)| c.suit() == suit)
             .max_by_key(|(_, c)| **c)
             .unwrap();
-        match (self.len - index) % 4 {
+        match (self.len - index as u8) % 4 {
             0 => next,
             1 => next.right(),
             2 => next.across(),
@@ -62,12 +63,16 @@ impl Trick {
     }
 
     pub fn push(&mut self, card: Card) {
-        self.cards[self.len] = card;
+        self.cards[self.len as usize] = card;
         self.len += 1;
     }
 
     pub fn clear(&mut self) {
         self.len = 0;
+    }
+
+    fn slice(&self) -> &[Card] {
+        &self.cards[..self.len as usize]
     }
 }
 

@@ -29,7 +29,7 @@ impl Algorithm for GottaTry {
     }
 
     fn charge(&mut self, state: &BotState) -> Cards {
-        (state.post_pass_hand & Cards::CHARGEABLE) - state.game.all_charged()
+        (state.post_pass_hand & Cards::CHARGEABLE) - state.game.charges.charges(state.seat)
     }
 
     fn play(&mut self, state: &BotState) -> Card {
