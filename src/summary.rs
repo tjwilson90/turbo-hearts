@@ -92,12 +92,12 @@ fn leaderboard(db: infallible!(Database)) -> reply!() {
         let games = db.run_read_only(|tx| {
             Ok(match game_id {
                 None => {
-                    let mut stmt = tx.prepare_cached(INITIAL_SCORES)?;
+                    let mut stmt = tx.prepare(INITIAL_SCORES)?;
                     let rows = stmt.query(&[page_size])?;
                     read_games(rows)?
                 }
                 Some(game_id) => {
-                    let mut stmt = tx.prepare_cached(PAGED_SCORES)?;
+                    let mut stmt = tx.prepare(PAGED_SCORES)?;
                     let rows = stmt.query::<&[&dyn ToSql]>(&[&game_id, &page_size])?;
                     read_games(rows)?
                 }
@@ -205,7 +205,7 @@ fn hand(db: infallible!(Database)) -> reply!() {
         db: Database,
     ) -> Result<impl Reply, Rejection> {
         let reply = db.run_read_only(|tx| {
-            let mut stmt = tx.prepare_cached(
+            let mut stmt = tx.prepare(
                 "SELECT timestamp, event FROM event WHERE game_id = ? ORDER BY event_id",
             )?;
             let mut rows = stmt.query(&[game_id])?;

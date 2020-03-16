@@ -349,6 +349,8 @@ async fn test_pass() -> Result<(), CardsError> {
                         south: h!(*TSLATCHER),
                         west: h!(*CARRINO),
                         rules: ChargingRules::Classic,
+                        created_time: 0,
+                        created_by: *TWILSON,
                         seed: Seed::random(),
                     },
                     GameEvent::Deal {
@@ -417,7 +419,7 @@ async fn test_bot_game() -> Result<(), CardsError> {
                 PlayerWithOptions {
                     player: Player::Bot {
                         user_id: *TSLATCHER,
-                        strategy: Strategy::Heuristic,
+                        strategy: Strategy::Duck,
                     },
                     rules: ChargingRules::Classic,
                     seat: None,

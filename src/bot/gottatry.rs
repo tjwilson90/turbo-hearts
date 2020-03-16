@@ -29,22 +29,23 @@ impl Algorithm for GottaTry {
     }
 
     fn charge(&mut self, state: &BotState) -> Cards {
-        (state.post_pass_hand & Cards::CHARGEABLE) - state.game.all_charged()
+        (state.post_pass_hand & Cards::CHARGEABLE) - state.game.charged_cards()
     }
 
     fn play(&mut self, state: &BotState) -> Card {
         let cards = state.game.legal_plays(state.post_pass_hand);
         let our_won = state.game.won[state.seat.idx()];
-        let all_won = state.game.all_won();
+        let all_won = state.game.won.iter().fold(Cards::NONE, |c1, c2| c1 | *c2);
         if Cards::POINTS.contains_any(all_won - our_won) {
             return Duck::new().play(state);
         }
-        if state.game.current_trick.is_empty() {
+        let trick = &state.game.current_trick;
+        if trick.is_empty() {
             return Random::new().play(state);
         }
-        let trick_cards = state.game.current_trick.cards();
+        let trick_cards = trick.iter().cloned().collect();
         if Cards::POINTS.contains_any(trick_cards) {
-            if !state.game.current_trick.suit().cards().contains_any(cards) {
+            if !trick[0].suit().cards().contains_any(cards) {
                 Duck::new().play(state)
             } else {
                 cards
