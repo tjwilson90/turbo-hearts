@@ -189,11 +189,13 @@ a {
             flex-grow: 1;
             overflow-y: auto;
             padding: 10px;
-            text-align: right;
 
-            & th {
-                user-select: none;
-                cursor: pointer;
+            table {
+                text-align: right;
+                th {
+                    user-select: none;
+                    cursor: pointer;
+                }
             }
         }
 
