@@ -83,14 +83,14 @@ class LeagueScoresInternal extends React.PureComponent<LeagueScores.Props, Leagu
             this.setState({
                 sort: this.state.sort,
                 reverse: !this.state.reverse
-            })
+            });
         } else {
             this.setState({
                 sort,
                 reverse: false
-            })
+            });
         }
-    }
+    };
 
     private getSortFunction(): (a: LeaderboardEntry, b: LeaderboardEntry) => number {
         switch (this.state.sort) {
