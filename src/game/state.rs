@@ -192,16 +192,7 @@ impl GameState {
                             .contains(&self.current_trick[0].with_rank(Rank::Nine)))
                 {
                     self.led_suits |= self.current_trick[0].suit().cards();
-                    let mut seat = seat.left();
-                    let mut winning_seat = seat;
-                    let mut winning_card = self.current_trick[0];
-                    for card in &self.current_trick[1..] {
-                        seat = seat.left();
-                        if card.suit() == winning_card.suit() && card.rank() > winning_card.rank() {
-                            winning_card = *card;
-                            winning_seat = seat;
-                        }
-                    }
+                    let winning_seat = self.trick_winner();
                     self.won[winning_seat.idx()] |=
                         self.current_trick.iter().cloned().collect::<Cards>();
                     self.next_player = Some(winning_seat);
@@ -226,6 +217,24 @@ impl GameState {
                 self.claims.reject(*claimer);
             }
             _ => {}
+        }
+    }
+
+    pub fn trick_winner(&self) -> Seat {
+        let suit = self.current_trick[0].suit();
+        let (index, _) = self
+            .current_trick
+            .iter()
+            .enumerate()
+            .filter(|(_, c)| c.suit() == suit)
+            .max_by_key(|(_, c)| **c)
+            .unwrap();
+        let next = self.next_player.unwrap();
+        match (self.current_trick.len() - index) % 4 {
+            0 => next,
+            1 => next.right(),
+            2 => next.across(),
+            _ => next.left(),
         }
     }
 
