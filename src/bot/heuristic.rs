@@ -4,6 +4,7 @@ use crate::{
     cards::Cards,
     game::event::GameEvent,
     rank::Rank,
+    suit::Suit,
 };
 use rand::Rng;
 
@@ -118,6 +119,8 @@ impl Algorithm for Heuristic {
 
     fn play(&mut self, state: &BotState) -> Card {
         let cards = state.game.legal_plays(state.post_pass_hand);
+
+        // If we only have one legal play, play it
         if cards.len() == 1 {
             return cards.max();
         }
@@ -127,9 +130,19 @@ impl Algorithm for Heuristic {
             if remaining.contains(Card::QueenSpades) && !spades.is_empty() {
                 let low_spades = spades.below(Card::QueenSpades);
                 let high_spades = spades.above(Card::QueenSpades);
-                if high_spades.is_empty() || low_spades.len() >= 4 {
+                let other_spades = remaining & Cards::SPADES;
+
+                // If it's safe to drill spades, do so.
+                if high_spades.is_empty()
+                    || low_spades.len() >= 4
+                    || (low_spades.len() >= 3 && other_spades.len() <= 9)
+                    || (low_spades.len() >= 2 && other_spades.len() <= 5)
+                {
                     return random(low_spades);
                 }
+
+                // We don't believe in fake charges (and we have few enough low
+                // spades that the test above didn't trigger).
                 if !high_spades.is_empty()
                     && state.game.charged_cards().contains(Card::QueenSpades)
                     && !state.game.led_suits.contains_any(Cards::SPADES)
@@ -137,13 +150,55 @@ impl Algorithm for Heuristic {
                     return random(high_spades);
                 }
             }
+
+            // If someone else would be forced to take the queen should we lead it, do so.
+            if cards.contains(Card::QueenSpades)
+                && remaining.below(Card::QueenSpades).is_empty()
+                && !remaining.above(Card::QueenSpades).is_empty()
+            {
+                return Card::QueenSpades;
+            }
             let clubs = cards & Cards::CLUBS;
             if remaining.contains(Card::TenClubs) && !clubs.is_empty() {
                 let low_clubs = clubs.below(Card::TenClubs);
                 let high_clubs = clubs.above(Card::TenClubs);
-                if high_clubs.is_empty() || low_clubs.len() >= 4 {
+                let other_clubs = remaining & Cards::CLUBS;
+
+                // If it's safe to drill clubs, do so.
+                if high_clubs.is_empty()
+                    || low_clubs.len() >= 4
+                    || (low_clubs.len() >= 3 && other_clubs.len() <= 9)
+                    || (low_clubs.len() >= 2 && other_clubs.len() <= 5)
+                {
                     return random(low_clubs);
                 }
+            }
+
+            // If someone else would be forced to take the ten should we lead it, do so.
+            if cards.contains(Card::TenClubs)
+                && remaining.below(Card::TenClubs).is_empty()
+                && !remaining.above(Card::TenClubs).is_empty()
+            {
+                return Card::TenClubs;
+            }
+        } else {
+            let trick: Cards = state.game.current_trick.iter().cloned().collect();
+            let suit = state.game.current_trick[0].suit();
+
+            // If we can play the queen and not win the trick, do so.
+            if cards.contains(Card::QueenSpades)
+                && state.game.trick_winner() != state.seat
+                && (suit != Suit::Spades || !trick.above(Card::QueenSpades).is_empty())
+            {
+                return Card::QueenSpades;
+            }
+
+            // If we can play the ten and not win the trick, do so.
+            if cards.contains(Card::TenClubs)
+                && state.game.trick_winner() != state.seat
+                && (suit != Suit::Clubs || !trick.above(Card::TenClubs).is_empty())
+            {
+                return Card::TenClubs;
             }
         }
         random(cards)
