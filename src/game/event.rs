@@ -37,8 +37,6 @@ pub enum GameEvent {
         south: Player,
         west: Player,
         rules: ChargingRules,
-        created_time: i64,
-        created_by: UserId,
         seed: Seed,
     },
     Deal {
@@ -146,8 +144,6 @@ impl GameEvent {
                 south,
                 west,
                 rules,
-                created_time,
-                created_by,
                 seed,
             } => GameEvent::Sit {
                 north: *north,
@@ -155,8 +151,6 @@ impl GameEvent {
                 south: *south,
                 west: *west,
                 rules: *rules,
-                created_time: *created_time,
-                created_by: *created_by,
                 seed: seed.redact(),
             },
             GameEvent::Deal {

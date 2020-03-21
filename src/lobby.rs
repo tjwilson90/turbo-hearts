@@ -249,7 +249,7 @@ pub struct LobbyChat {
 }
 
 fn load_recent_chat(tx: &Transaction) -> Result<Vec<LobbyChat>, CardsError> {
-    let mut stmt = tx.prepare(
+    let mut stmt = tx.prepare_cached(
         "SELECT timestamp, user_id, message FROM lobby_chat ORDER BY timestamp DESC LIMIT 500",
     )?;
     let mut rows = stmt.query(NO_PARAMS)?;
@@ -267,7 +267,7 @@ fn load_recent_chat(tx: &Transaction) -> Result<Vec<LobbyChat>, CardsError> {
 
 fn load_games(tx: &Transaction) -> Result<HashMap<GameId, LobbyGame>, CardsError> {
     let mut games = HashMap::new();
-    let mut stmt = tx.prepare(
+    let mut stmt = tx.prepare_cached(
         "SELECT game_id, seed, created_time, created_by,
                 last_updated_time, last_updated_by, started_time
                 FROM game WHERE completed_time IS NULL AND last_updated_time > ?",
@@ -287,7 +287,7 @@ fn load_games(tx: &Transaction) -> Result<HashMap<GameId, LobbyGame>, CardsError
             },
         );
     }
-    let mut stmt = tx.prepare(
+    let mut stmt = tx.prepare_cached(
         "SELECT gp.game_id, gp.user_id, gp.strategy, gp.rules, gp.seat
             FROM game_player gp, game g
             WHERE gp.game_id = g.game_id AND g.completed_time IS NULL",

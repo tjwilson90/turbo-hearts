@@ -144,7 +144,7 @@ impl Algorithm for Heuristic {
                 // We don't believe in fake charges (and we have few enough low
                 // spades that the test above didn't trigger).
                 if !high_spades.is_empty()
-                    && state.game.charged_cards().contains(Card::QueenSpades)
+                    && state.game.all_charged().contains(Card::QueenSpades)
                     && !state.game.led_suits.contains_any(Cards::SPADES)
                 {
                     return random(high_spades);
@@ -182,12 +182,12 @@ impl Algorithm for Heuristic {
                 return Card::TenClubs;
             }
         } else {
-            let trick: Cards = state.game.current_trick.iter().cloned().collect();
-            let suit = state.game.current_trick[0].suit();
+            let trick: Cards = state.game.current_trick.cards();
+            let suit = state.game.current_trick.suit();
 
             // If we can play the queen and not win the trick, do so.
             if cards.contains(Card::QueenSpades)
-                && state.game.trick_winner() != state.seat
+                && state.game.current_trick.winning_seat(state.seat) != state.seat
                 && (suit != Suit::Spades || !trick.above(Card::QueenSpades).is_empty())
             {
                 return Card::QueenSpades;
@@ -195,7 +195,7 @@ impl Algorithm for Heuristic {
 
             // If we can play the ten and not win the trick, do so.
             if cards.contains(Card::TenClubs)
-                && state.game.trick_winner() != state.seat
+                && state.game.current_trick.winning_seat(state.seat) != state.seat
                 && (suit != Suit::Clubs || !trick.above(Card::TenClubs).is_empty())
             {
                 return Card::TenClubs;
