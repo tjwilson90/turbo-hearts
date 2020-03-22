@@ -140,3 +140,28 @@ impl BitOr<Card> for Card {
         Cards::from(self) | rhs
     }
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_display() {
+        assert_eq!(Card::NineSpades.to_string(), "9S");
+        assert_eq!(Card::ThreeDiamonds.to_string(), "3D");
+        assert_eq!(Card::JackClubs.to_string(), "JC");
+        assert_eq!(Card::AceHearts.to_string(), "AH");
+    }
+
+    #[test]
+    fn test_suit() {
+        assert_eq!(Card::TwoClubs.suit(), Suit::Clubs);
+        assert_eq!(Card::AceClubs.suit(), Suit::Clubs);
+        assert_eq!(Card::TwoDiamonds.suit(), Suit::Diamonds);
+        assert_eq!(Card::AceDiamonds.suit(), Suit::Diamonds);
+        assert_eq!(Card::TwoHearts.suit(), Suit::Hearts);
+        assert_eq!(Card::AceHearts.suit(), Suit::Hearts);
+        assert_eq!(Card::TwoSpades.suit(), Suit::Spades);
+        assert_eq!(Card::AceSpades.suit(), Suit::Spades);
+    }
+}
