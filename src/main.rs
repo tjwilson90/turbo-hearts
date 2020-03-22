@@ -33,6 +33,7 @@ mod seat;
 mod seed;
 mod sql_types;
 mod suit;
+mod suits;
 mod summary;
 #[cfg(test)]
 mod test;
