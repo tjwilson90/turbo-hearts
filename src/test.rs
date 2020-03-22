@@ -1,12 +1,12 @@
 use crate::{
     bot::Strategy,
     card::Card,
-    cards::Cards,
     db::Database,
     error::CardsError,
     game::{event::GameEvent, id::GameId, persist_events, phase::GamePhase, Games},
     lobby::{event::LobbyEvent, Lobby},
     player::{Player, PlayerWithOptions},
+    seat::Seat,
     seed::Seed,
     types::{ChargingRules, PassDirection},
     user::UserId,
@@ -14,7 +14,7 @@ use crate::{
 use log::LevelFilter;
 use once_cell::sync::Lazy;
 use r2d2_sqlite::SqliteConnectionManager;
-use std::future::Future;
+use std::{collections::HashMap, future::Future};
 use tempfile::TempDir;
 
 macro_rules! h {
@@ -33,21 +33,6 @@ macro_rules! set {
     ($($x:expr),*) => (
         vec![$($x),*].into_iter().collect::<std::collections::HashSet<_>>()
     );
-}
-
-macro_rules! map {
-    ($($x:expr => $y:expr),*) => (
-        vec![$(($x, $y)),*].into_iter().collect::<std::collections::HashMap<_, _>>()
-    );
-}
-
-macro_rules! matches {
-    ($expression:expr, $( $pattern:pat )|+ $( if $guard: expr )?) => {
-        match $expression {
-            $( $pattern )|+ $( if $guard )? => true,
-            _ => false
-        }
-    }
 }
 
 static TWILSON: Lazy<UserId> = Lazy::new(|| UserId::new());
@@ -99,68 +84,6 @@ impl TestRunner {
     }
 }
 
-#[test]
-fn test_card_display() {
-    assert_eq!(Card::NineSpades.to_string(), "9S");
-    assert_eq!(Card::ThreeDiamonds.to_string(), "3D");
-    assert_eq!(Card::JackClubs.to_string(), "JC");
-    assert_eq!(Card::AceHearts.to_string(), "AH");
-}
-
-#[test]
-fn test_card_suit() {
-    assert_eq!(Card::TwoClubs.suit().cards(), Cards::CLUBS);
-    assert_eq!(Card::AceClubs.suit().cards(), Cards::CLUBS);
-    assert_eq!(Card::TwoDiamonds.suit().cards(), Cards::DIAMONDS);
-    assert_eq!(Card::AceDiamonds.suit().cards(), Cards::DIAMONDS);
-    assert_eq!(Card::TwoHearts.suit().cards(), Cards::HEARTS);
-    assert_eq!(Card::AceHearts.suit().cards(), Cards::HEARTS);
-    assert_eq!(Card::TwoSpades.suit().cards(), Cards::SPADES);
-    assert_eq!(Card::AceSpades.suit().cards(), Cards::SPADES);
-}
-
-#[test]
-fn test_cards_display() {
-    assert_eq!(
-        format!(
-            "{}",
-            Card::NineSpades | Card::QueenSpades | Card::JackDiamonds
-        ),
-        "Q9S JD"
-    );
-}
-
-#[test]
-fn test_cards_max() {
-    assert_eq!((Card::TwoClubs | Card::NineClubs).max(), Card::NineClubs);
-    assert_eq!(
-        (Card::FourHearts | Card::SevenDiamonds).max(),
-        Card::FourHearts
-    );
-    assert_eq!((Card::AceSpades | Card::FiveSpades).max(), Card::AceSpades);
-    assert_eq!(Cards::from(Card::FiveHearts).max(), Card::FiveHearts);
-}
-
-#[test]
-fn test_cards_iter() {
-    assert_eq!(
-        (Card::QueenSpades | Card::AceHearts | Card::TenClubs | Card::JackDiamonds)
-            .into_iter()
-            .collect::<Vec<_>>(),
-        vec![
-            Card::QueenSpades,
-            Card::AceHearts,
-            Card::JackDiamonds,
-            Card::TenClubs
-        ]
-    );
-}
-
-#[test]
-fn test_cards_parse() {
-    assert_eq!(Cards::from(Card::AceHearts), c!(AH))
-}
-
 #[tokio::test(threaded_scheduler)]
 async fn test_lobby() -> Result<(), CardsError> {
     async fn test(_: Database, lobby: Lobby, _games: Games) -> Result<(), CardsError> {
@@ -170,7 +93,7 @@ async fn test_lobby() -> Result<(), CardsError> {
             Some(LobbyEvent::LobbyState {
                 subscribers: set![*TWILSON],
                 chat: vec![],
-                games: map![],
+                games: HashMap::new(),
             })
         );
 
@@ -184,7 +107,7 @@ async fn test_lobby() -> Result<(), CardsError> {
             Some(LobbyEvent::LobbyState {
                 subscribers: set![*TWILSON, *CARRINO],
                 chat: vec![],
-                games: map![],
+                games: HashMap::new(),
             })
         );
 
@@ -390,6 +313,120 @@ async fn test_pass() -> Result<(), CardsError> {
             Err(CardsError::AlreadyPassed(c)) if c == c!(K86C)
         ));
 
+        Ok(())
+    }
+    TestRunner::new().run(test).await
+}
+
+#[tokio::test(threaded_scheduler)]
+async fn test_seeded_game() -> Result<(), CardsError> {
+    async fn test(_db: Database, lobby: Lobby, games: Games) -> Result<(), CardsError> {
+        let game_id = lobby
+            .new_game(
+                PlayerWithOptions {
+                    player: h![*TWILSON],
+                    rules: ChargingRules::Classic,
+                    seat: Some(Seat::North),
+                },
+                Some("2a3ef864-e49e-440b-9f0a-4125c59716ee".to_string()),
+            )
+            .await?;
+        lobby
+            .join_game(
+                game_id,
+                PlayerWithOptions {
+                    player: h![*TSLATCHER],
+                    rules: ChargingRules::Classic,
+                    seat: Some(Seat::East),
+                },
+            )
+            .await?;
+        lobby
+            .join_game(
+                game_id,
+                PlayerWithOptions {
+                    player: h![*DCERVELLI],
+                    rules: ChargingRules::Classic,
+                    seat: Some(Seat::South),
+                },
+            )
+            .await?;
+        lobby
+            .join_game(
+                game_id,
+                PlayerWithOptions {
+                    player: h![*CARRINO],
+                    rules: ChargingRules::Classic,
+                    seat: Some(Seat::West),
+                },
+            )
+            .await?;
+        games.start_game(game_id)?;
+        games.pass_cards(game_id, *CARRINO, c!(87H 8C)).await?;
+        games.pass_cards(game_id, *DCERVELLI, c!(JH J2C)).await?;
+        games.pass_cards(game_id, *TWILSON, c!(Q63H)).await?;
+        games.pass_cards(game_id, *TSLATCHER, c!(AD KQC)).await?;
+        games.charge_cards(game_id, *TWILSON, c!()).await?;
+        games.charge_cards(game_id, *DCERVELLI, c!()).await?;
+        games.charge_cards(game_id, *CARRINO, c!()).await?;
+        games.charge_cards(game_id, *TSLATCHER, c!(AH)).await?;
+        games.charge_cards(game_id, *TWILSON, c!()).await?;
+        games.charge_cards(game_id, *DCERVELLI, c!()).await?;
+        games.charge_cards(game_id, *CARRINO, c!()).await?;
+        games.play_card(game_id, *CARRINO, c!(2C)).await?;
+        games.play_card(game_id, *TWILSON, c!(8C)).await?;
+        games.play_card(game_id, *TSLATCHER, c!(7C)).await?;
+        games.play_card(game_id, *DCERVELLI, c!(QC)).await?;
+        games.play_card(game_id, *DCERVELLI, c!(8S)).await?;
+        games.play_card(game_id, *CARRINO, c!(3S)).await?;
+        games.play_card(game_id, *TWILSON, c!(6S)).await?;
+        games.play_card(game_id, *TSLATCHER, c!(2S)).await?;
+        games.play_card(game_id, *DCERVELLI, c!(AD)).await?;
+        games.play_card(game_id, *CARRINO, c!(7D)).await?;
+        games.play_card(game_id, *TWILSON, c!(TD)).await?;
+        games.chat(game_id, *CARRINO, "no jack".to_string()).await?;
+        games.play_card(game_id, *TSLATCHER, c!(6D)).await?;
+        games.chat(game_id, *DCERVELLI, "hi".to_string()).await?;
+        games.play_card(game_id, *DCERVELLI, c!(4D)).await?;
+        games.play_card(game_id, *CARRINO, c!(QD)).await?;
+        games.play_card(game_id, *TWILSON, c!(8D)).await?;
+        games.play_card(game_id, *TSLATCHER, c!(AH)).await?;
+        games.play_card(game_id, *CARRINO, c!(6C)).await?;
+        games.play_card(game_id, *TWILSON, c!(9C)).await?;
+        games.play_card(game_id, *TSLATCHER, c!(7S)).await?;
+        games.play_card(game_id, *DCERVELLI, c!(3C)).await?;
+        games.play_card(game_id, *CARRINO, c!(AC)).await?;
+        games.play_card(game_id, *TWILSON, c!(TC)).await?;
+        games.play_card(game_id, *TSLATCHER, c!(4S)).await?;
+        games.play_card(game_id, *DCERVELLI, c!(KC)).await?;
+        games.play_card(game_id, *CARRINO, c!(JC)).await?;
+        games.play_card(game_id, *TWILSON, c!(4C)).await?;
+        games.play_card(game_id, *TSLATCHER, c!(9H)).await?;
+        games.play_card(game_id, *DCERVELLI, c!(QS)).await?;
+        games.play_card(game_id, *CARRINO, c!(AS)).await?;
+        games.play_card(game_id, *TWILSON, c!(TS)).await?;
+        games.play_card(game_id, *TSLATCHER, c!(TH)).await?;
+        games.play_card(game_id, *DCERVELLI, c!(KS)).await?;
+        games.play_card(game_id, *CARRINO, c!(KD)).await?;
+        games.play_card(game_id, *TWILSON, c!(5D)).await?;
+        games.play_card(game_id, *TSLATCHER, c!(6H)).await?;
+        games.play_card(game_id, *DCERVELLI, c!(9S)).await?;
+        games.play_card(game_id, *CARRINO, c!(JH)).await?;
+        games.play_card(game_id, *TWILSON, c!(8H)).await?;
+        games.play_card(game_id, *TSLATCHER, c!(5H)).await?;
+        games.play_card(game_id, *DCERVELLI, c!(KH)).await?;
+        games.play_card(game_id, *DCERVELLI, c!(4H)).await?;
+        games.play_card(game_id, *CARRINO, c!(9D)).await?;
+        games.play_card(game_id, *TWILSON, c!(7H)).await?;
+        games.play_card(game_id, *TSLATCHER, c!(3H)).await?;
+        games.play_card(game_id, *TWILSON, c!(JD)).await?;
+        games.play_card(game_id, *TSLATCHER, c!(QH)).await?;
+        games.play_card(game_id, *DCERVELLI, c!(JS)).await?;
+        games.play_card(game_id, *CARRINO, c!(2D)).await?;
+        games.play_card(game_id, *TWILSON, c!(3D)).await?;
+        games.play_card(game_id, *TSLATCHER, c!(2H)).await?;
+        games.play_card(game_id, *DCERVELLI, c!(5S)).await?;
+        games.play_card(game_id, *CARRINO, c!(5C)).await?;
         Ok(())
     }
     TestRunner::new().run(test).await

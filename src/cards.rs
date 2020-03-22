@@ -345,3 +345,50 @@ impl FromIterator<Cards> for Cards {
         cards
     }
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_display() {
+        assert_eq!(
+            format!(
+                "{}",
+                Card::NineSpades | Card::QueenSpades | Card::JackDiamonds
+            ),
+            "Q9S JD"
+        );
+    }
+
+    #[test]
+    fn test_max() {
+        assert_eq!((Card::TwoClubs | Card::NineClubs).max(), Card::NineClubs);
+        assert_eq!(
+            (Card::FourHearts | Card::SevenDiamonds).max(),
+            Card::FourHearts
+        );
+        assert_eq!((Card::AceSpades | Card::FiveSpades).max(), Card::AceSpades);
+        assert_eq!(Cards::from(Card::FiveHearts).max(), Card::FiveHearts);
+    }
+
+    #[test]
+    fn test_iter() {
+        assert_eq!(
+            (Card::QueenSpades | Card::AceHearts | Card::TenClubs | Card::JackDiamonds)
+                .into_iter()
+                .collect::<Vec<_>>(),
+            vec![
+                Card::QueenSpades,
+                Card::AceHearts,
+                Card::JackDiamonds,
+                Card::TenClubs
+            ]
+        );
+    }
+
+    #[test]
+    fn test_parse() {
+        assert_eq!(Cards::from(Card::AceHearts), "AH".parse().unwrap())
+    }
+}

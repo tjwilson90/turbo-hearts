@@ -12,13 +12,12 @@ use crate::{
     },
     player::{Player, PlayerWithOptions},
     seat::Seat,
-    seed::Seed,
+    seed::{HashedSeed, Seed},
     types::PassDirection,
     user::UserId,
     util,
 };
 use log::info;
-use rand::seq::SliceRandom;
 use rand_distr::Gamma;
 use rusqlite::{ToSql, Transaction};
 use std::{
@@ -160,7 +159,7 @@ impl Games {
                 &[game_id],
                 |row| Ok(row.get::<_, Seed>(0)?),
             )?;
-            let seed_bytes = seed.as_bytes();
+            let hashed_seed = HashedSeed::from(&seed);
             let timestamp = persist_events(
                 &tx,
                 game_id,
@@ -174,7 +173,7 @@ impl Games {
                         rules: players[0].rules,
                         seed,
                     },
-                    deal(seed_bytes, PassDirection::Left),
+                    hashed_seed.deal(PassDirection::Left),
                 ],
             )?;
             tx.execute::<&[&dyn ToSql]>(
@@ -271,24 +270,7 @@ impl Games {
                             - game.post_pass_hand[2]
                             - game.post_pass_hand[3]
                             | cards;
-                        let mut passes = passes.into_iter().collect::<Vec<_>>();
-                        passes.shuffle(&mut rand::thread_rng());
-                        events.push(GameEvent::RecvPass {
-                            to: Seat::North,
-                            cards: passes[0..3].iter().cloned().collect(),
-                        });
-                        events.push(GameEvent::RecvPass {
-                            to: Seat::East,
-                            cards: passes[3..6].iter().cloned().collect(),
-                        });
-                        events.push(GameEvent::RecvPass {
-                            to: Seat::South,
-                            cards: passes[6..9].iter().cloned().collect(),
-                        });
-                        events.push(GameEvent::RecvPass {
-                            to: Seat::West,
-                            cards: passes[9..12].iter().cloned().collect(),
-                        });
+                        events.extend_from_slice(&game.seed.keeper_pass(passes));
                     }
                     self.db.run_with_retry(|tx| {
                         persist_events(&tx, game_id, game.events.len(), &events)
@@ -517,7 +499,7 @@ pub struct Game {
     pub pre_pass_hand: [Cards; 4],
     pub post_pass_hand: [Cards; 4],
     pub state: GameState,
-    pub seed: [u8; 32],
+    pub seed: HashedSeed,
 }
 
 impl Game {
@@ -529,7 +511,7 @@ impl Game {
             pre_pass_hand: [Cards::NONE; 4],
             post_pass_hand: [Cards::NONE; 4],
             state: GameState::new(),
-            seed: [0; 32],
+            seed: HashedSeed::new(),
         }
     }
 
@@ -590,7 +572,7 @@ impl Game {
         self.events.push(event.clone());
         match &event {
             GameEvent::Sit { seed, .. } => {
-                self.seed = seed.as_bytes();
+                self.seed = seed.into();
             }
             GameEvent::Deal {
                 north,
@@ -875,9 +857,9 @@ impl Game {
 
     fn add_deal_event(&self, events: &mut Vec<GameEvent>) {
         match self.state.phase {
-            GamePhase::PlayLeft => events.push(deal(self.seed, PassDirection::Right)),
-            GamePhase::PlayRight => events.push(deal(self.seed, PassDirection::Across)),
-            GamePhase::PlayAcross => events.push(deal(self.seed, PassDirection::Keeper)),
+            GamePhase::PlayLeft => events.push(self.seed.deal(PassDirection::Right)),
+            GamePhase::PlayRight => events.push(self.seed.deal(PassDirection::Across)),
+            GamePhase::PlayAcross => events.push(self.seed.deal(PassDirection::Keeper)),
             _ => {}
         };
     }
@@ -898,27 +880,6 @@ fn seat(players: [UserId; 4], user_id: UserId) -> Option<Seat> {
         .iter()
         .position(|id| *id == user_id)
         .map(|idx| Seat::VALUES[idx])
-}
-
-fn deal(seed: [u8; 32], pass: PassDirection) -> GameEvent {
-    let mut rng = pass.rng(seed);
-    let mut deck = Cards::ALL.into_iter().collect::<Vec<_>>();
-    deck.shuffle(&mut rng);
-    let north = deck[0..13].iter().cloned().collect();
-    let east = deck[13..26].iter().cloned().collect();
-    let south = deck[26..39].iter().cloned().collect();
-    let west = deck[39..52].iter().cloned().collect();
-    info!(
-        "deal: north={}, east={}, south={}, west={}, pass={}",
-        north, east, south, west, pass
-    );
-    GameEvent::Deal {
-        north,
-        east,
-        south,
-        west,
-        pass,
-    }
 }
 
 pub fn persist_events(
