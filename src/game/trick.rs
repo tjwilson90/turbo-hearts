@@ -49,10 +49,9 @@ impl Trick {
         let suit = self.suit();
         let (index, _) = self.cards[..self.len]
             .iter()
-            .cloned()
             .enumerate()
             .filter(|(_, c)| c.suit() == suit)
-            .max()
+            .max_by_key(|(_, c)| **c)
             .unwrap();
         match (self.len - index) % 4 {
             0 => next,
@@ -69,5 +68,116 @@ impl Trick {
 
     pub fn clear(&mut self) {
         self.len = 0;
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_is_empty() {
+        let mut trick = Trick::new();
+        assert!(trick.is_empty());
+        trick.push(Card::FiveClubs);
+        assert!(!trick.is_empty());
+    }
+
+    #[test]
+    fn test_suit() {
+        let mut trick = Trick::new();
+        trick.push(Card::FiveClubs);
+        assert_eq!(trick.suit(), Suit::Clubs);
+    }
+
+    #[test]
+    fn test_nined() {
+        let mut trick = Trick::new();
+        assert!(!trick.nined());
+        trick.push(Card::FiveClubs);
+        assert!(!trick.nined());
+        trick.push(Card::NineDiamonds);
+        assert!(!trick.nined());
+        trick.push(Card::NineClubs);
+        assert!(trick.nined());
+        trick.push(Card::FourClubs);
+        assert!(trick.nined());
+    }
+
+    #[test]
+    fn test_is_complete() {
+        let mut trick = Trick::new();
+        assert!(!trick.is_complete());
+        trick.push(Card::FiveClubs);
+        assert!(!trick.is_complete());
+        trick.push(Card::NineDiamonds);
+        assert!(!trick.is_complete());
+        trick.push(Card::TenClubs);
+        assert!(!trick.is_complete());
+        trick.push(Card::FourClubs);
+        assert!(trick.is_complete());
+    }
+
+    #[test]
+    fn test_is_complete_nined() {
+        let mut trick = Trick::new();
+        assert!(!trick.is_complete());
+        trick.push(Card::FiveClubs);
+        assert!(!trick.is_complete());
+        trick.push(Card::NineDiamonds);
+        assert!(!trick.is_complete());
+        trick.push(Card::NineClubs);
+        assert!(!trick.is_complete());
+        trick.push(Card::FourClubs);
+        assert!(!trick.is_complete());
+        trick.push(Card::AceClubs);
+        assert!(!trick.is_complete());
+        trick.push(Card::EightHearts);
+        assert!(!trick.is_complete());
+        trick.push(Card::TwoSpades);
+        assert!(!trick.is_complete());
+        trick.push(Card::KingClubs);
+        assert!(trick.is_complete());
+    }
+
+    #[test]
+    fn test_cards() {
+        let mut trick = Trick::new();
+        trick.push(Card::FiveClubs);
+        trick.push(Card::NineDiamonds);
+        trick.push(Card::NineClubs);
+        trick.push(Card::FourClubs);
+        trick.push(Card::AceClubs);
+        trick.push(Card::EightHearts);
+        assert_eq!(trick.cards(), "8H 9D A954C".parse().unwrap());
+    }
+
+    #[test]
+    fn test_winning_card() {
+        let mut trick = Trick::new();
+        trick.push(Card::FiveClubs);
+        trick.push(Card::NineDiamonds);
+        trick.push(Card::NineClubs);
+        trick.push(Card::FourClubs);
+        trick.push(Card::KingClubs);
+        trick.push(Card::AceHearts);
+        assert_eq!(trick.winning_card(), Card::KingClubs);
+    }
+
+    #[test]
+    fn test_winning_seat() {
+        let mut trick = Trick::new();
+        trick.push(Card::FiveClubs);
+        assert_eq!(trick.winning_seat(Seat::West), Seat::South);
+        trick.push(Card::NineDiamonds);
+        assert_eq!(trick.winning_seat(Seat::North), Seat::South);
+        trick.push(Card::NineClubs);
+        assert_eq!(trick.winning_seat(Seat::East), Seat::North);
+        trick.push(Card::FourClubs);
+        assert_eq!(trick.winning_seat(Seat::South), Seat::North);
+        trick.push(Card::KingClubs);
+        assert_eq!(trick.winning_seat(Seat::West), Seat::South);
+        trick.push(Card::AceHearts);
+        assert_eq!(trick.winning_seat(Seat::North), Seat::South);
     }
 }
