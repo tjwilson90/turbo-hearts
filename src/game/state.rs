@@ -5,6 +5,7 @@ use crate::{
         charge::ChargeState, claim::ClaimState, event::GameEvent, phase::GamePhase, trick::Trick,
     },
     seat::Seat,
+    suits::Suits,
     types::ChargingRules,
     user::UserId,
 };
@@ -15,13 +16,13 @@ pub struct GameState {
     pub rules: ChargingRules,       // 1
     pub phase: GamePhase,           // 1
     pub done_with_phase: [bool; 4], // 4
-    pub charge_count: usize,        // 8
+    pub charge_count: u8,           // 1
     pub charges: ChargeState,       // 2
     pub next_actor: Option<Seat>,   // 1
     pub played: Cards,              // 8
     pub claims: ClaimState,         // 2
     pub won: [Cards; 4],            // 32
-    pub led_suits: Cards,           // 8
+    pub led_suits: Suits,           // 1
     pub current_trick: Trick,       // 9
 }
 
@@ -38,7 +39,7 @@ impl GameState {
             played: Cards::NONE,
             claims: ClaimState::new(),
             won: [Cards::NONE; 4],
-            led_suits: Cards::NONE,
+            led_suits: Suits::NONE,
             current_trick: Trick::new(),
         }
     }
@@ -141,7 +142,7 @@ impl GameState {
                 self.played = Cards::NONE;
                 self.claims = ClaimState::new();
                 self.won = [Cards::NONE; 4];
-                self.led_suits = Cards::NONE;
+                self.led_suits = Suits::NONE;
                 self.current_trick.clear();
             }
             GameEvent::SendPass { from, .. } => {
@@ -155,11 +156,11 @@ impl GameState {
                 }
             }
             GameEvent::BlindCharge { seat, count } => {
-                self.charge_count += *count;
+                self.charge_count += *count as u8;
                 self.charge(*seat, *count);
             }
             GameEvent::Charge { seat, cards } => {
-                self.charge_count += cards.len();
+                self.charge_count += cards.len() as u8;
                 self.charges.charge(*seat, *cards);
                 self.charge(*seat, cards.len());
             }
@@ -179,7 +180,7 @@ impl GameState {
                 self.current_trick.push(*card);
                 self.next_actor = Some(seat.left());
                 if self.current_trick.is_complete() || self.played == Cards::ALL {
-                    self.led_suits |= self.current_trick.suit().cards();
+                    self.led_suits |= self.current_trick.suit();
                     let winning_seat = self.current_trick.winning_seat(seat.left());
                     self.won[winning_seat.idx()] |= self.current_trick.cards();
                     self.current_trick.clear();
@@ -264,7 +265,7 @@ impl GameState {
                 plays &= suit.cards();
 
                 // and if this is the first trick of this suit
-                if !self.led_suits.contains_any(suit.cards())
+                if !self.led_suits.contains(suit)
                     // and you have multiple plays
                     && plays.len() > 1
                 {
@@ -284,7 +285,7 @@ impl GameState {
                 plays -= Cards::HEARTS;
             }
 
-            let unled_charges = self.charges.all_charges() - self.led_suits;
+            let unled_charges = self.charges.all_charges() - self.led_suits.cards();
             // if you have cards other than charged cards from unled suits
             if !unled_charges.contains_all(plays) {
                 // you must lead one of them
@@ -292,16 +293,5 @@ impl GameState {
             }
         }
         plays
-    }
-}
-
-#[cfg(test)]
-mod test {
-    use super::*;
-    use std::mem::size_of;
-
-    #[test]
-    fn state_size() {
-        println!("{}", size_of::<GameState>());
     }
 }

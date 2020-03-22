@@ -286,7 +286,7 @@ fn losers(suit: Suit, hand: Cards, state: &GameState) -> i8 {
     let mut hand = hand & suit.cards();
     let mut remaining = suit.cards() - hand - state.played;
     let nine = suit.with_rank(Rank::Nine);
-    let mut legal_plays = if hand.len() == 1 || state.led_suits.contains_any(suit.cards()) {
+    let mut legal_plays = if hand.len() == 1 || state.led_suits.contains(suit) {
         hand
     } else {
         hand - state.charges.all_charges()

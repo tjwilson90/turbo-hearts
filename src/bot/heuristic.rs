@@ -145,7 +145,7 @@ impl Algorithm for Heuristic {
                 // spades that the test above didn't trigger).
                 if !high_spades.is_empty()
                     && state.game.charges.is_charged(Card::QueenSpades)
-                    && !state.game.led_suits.contains_any(Cards::SPADES)
+                    && !state.game.led_suits.contains(Suit::Spades)
                 {
                     return random(high_spades);
                 }

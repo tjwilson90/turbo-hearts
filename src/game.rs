@@ -797,7 +797,7 @@ impl Game {
                 if !plays.contains(card) {
                     return Err(CardsError::MustFollowSuit);
                 }
-                if !self.state.led_suits.contains_any(suit.cards()) && plays.len() > 1 {
+                if !self.state.led_suits.contains(suit) && plays.len() > 1 {
                     plays -= self.state.charges.charges(seat);
                     if !plays.contains(card) {
                         return Err(CardsError::NoChargeOnFirstTrickOfSuit);
@@ -812,7 +812,7 @@ impl Game {
                     return Err(CardsError::HeartsNotBroken);
                 }
             }
-            let unled_charges = self.state.charges.charges(seat) - self.state.led_suits;
+            let unled_charges = self.state.charges.charges(seat) - self.state.led_suits.cards();
             if !unled_charges.contains_all(plays) {
                 plays -= unled_charges;
                 if !plays.contains(card) {
