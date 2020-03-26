@@ -46,9 +46,11 @@ impl Lobby {
 
     pub async fn delete_stale_games(&self) -> Result<(), CardsError> {
         self.db.run_with_retry(|tx| {
+            let now = util::timestamp();
             let rows = tx.execute(
-                "DELETE FROM game WHERE started_time IS NULL AND last_updated_time < ?",
-                &[util::timestamp() - 24 * 60 * 60 * 1000],
+                "DELETE FROM game WHERE (started_time IS NULL AND last_updated_time < ?)
+                    OR (completed_time IS NULL AND last_updated_time < ?)",
+                &[now - 24 * 60 * 60 * 1000, now - 21 * 24 * 60 * 60 * 1000],
             )?;
             if rows > 0 {
                 info!("Deleted {} stale game(s)", rows);
