@@ -4,7 +4,6 @@ use rand::{seq::SliceRandom, SeedableRng};
 use rand_chacha::ChaCha20Rng;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
-use std::{cell::RefCell, ops::DerefMut};
 use uuid::Uuid;
 
 #[serde(tag = "type", rename_all = "snake_case")]
@@ -32,33 +31,32 @@ impl Seed {
 
 #[derive(Debug)]
 pub struct HashedSeed {
-    rng: Option<RefCell<ChaCha20Rng>>,
+    seed: [u8; 32],
 }
 
 impl From<&Seed> for HashedSeed {
     fn from(seed: &Seed) -> Self {
-        let hash = Sha256::digest(match seed {
-            Seed::Chosen { value } => value.as_bytes(),
-            Seed::Random { value } => value.as_bytes(),
-            Seed::Redacted => panic!("cannot convert redacted seed to bytes"),
-        })
-        .into();
         Self {
-            rng: Some(RefCell::new(ChaCha20Rng::from_seed(hash))),
+            seed: Sha256::digest(match seed {
+                Seed::Chosen { value } => value.as_bytes(),
+                Seed::Random { value } => value.as_bytes(),
+                Seed::Redacted => panic!("cannot convert redacted seed to bytes"),
+            })
+            .into(),
         }
     }
 }
 
 impl HashedSeed {
     pub fn new() -> Self {
-        Self { rng: None }
+        Self { seed: [0; 32] }
     }
 
     pub fn deal(&self, pass: PassDirection) -> GameEvent {
-        let mut rng = self.rng.as_ref().expect("seed not set").borrow_mut();
+        let mut rng = ChaCha20Rng::from_seed(self.seed);
         rng.set_stream(pass as u64);
         let mut deck = Cards::ALL.into_iter().collect::<Vec<_>>();
-        deck.shuffle(rng.deref_mut());
+        deck.shuffle(&mut rng);
         let north = deck[0..13].iter().cloned().collect();
         let east = deck[13..26].iter().cloned().collect();
         let south = deck[26..39].iter().cloned().collect();
@@ -77,10 +75,10 @@ impl HashedSeed {
     }
 
     pub fn keeper_pass(&self, cards: Cards) -> [GameEvent; 4] {
-        let mut rng = self.rng.as_ref().expect("seed not set").borrow_mut();
+        let mut rng = ChaCha20Rng::from_seed(self.seed);
         rng.set_stream(4);
         let mut passes = cards.into_iter().collect::<Vec<_>>();
-        passes.shuffle(rng.deref_mut());
+        passes.shuffle(&mut rng);
         [
             GameEvent::RecvPass {
                 to: Seat::North,
@@ -119,6 +117,24 @@ mod test {
                 south: "53S A52H 54D T97542C".parse().unwrap(),
                 west: "84S T87H AKQT63D K8C".parse().unwrap(),
                 pass: PassDirection::Left
+            }
+        );
+    }
+
+    #[test]
+    fn test_deal_left_then_right() {
+        let seed = HashedSeed::from(&Seed::Chosen {
+            value: "chosen".to_string(),
+        });
+        seed.deal(PassDirection::Left);
+        assert_eq!(
+            seed.deal(PassDirection::Right),
+            GameEvent::Deal {
+                north: "A3S KQT542H Q9642C".parse().unwrap(),
+                east: "JT62S A976H AQ5D A8C".parse().unwrap(),
+                south: "K987S JH KJ7643D J7C".parse().unwrap(),
+                west: "Q54S 83H T982D KT53C".parse().unwrap(),
+                pass: PassDirection::Right
             }
         );
     }

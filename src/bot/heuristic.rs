@@ -135,8 +135,8 @@ impl Algorithm for Heuristic {
                 // If it's safe to drill spades, do so.
                 if high_spades.is_empty()
                     || low_spades.len() >= 4
-                    || (low_spades.len() >= 3 && other_spades.len() <= 9)
-                    || (low_spades.len() >= 2 && other_spades.len() <= 5)
+                    || (low_spades.len() >= 3 && other_spades.len() <= 8)
+                    || (low_spades.len() >= 2 && other_spades.len() <= 4)
                 {
                     return random(low_spades);
                 }
