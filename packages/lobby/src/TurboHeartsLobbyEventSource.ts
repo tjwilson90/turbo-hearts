@@ -67,9 +67,14 @@ function unrustify(event: any): LobbyEvent {
         case "new_game":
             event.createdBy = event.player.player.user_id;
             return event;
+        case "start_game":
+            renameCommon(event.north);
+            renameCommon(event.west);
+            renameCommon(event.south);
+            renameCommon(event.east);
+            return event;
         case "leave_game":
         case "finish_game":
-        case "start_game":
         case "chat":
         default:
             return event;

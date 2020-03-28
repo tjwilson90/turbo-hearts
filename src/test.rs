@@ -256,7 +256,7 @@ async fn test_lobby() -> Result<(), CardsError> {
             twilson.recv().await,
             Some(LobbyEvent::LeaveGame {
                 game_id,
-                user_id: *TSLATCHER,
+                player: h!(*TSLATCHER),
             })
         );
         Ok(())

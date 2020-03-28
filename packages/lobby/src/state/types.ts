@@ -17,7 +17,11 @@ export interface IUserNameSubstitutions {
     type: "user";
     userId: string;
 }
-export type ISubstitutions = IGameLinkSubstitutions | IUserNameSubstitutions;
+export interface IBotSubstitutions {
+    type: "bot";
+    strategy: string;
+}
+export type ISubstitutions = IGameLinkSubstitutions | IUserNameSubstitutions | IBotSubstitutions;
 
 export interface ChatMessage {
     date: Date;
