@@ -147,7 +147,8 @@ class LobbyInternal extends React.PureComponent<Lobby.Props> {
     }
 
     private focusTextInput = () => {
-        if (this.inputRef != null) {
+        const selection = window.getSelection();
+        if (this.inputRef != null && (selection === null || selection.toString() === "")) {
             this.inputRef.focus();
         }
     };
