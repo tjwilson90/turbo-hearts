@@ -66,6 +66,7 @@ export class LobbySubscriber {
                     substitutions: [],
                 }
             }));
+            collectedUserIds.add(chat.userId);
         }
 
         this.store.dispatch(UpdateChatUserIds({

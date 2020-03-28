@@ -1,11 +1,6 @@
-export type BotStrategy = "random" | "duck" | "gotta_try";
+export type BotStrategy = "random" | "duck" | "gotta_try" | "heuristic";
 
-export type Rules = "classic"
-    | "blind"
-    | "bridge"
-    | "blind-bridge"
-    | "chain"
-    | "blind-chain"
+export type Rules = "classic" | "blind" | "bridge" | "blind-bridge" | "chain" | "blind-chain";
 
 export interface HumanLobbyPlayer {
     type: "human";
@@ -17,6 +12,21 @@ export interface BotLobbyPlayer {
     strategy: BotStrategy;
 }
 export type LobbyPlayer = HumanLobbyPlayer | BotLobbyPlayer;
+
+export interface GameResult {
+    gameId: string;
+    time: number;
+    players: {
+        userId: string;
+    }[];
+    hands: {
+        charges: string[];
+        hearts: number[];
+        qsWinnerId: string;
+        tcWinnerId: string;
+        jdWinnerId: string;
+    }[];
+}
 
 export interface LobbyStateEvent {
     type: "lobby_state";
@@ -31,9 +41,9 @@ export interface LobbyStateEvent {
         };
     };
     chat: {
-        timestamp: Date,
-        userId: string,
-        message: string,
+        timestamp: Date;
+        userId: string;
+        message: string;
     }[];
     userId: string;
     gameId: string;
@@ -96,4 +106,4 @@ export type LobbyEvent =
     | LeaveGameEvent
     | FinishGameEvent
     | StartGameEvent
-    | ChatEvent
+    | ChatEvent;

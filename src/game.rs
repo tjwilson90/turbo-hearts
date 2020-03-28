@@ -4,11 +4,16 @@ use crate::{
     cards::Cards,
     db::Database,
     error::CardsError,
-    game::{event::GameEvent, id::GameId, phase::GamePhase, state::GameState},
+    game::{
+        event::{GameEvent, Sender},
+        id::GameId,
+        phase::GamePhase,
+        state::GameState,
+    },
     player::{Player, PlayerWithOptions},
     seat::Seat,
     seed::Seed,
-    types::{PassDirection, RandomEvent},
+    types::PassDirection,
     user::UserId,
     util,
 };
@@ -21,11 +26,7 @@ use std::{
     sync::Arc,
 };
 use tokio::{
-    sync::{
-        mpsc,
-        mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender},
-        Mutex,
-    },
+    sync::{mpsc, mpsc::UnboundedReceiver, Mutex},
     task,
 };
 
@@ -112,6 +113,7 @@ impl Games {
     fn run_bot(&self, game_id: GameId, seat: Seat, player: Player, game: &mut Game) {
         if let Player::Bot { user_id, strategy } = player {
             let (tx, rx) = mpsc::unbounded_channel();
+            let tx = Sender::new(tx, None);
             task::spawn(Bot::new(game_id, user_id, strategy).run(self.clone(), rx, self.bot_delay));
             self.replay_events(&game, &tx, Some(seat));
             game.bots.push((seat, tx));
@@ -199,8 +201,10 @@ impl Games {
         &self,
         game_id: GameId,
         user_id: UserId,
-    ) -> Result<UnboundedReceiver<GameEvent>, CardsError> {
-        let (tx, rx) = unbounded_channel();
+        last_event_id: Option<usize>,
+    ) -> Result<UnboundedReceiver<(GameEvent, usize)>, CardsError> {
+        let (tx, rx) = mpsc::unbounded_channel();
+        let tx = Sender::new(tx, last_event_id);
         self.with_game(game_id, |game| {
             let seat = game.seat(user_id);
             let mut subscribers = game
@@ -211,9 +215,9 @@ impl Games {
             if subscribers.insert(user_id) {
                 game.broadcast(&GameEvent::JoinGame { user_id });
             }
-            game.subscribers.push((user_id, tx.clone()));
             self.replay_events(&game, &tx, seat);
-            tx.send(GameEvent::EndReplay { subscribers }).unwrap();
+            tx.send(GameEvent::EndReplay { subscribers });
+            game.subscribers.push((user_id, tx));
             Ok(())
         })
         .await?;
@@ -221,11 +225,11 @@ impl Games {
         Ok(rx)
     }
 
-    fn replay_events(&self, game: &Game, tx: &UnboundedSender<GameEvent>, seat: Option<Seat>) {
+    fn replay_events(&self, game: &Game, tx: &Sender, seat: Option<Seat>) {
         let mut copy = Game::new();
         for event in &game.events {
             copy.apply(event, |g, e| {
-                tx.send(e.redact(seat, g.state.rules)).unwrap();
+                tx.send(e.redact(seat, g.state.rules));
             });
         }
     }
@@ -269,7 +273,7 @@ impl Games {
                             - game.post_pass_hand[3]
                             | cards;
                         let mut passes = passes.into_iter().collect::<Vec<_>>();
-                        passes.shuffle(&mut RandomEvent::KeeperPass.rng(game.seed));
+                        passes.shuffle(&mut rand::thread_rng());
                         events.push(GameEvent::RecvPass {
                             to: Seat::North,
                             cards: passes[0..3].iter().cloned().collect(),
@@ -349,29 +353,14 @@ impl Games {
                 Some(seat) => {
                     game.verify_play(game_id, seat, card)?;
                     let mut events = vec![GameEvent::Play { seat, card }];
-                    if game.state.played | card == Cards::ALL {
-                        match game.state.phase {
-                            GamePhase::PlayLeft => {
-                                events.push(deal(game.seed, PassDirection::Right))
-                            }
-                            GamePhase::PlayRight => {
-                                events.push(deal(game.seed, PassDirection::Across))
-                            }
-                            GamePhase::PlayAcross => {
-                                events.push(deal(game.seed, PassDirection::Keeper))
-                            }
-                            _ => {}
-                        };
+                    let ends_hand = game.state.played | card == Cards::ALL;
+                    if ends_hand {
+                        game.add_deal_event(&mut events);
                     }
                     self.db.run_with_retry(|tx| {
                         persist_events(&tx, game_id, game.events.len(), &events)?;
-                        if game.state.played | card == Cards::ALL
-                            && game.state.phase == GamePhase::PlayKeeper
-                        {
-                            tx.execute::<&[&dyn ToSql]>(
-                                "UPDATE game SET completed_time = ? WHERE game_id = ?",
-                                &[&util::timestamp(), &game_id],
-                            )?;
+                        if ends_hand {
+                            game.finish_if_keeper(&tx, game_id)?;
                         }
                         Ok(())
                     })?;
@@ -424,21 +413,31 @@ impl Games {
         game_id: GameId,
         user_id: UserId,
         claimer: Seat,
-    ) -> Result<(), CardsError> {
+    ) -> Result<bool, CardsError> {
         let result = self
             .with_game(game_id, |game| match game.seat(user_id) {
                 None => Err(CardsError::InvalidPlayer(user_id, game_id)),
                 Some(seat) => {
                     game.verify_accept_claim(game_id, claimer, seat)?;
-                    let event = GameEvent::AcceptClaim {
+                    let mut events = vec![GameEvent::AcceptClaim {
                         claimer,
                         acceptor: seat,
-                    };
+                    }];
+                    let ends_hand = game.state.claims.will_successfully_claim(claimer, seat);
+                    if ends_hand {
+                        game.add_deal_event(&mut events);
+                    }
                     self.db.run_with_retry(|tx| {
-                        persist_events(&tx, game_id, game.events.len(), &[event.clone()])
+                        persist_events(&tx, game_id, game.events.len(), &events)?;
+                        if ends_hand {
+                            game.finish_if_keeper(&tx, game_id)?;
+                        }
+                        Ok(())
                     })?;
-                    game.apply(&event, |g, e| g.broadcast(e));
-                    Ok(())
+                    for event in events {
+                        game.apply(&event, |g, e| g.broadcast(e));
+                    }
+                    Ok(game.state.phase == GamePhase::Complete)
                 }
             })
             .await;
@@ -512,18 +511,18 @@ impl Games {
 }
 
 #[derive(Debug)]
-struct Game {
-    events: Vec<GameEvent>,
-    subscribers: Vec<(UserId, UnboundedSender<GameEvent>)>,
-    bots: Vec<(Seat, UnboundedSender<GameEvent>)>,
-    pre_pass_hand: [Cards; 4],
-    post_pass_hand: [Cards; 4],
-    state: GameState,
-    seed: [u8; 32],
+pub struct Game {
+    pub events: Vec<GameEvent>,
+    pub subscribers: Vec<(UserId, Sender)>,
+    pub bots: Vec<(Seat, Sender)>,
+    pub pre_pass_hand: [Cards; 4],
+    pub post_pass_hand: [Cards; 4],
+    pub state: GameState,
+    pub seed: [u8; 32],
 }
 
 impl Game {
-    fn new() -> Self {
+    pub fn new() -> Self {
         Self {
             events: Vec::new(),
             subscribers: Vec::new(),
@@ -550,7 +549,7 @@ impl Game {
         let mut disconnects = HashSet::new();
         self.subscribers.retain(|(user_id, tx)| {
             let seat = seat(players, *user_id);
-            if tx.send(event.redact(seat, rules)).is_ok() {
+            if tx.send(event.redact(seat, rules)) {
                 true
             } else {
                 disconnects.insert(*user_id);
@@ -566,7 +565,7 @@ impl Game {
             }
         }
         for (seat, bot) in &self.bots {
-            bot.send(event.redact(Some(*seat), rules)).unwrap();
+            bot.send(event.redact(Some(*seat), rules));
         }
     }
 
@@ -583,7 +582,7 @@ impl Game {
         }
     }
 
-    fn apply<F>(&mut self, event: &GameEvent, mut broadcast: F)
+    pub fn apply<F>(&mut self, event: &GameEvent, mut broadcast: F)
     where
         F: FnMut(&mut Game, &GameEvent),
     {
@@ -670,24 +669,36 @@ impl Game {
                     let play_status = self.play_status_event(self.state.next_player.unwrap());
                     broadcast(&mut *self, &play_status);
                 } else {
-                    let hand_complete = GameEvent::HandComplete {
-                        north_score: self.state.score(Seat::North),
-                        east_score: self.state.score(Seat::East),
-                        south_score: self.state.score(Seat::South),
-                        west_score: self.state.score(Seat::West),
-                    };
-                    broadcast(&mut *self, &hand_complete);
+                    self.finish_hand(broadcast);
                 }
-                if self.state.phase.is_complete() {
-                    let seed = if let GameEvent::Sit { seed, .. } = &self.events[0] {
-                        seed.clone()
-                    } else {
-                        panic!("First event must be a sit event");
-                    };
-                    broadcast(&mut *self, &GameEvent::GameComplete { seed });
+            }
+            GameEvent::AcceptClaim { claimer, .. } => {
+                if self.state.claims.successfully_claimed(*claimer) {
+                    self.finish_hand(broadcast);
                 }
             }
             _ => {}
+        }
+    }
+
+    fn finish_hand<F>(&mut self, mut broadcast: F)
+    where
+        F: FnMut(&mut Game, &GameEvent),
+    {
+        let hand_complete = GameEvent::HandComplete {
+            north_score: self.state.score(Seat::North),
+            east_score: self.state.score(Seat::East),
+            south_score: self.state.score(Seat::South),
+            west_score: self.state.score(Seat::West),
+        };
+        broadcast(&mut *self, &hand_complete);
+        if self.state.phase.is_complete() {
+            let seed = if let GameEvent::Sit { seed, .. } = &self.events[0] {
+                seed.clone()
+            } else {
+                panic!("First event must be a sit event");
+            };
+            broadcast(&mut *self, &GameEvent::GameComplete { seed });
         }
     }
 
@@ -863,6 +874,25 @@ impl Game {
         }
         Ok(())
     }
+
+    fn add_deal_event(&self, events: &mut Vec<GameEvent>) {
+        match self.state.phase {
+            GamePhase::PlayLeft => events.push(deal(self.seed, PassDirection::Right)),
+            GamePhase::PlayRight => events.push(deal(self.seed, PassDirection::Across)),
+            GamePhase::PlayAcross => events.push(deal(self.seed, PassDirection::Keeper)),
+            _ => {}
+        };
+    }
+
+    fn finish_if_keeper(&self, tx: &Transaction, game_id: GameId) -> Result<(), CardsError> {
+        if self.state.phase == GamePhase::PlayKeeper {
+            tx.execute::<&[&dyn ToSql]>(
+                "UPDATE game SET completed_time = ? WHERE game_id = ?",
+                &[&util::timestamp(), &game_id],
+            )?;
+        }
+        Ok(())
+    }
 }
 
 fn seat(players: [UserId; 4], user_id: UserId) -> Option<Seat> {
@@ -873,7 +903,7 @@ fn seat(players: [UserId; 4], user_id: UserId) -> Option<Seat> {
 }
 
 fn deal(seed: [u8; 32], pass: PassDirection) -> GameEvent {
-    let mut rng = RandomEvent::Deal(pass).rng(seed);
+    let mut rng = pass.rng(seed);
     let mut deck = Cards::ALL.into_iter().collect::<Vec<_>>();
     deck.shuffle(&mut rng);
     GameEvent::Deal {

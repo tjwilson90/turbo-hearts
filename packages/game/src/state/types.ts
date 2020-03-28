@@ -25,6 +25,15 @@ export interface UsersState {
   me: User;
 }
 
+export type ClaimResponseStatus = "ACCEPT" | "REJECT";
+
+export interface ClaimStatus {
+  north?: ClaimResponseStatus;
+  east?: ClaimResponseStatus;
+  south?: ClaimResponseStatus;
+  west?: ClaimResponseStatus;
+}
+
 export interface GameState {
   gameId: string;
   spectatorMode: boolean;
@@ -43,6 +52,7 @@ export interface GameState {
   scores: number[][];
   tricks: TurboHearts.Trick[];
   localPass: TurboHearts.LocalPass | undefined;
+  claims: { [key in Seat]?: ClaimStatus };
 }
 
 export interface GameContext {

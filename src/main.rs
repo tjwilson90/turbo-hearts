@@ -7,6 +7,7 @@ use crate::{
     user::{UserId, Users},
 };
 use http::header;
+use log::error;
 use r2d2_sqlite::SqliteConnectionManager;
 use rand_distr::Gamma;
 use reqwest::Client;
@@ -32,6 +33,7 @@ mod seat;
 mod seed;
 mod sql_types;
 mod suit;
+mod summary;
 #[cfg(test)]
 mod test;
 mod types;
@@ -44,6 +46,17 @@ pub fn user_id(users: infallible!(Users)) -> rejection!(UserId) {
     }
 
     users.and(warp::cookie("AUTH_TOKEN")).and_then(handle)
+}
+
+pub fn start_stale_game_cleanup(lobby: Lobby) {
+    tokio::task::spawn(async move {
+        let mut stream = time::interval(Duration::from_secs(60 * 60));
+        while let Some(_) = stream.next().await {
+            if let Err(e) = lobby.delete_stale_games().await {
+                error!("Failed to delete stale games {}", e);
+            }
+        }
+    });
 }
 
 pub fn start_background_pings(lobby: Lobby, games: Games) {
@@ -63,10 +76,12 @@ async fn main() -> Result<(), CardsError> {
     let bot_delay = Gamma::new(2.0, 1.0).unwrap();
     let lobby = Lobby::new(db.clone())?;
     let games = Games::new(db.clone(), Some(bot_delay));
-    let users = Users::new(db);
+    let users = Users::new(db.clone());
     let http_client = Client::new();
+    start_stale_game_cleanup(lobby.clone());
     start_background_pings(lobby.clone(), games.clone());
 
+    let db = warp::any().map(move || db.clone());
     let lobby = warp::any().map(move || lobby.clone());
     let games = warp::any().map(move || games.clone());
     let users = warp::any().map(move || users.clone());
@@ -82,6 +97,7 @@ async fn main() -> Result<(), CardsError> {
         .or(lobby::endpoints::router(lobby, games, user_id))
         .or(auth::endpoints::router(users.clone(), http_client))
         .or(endpoint::users(users))
+        .or(summary::router(db))
         .with(
             warp::cors()
                 .allow_any_origin()

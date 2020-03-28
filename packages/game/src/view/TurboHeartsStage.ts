@@ -255,7 +255,9 @@ export class TurboHeartsStage {
         next.event.type === "end_trick" ||
         next.event.type === "recv_pass" ||
         next.event.type === "send_pass" ||
-        next.event.type === "charge"
+        next.event.type === "claim" ||
+        next.event.type === "charge" ||
+        next.event.type === "game_complete"
       ) {
         return new StepAnimation(
           this.app.loader.resources,
@@ -278,7 +280,8 @@ export class TurboHeartsStage {
     if (next.event.type === "sit") {
       return this.snapAnimation();
     }
-    throw new Error("");
+    console.warn("didn't handle event", next.event)
+    return noopAnimation();
   }
 
   private getBottomSeat(state: TurboHearts.StateSnapshot) {
@@ -418,6 +421,11 @@ export class TurboHeartsStage {
   private enableCardInteraction(legalPlays: Card[]) {
     if (this.spectatorMode || this.snapshot === undefined) {
       return;
+    }
+    // Don't allow interaction with already charged cards.
+    if (this.action === "charge") {
+      const player = this.snapshot[getBottomSeat(this.snapshot, this.userId)];
+      legalPlays = legalPlays.filter(card => !player.charged.includes(card));
     }
 
     const spriteCards = spriteCardsOf([...this.bottom.hand, ...this.bottom.charged], legalPlays);

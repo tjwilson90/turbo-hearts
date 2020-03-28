@@ -1,5 +1,6 @@
 import { TypedAction } from "redoodle";
 import { ChatMessage, LobbyGame } from "./types";
+import { GameResult } from "../types";
 
 export const UpdateUserNames = TypedAction.define("UpdateUserNames")<{ [userId: string]: string }>();
 
@@ -21,3 +22,5 @@ export const DeleteLobbyGame = TypedAction.define("DeleteLobbyGame")<{
 }>();
 
 export const ToggleHideOldGames = TypedAction.defineWithoutPayload("ToggleHideOldGames")();
+
+export const SetLeagueGames = TypedAction.define("SetLeagueGames")<GameResult[]>();
