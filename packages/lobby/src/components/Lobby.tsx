@@ -101,7 +101,7 @@ class LobbyInternal extends React.PureComponent<Lobby.Props> {
         sortedGames.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 
         if (this.props.hideOldGames) {
-            sortedGames = sortedGames.filter(game => Date.now() - 1000 * 60 * 10 < game.updatedAt.getTime());
+            sortedGames = sortedGames.filter(game => Date.now() - 1000 * 60 * 60 < game.updatedAt.getTime());
         }
 
         return sortedGames.map(game => <GameListItem game={game} service={this.props.service} />);
