@@ -9,7 +9,7 @@ use crate::{
     util,
 };
 use log::info;
-use rusqlite::{ToSql, Transaction, NO_PARAMS};
+use rusqlite::{OptionalExtension, ToSql, Transaction, NO_PARAMS};
 use serde::Serialize;
 use std::{
     collections::{HashMap, HashSet},
@@ -132,6 +132,7 @@ impl Lobby {
         player: PlayerWithOptions,
     ) -> Result<(), CardsError> {
         let joined = self.db.run_with_retry(|tx| {
+            validate_game_unstarted(&tx, game_id)?;
             if insert_player(&tx, game_id, &player)? {
                 tx.execute::<&[&dyn ToSql]>(
                     "UPDATE game SET last_updated_time = ?, last_updated_by = ? WHERE game_id = ?",
@@ -150,7 +151,7 @@ impl Lobby {
         Ok(())
     }
 
-    pub async fn start_game(&self, game_id: GameId, players: [UserId; 4]) {
+    pub async fn start_game(&self, game_id: GameId, players: [Player; 4]) {
         let mut inner = self.inner.lock().await;
         inner.broadcast(LobbyEvent::StartGame {
             game_id,
@@ -163,20 +164,20 @@ impl Lobby {
     }
 
     pub async fn leave_game(&self, game_id: GameId, user_id: UserId) -> Result<(), CardsError> {
-        let left = self.db.run_with_retry(|tx| {
-            if remove_player(&tx, game_id, user_id)? {
+        let player = self.db.run_with_retry(|tx| {
+            validate_game_unstarted(&tx, game_id)?;
+            let player = remove_player(&tx, game_id, user_id)?;
+            if player.is_some() {
                 tx.execute::<&[&dyn ToSql]>(
                     "UPDATE game SET last_updated_time = ?, last_updated_by = ? WHERE game_id = ?",
                     &[&util::timestamp(), &user_id, &game_id],
                 )?;
-                Ok(true)
-            } else {
-                Ok(false)
             }
+            Ok(player)
         })?;
-        if left {
+        if let Some(player) = player {
             let mut inner = self.inner.lock().await;
-            inner.broadcast(LobbyEvent::LeaveGame { game_id, user_id });
+            inner.broadcast(LobbyEvent::LeaveGame { game_id, player });
         }
         info!("leave_game: game_id={}, user_id={}", game_id, user_id);
         Ok(())
@@ -311,6 +312,21 @@ fn load_games(tx: &Transaction) -> Result<HashMap<GameId, LobbyGame>, CardsError
     Ok(games)
 }
 
+fn validate_game_unstarted(tx: &Transaction, game_id: GameId) -> Result<(), CardsError> {
+    let started = tx
+        .query_row(
+            "SELECT started_time FROM game WHERE game_id = ?",
+            &[game_id],
+            |row| Ok(row.get::<_, Option<i64>>(0)?.is_some()),
+        )
+        .optional()?;
+    match started {
+        None => Err(CardsError::UnknownGame(game_id)),
+        Some(true) => Err(CardsError::GameHasStarted(game_id)),
+        _ => Ok(()),
+    }
+}
+
 fn insert_player(
     tx: &Transaction,
     game_id: GameId,
@@ -318,23 +334,38 @@ fn insert_player(
 ) -> Result<bool, CardsError> {
     let rows = tx.execute::<&[&dyn ToSql]>(
         "INSERT OR IGNORE INTO game_player (game_id, user_id, strategy, rules, seat)
-            SELECT game_id, ?, ?, ?, ? FROM game WHERE game_id = ? AND started_time IS NULL",
+            VALUES (?, ?, ?, ?, ?)",
         &[
+            &game_id,
             &player.player.user_id(),
             &player.player.strategy(),
             &player.rules,
             &player.seat,
-            &game_id,
         ],
     )?;
     Ok(rows > 0)
 }
 
-fn remove_player(tx: &Transaction, game_id: GameId, user_id: UserId) -> Result<bool, CardsError> {
-    let rows = tx.execute::<&[&dyn ToSql]>(
-        "DELETE FROM game_player WHERE game_id = ? AND user_id = ?
-            AND game_id IN (SELECT game_id FROM game WHERE started_time IS NULL)",
+fn remove_player(
+    tx: &Transaction,
+    game_id: GameId,
+    user_id: UserId,
+) -> Result<Option<Player>, CardsError> {
+    let player = tx
+        .query_row::<_, &[&dyn ToSql], _>(
+            "SELECT strategy FROM game_player WHERE game_id = ? AND user_id = ?",
+            &[&game_id, &user_id],
+            |row| {
+                Ok(match row.get(0)? {
+                    Some(strategy) => Player::Bot { user_id, strategy },
+                    None => Player::Human { user_id },
+                })
+            },
+        )
+        .optional()?;
+    tx.execute::<&[&dyn ToSql]>(
+        "DELETE FROM game_player WHERE game_id = ? AND user_id = ?",
         &[&game_id, &user_id],
     )?;
-    Ok(rows > 0)
+    Ok(player)
 }

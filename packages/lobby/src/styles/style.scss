@@ -104,6 +104,10 @@ a {
 
     > .game-controls {
         margin-top: 8px;
+
+        > .add-bot-select {
+            width: 67px;
+        }
     }
 }
 
@@ -154,6 +158,20 @@ a {
 
         &:hover {
             background-color: $accent-color;
+        }
+    }
+
+    > .select {
+        color: $text-color;
+        border: 0;
+        appearance: none;
+
+        &:hover {
+            background-color: $accent-color;
+        }
+
+        &:focus {
+            background-color: $bg2-color-secondary;
         }
     }
 

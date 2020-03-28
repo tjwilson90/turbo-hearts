@@ -15,6 +15,8 @@ import { AppendChat, DeleteLobbyGame, UpdateChatUserIds, UpdateLobbyGame, Update
 import { TurboHeartsLobbyService } from "./TurboHeartsLobbyService";
 
 export class LobbySubscriber {
+    private isVisible = true;
+
     public constructor(eventSource: TurboHeartsLobbyEventSource,
                        private lobbyService: TurboHeartsLobbyService,
                        private store: Store<LobbyState>) {
@@ -27,6 +29,9 @@ export class LobbySubscriber {
         eventSource.on("finish_game", this.onFinishGameEvent);
         eventSource.on("start_game", this.onStartGame);
         eventSource.on("chat", this.onChatEvent);
+
+        document.addEventListener("visibilitychange", () => this.handleVisibilityChange());
+        document.addEventListener("blur", () => this.handleVisibilityChange());
     }
 
     private onLobbyStateEvent = (event: LobbyStateEvent) => {
@@ -110,6 +115,7 @@ export class LobbySubscriber {
             }
         }));
         this.maybeLoadUserId(event.userId);
+        this.maybeFlashTitle();
     }
     private onExitLobbyEvent = (event: ExitLobbyEvent) => {
         const subscriberUserIds = this.store.getState().chats.lobby.userIds;
@@ -155,6 +161,7 @@ export class LobbySubscriber {
             }
         }));
         this.maybeLoadUserId(event.createdBy);
+        this.maybeFlashTitle();
     }
     private onJoinGameEvent = (event: JoinGameEvent) => {
         const game = this.store.getState().games[event.gameId];
@@ -179,7 +186,9 @@ export class LobbySubscriber {
             }
         }));
         for (const player of [event.north, event.east, event.south, event.west]) {
-            this.maybeLoadUserId(player);
+            if (player.type === "human") {
+                this.maybeLoadUserId(player.userId);
+            }
         }
         this.store.dispatch(AppendChat({
             room: "lobby",
@@ -189,18 +198,27 @@ export class LobbySubscriber {
                 message: "Game started between $0, $1, $2, and $3! $4",
                 generated: true,
                 substitutions: [
-                    { type: "user", userId: event.north },
-                    { type: "user", userId: event.east },
-                    { type: "user", userId: event.south },
-                    { type: "user", userId: event.west },
+                    event.north.type === "human"
+                        ? { type: "user", userId: event.north.userId }
+                        : { type: "bot", strategy: event.north.strategy },
+                    event.east.type === "human"
+                        ? { type: "user", userId: event.east.userId }
+                        : { type: "bot", strategy: event.east.strategy },
+                    event.south.type === "human"
+                        ? { type: "user", userId: event.south.userId }
+                        : { type: "bot", strategy: event.south.strategy },
+                    event.west.type === "human"
+                        ? { type: "user", userId: event.west.userId }
+                        : { type: "bot", strategy: event.west.strategy },
                     { type: "game", gameId: event.gameId },
                 ],
             }
         }));
+        this.maybeFlashTitle();
     }
     private onLeaveGameEvent = (event: LeaveGameEvent) => {
         const game = this.store.getState().games[event.gameId];
-        const players = game.players.filter(user => user.type === "bot" || event.userId !== event.userId);
+        const players = game.players.filter(user => user.type === "bot" || user.userId !== event.userId);
         if (players.length === 0) {
             this.store.dispatch(DeleteLobbyGame({
                 gameId: event.gameId,
@@ -232,6 +250,7 @@ export class LobbySubscriber {
             }
         }));
         this.maybeLoadUserId(event.userId);
+        this.maybeFlashTitle();
     }
 
     private async maybeLoadUserId(userId: string) {
@@ -242,5 +261,19 @@ export class LobbySubscriber {
                 [userId]: userName,
             }));
         }
+    }
+    
+    private handleVisibilityChange() {
+        this.isVisible = document.visibilityState === "visible";
+        if (this.isVisible) {
+            document.title = "play.anti.run";
+        }
+    }
+    
+    private maybeFlashTitle() {
+        if (this.isVisible) {
+            return;
+        }
+        document.title = "* play.anti.run";
     }
 }
