@@ -218,7 +218,7 @@ export class LobbySubscriber {
     }
     private onLeaveGameEvent = (event: LeaveGameEvent) => {
         const game = this.store.getState().games[event.gameId];
-        const players = game.players.filter(user => user.type === "bot" || event.userId !== event.userId);
+        const players = game.players.filter(user => user.type === "bot" || user.userId !== event.userId);
         if (players.length === 0) {
             this.store.dispatch(DeleteLobbyGame({
                 gameId: event.gameId,
