@@ -94,24 +94,24 @@ impl Bot {
             }
             match action {
                 Some(Action::Pass(cards)) => {
-                    games.pass_cards(self.game_id, self.user_id, cards).await?
+                    let _ = games.pass_cards(self.game_id, self.user_id, cards).await;
                 }
                 Some(Action::Charge(cards)) => {
-                    games
-                        .charge_cards(self.game_id, self.user_id, cards)
-                        .await?
+                    let _ = games.charge_cards(self.game_id, self.user_id, cards).await;
                 }
                 Some(Action::Play(card)) => {
-                    if games.play_card(self.game_id, self.user_id, card).await? {
-                        return Ok(());
+                    match games.play_card(self.game_id, self.user_id, card).await {
+                        Ok(true) => return Ok(()),
+                        _ => {}
                     }
                 }
                 Some(Action::Claim) => {
-                    games.claim(self.game_id, self.user_id).await?;
+                    let _ = games.claim(self.game_id, self.user_id).await;
                 }
                 Some(Action::AcceptClaim(seat)) => {
-                    if let Ok(true) = games.accept_claim(self.game_id, self.user_id, seat).await {
-                        return Ok(());
+                    match games.accept_claim(self.game_id, self.user_id, seat).await {
+                        Ok(true) => return Ok(()),
+                        _ => {}
                     }
                 }
                 Some(Action::RejectClaim(seat)) => {
