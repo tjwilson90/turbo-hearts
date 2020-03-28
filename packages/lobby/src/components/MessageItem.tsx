@@ -63,6 +63,8 @@ class MessageItemInternal extends React.PureComponent<MessageItem.Props> {
                 consumed.push(<a key={consumed.length} className="inline-message-link" href={`/game#${sub.gameId}`} target="_blank">Open game</a>);
             } else if (sub.type === "user") {
                 consumed.push(<React.Fragment key={consumed.length}>{this.props.users.userNamesByUserId[sub.userId] || "Loading"}</React.Fragment>);
+            } else if (sub.type === "bot") {
+                consumed.push(<React.Fragment key={consumed.length}>{sub.strategy.slice(0, 1).toUpperCase() + sub.strategy.slice(1)}</React.Fragment>);
             }
 
             unconsumed = unconsumed.slice(subIdx + searchString.length);

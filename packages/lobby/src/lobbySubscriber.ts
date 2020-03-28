@@ -179,7 +179,9 @@ export class LobbySubscriber {
             }
         }));
         for (const player of [event.north, event.east, event.south, event.west]) {
-            this.maybeLoadUserId(player);
+            if (player.type === "human") {
+                this.maybeLoadUserId(player.userId);
+            }
         }
         this.store.dispatch(AppendChat({
             room: "lobby",
@@ -189,10 +191,18 @@ export class LobbySubscriber {
                 message: "Game started between $0, $1, $2, and $3! $4",
                 generated: true,
                 substitutions: [
-                    { type: "user", userId: event.north },
-                    { type: "user", userId: event.east },
-                    { type: "user", userId: event.south },
-                    { type: "user", userId: event.west },
+                    event.north.type === "human"
+                        ? { type: "user", userId: event.north.userId }
+                        : { type: "bot", strategy: event.north.strategy },
+                    event.east.type === "human"
+                        ? { type: "user", userId: event.east.userId }
+                        : { type: "bot", strategy: event.east.strategy },
+                    event.south.type === "human"
+                        ? { type: "user", userId: event.south.userId }
+                        : { type: "bot", strategy: event.south.strategy },
+                    event.west.type === "human"
+                        ? { type: "user", userId: event.west.userId }
+                        : { type: "bot", strategy: event.west.strategy },
                     { type: "game", gameId: event.gameId },
                 ],
             }

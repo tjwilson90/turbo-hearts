@@ -85,10 +85,10 @@ export interface FinishGameEvent {
 export interface StartGameEvent {
     type: "start_game";
     gameId: string;
-    north: string;
-    east: string;
-    south: string;
-    west: string;
+    north: LobbyPlayer;
+    east: LobbyPlayer;
+    south: LobbyPlayer;
+    west: LobbyPlayer;
 }
 
 export interface ChatEvent {
