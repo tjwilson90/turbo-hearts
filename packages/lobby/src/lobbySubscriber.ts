@@ -15,6 +15,8 @@ import { AppendChat, DeleteLobbyGame, UpdateChatUserIds, UpdateLobbyGame, Update
 import { TurboHeartsLobbyService } from "./TurboHeartsLobbyService";
 
 export class LobbySubscriber {
+    private isVisible = true;
+
     public constructor(eventSource: TurboHeartsLobbyEventSource,
                        private lobbyService: TurboHeartsLobbyService,
                        private store: Store<LobbyState>) {
@@ -27,6 +29,9 @@ export class LobbySubscriber {
         eventSource.on("finish_game", this.onFinishGameEvent);
         eventSource.on("start_game", this.onStartGame);
         eventSource.on("chat", this.onChatEvent);
+
+        document.addEventListener("visibilitychange", () => this.handleVisibilityChange());
+        document.addEventListener("blur", () => this.handleVisibilityChange());
     }
 
     private onLobbyStateEvent = (event: LobbyStateEvent) => {
@@ -110,6 +115,7 @@ export class LobbySubscriber {
             }
         }));
         this.maybeLoadUserId(event.userId);
+        this.maybeFlashTitle();
     }
     private onExitLobbyEvent = (event: ExitLobbyEvent) => {
         const subscriberUserIds = this.store.getState().chats.lobby.userIds;
@@ -155,6 +161,7 @@ export class LobbySubscriber {
             }
         }));
         this.maybeLoadUserId(event.createdBy);
+        this.maybeFlashTitle();
     }
     private onJoinGameEvent = (event: JoinGameEvent) => {
         const game = this.store.getState().games[event.gameId];
@@ -207,6 +214,7 @@ export class LobbySubscriber {
                 ],
             }
         }));
+        this.maybeFlashTitle();
     }
     private onLeaveGameEvent = (event: LeaveGameEvent) => {
         const game = this.store.getState().games[event.gameId];
@@ -242,6 +250,7 @@ export class LobbySubscriber {
             }
         }));
         this.maybeLoadUserId(event.userId);
+        this.maybeFlashTitle();
     }
 
     private async maybeLoadUserId(userId: string) {
@@ -252,5 +261,19 @@ export class LobbySubscriber {
                 [userId]: userName,
             }));
         }
+    }
+    
+    private handleVisibilityChange() {
+        this.isVisible = document.visibilityState === "visible";
+        if (this.isVisible) {
+            document.title = "play.anti.run";
+        }
+    }
+    
+    private maybeFlashTitle() {
+        if (this.isVisible) {
+            return;
+        }
+        document.title = "* play.anti.run";
     }
 }
