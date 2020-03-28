@@ -231,7 +231,7 @@ impl GameState {
     pub fn legal_plays(&self, cards: Cards) -> Cards {
         let mut plays = cards - self.played;
         // if this is the first trick
-        if self.won.is_empty() {
+        if self.all_won().is_empty() {
             // if you have the two of clubs
             if plays.contains(Card::TwoClubs) {
                 // you must play it
