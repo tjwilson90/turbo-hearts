@@ -95,13 +95,16 @@ class GameListItemInternal extends React.PureComponent<GameListItem.Props> {
                         </div>
                     : <>
                         <div className="button" onClick={this.addRandomBot}>
-                            + Random
+                            + Rand
                         </div>
                         <div className="button" onClick={this.addDuckBot}>
                             + Duck
                         </div>
                         <div className="button" onClick={this.addGottaTryBot}>
                             + GT
+                        </div>
+                        <div className="button" onClick={this.addHeuristicBot}>
+                            + Heu
                         </div>
                     </>
                 }
@@ -129,6 +132,7 @@ class GameListItemInternal extends React.PureComponent<GameListItem.Props> {
     private addRandomBot = () => this.props.addBot("random");
     private addDuckBot = () => this.props.addBot("duck");
     private addGottaTryBot = () => this.props.addBot("gotta_try");
+    private addHeuristicBot = () => this.props.addBot("heuristic");
 }
 
 export const GameListItem = connect(mapStateToProps, mapDispatchToProps)(GameListItemInternal);

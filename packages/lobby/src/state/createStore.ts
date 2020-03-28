@@ -12,25 +12,27 @@ export function createStore(): Store<LobbyState> {
         chats: {
             lobby: {
                 messages: [],
-                userIds: [],
+                userIds: []
             }
         },
         games: {},
+        leagues: {
+            games: []
+        },
         users: {
             ownUserId: userId,
             userNamesByUserId: {
-                [userId]: cookieParams["USER_NAME"],
-            },
+                [userId]: cookieParams["USER_NAME"]
+            }
         },
         ui: {
-            hideOldGames: true,
+            hideOldGames: true
         }
-    }
+    };
 
-    return createRedoodleStore(
+    return (createRedoodleStore(
         rootReducer,
         initialState,
         (applyMiddleware(loggingMiddleware({})) as any) as StoreEnhancer
-    ) as Store<LobbyState>
+    ) as unknown) as Store<LobbyState>;
 }
-

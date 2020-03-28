@@ -1,4 +1,4 @@
-import { Card } from "../types";
+import { Card, Seat } from "../types";
 import { User } from "../state/types";
 
 export class TurboHeartsService {
@@ -30,6 +30,18 @@ export class TurboHeartsService {
 
   public chat = (message: string) => {
     return fetch(`/game/chat`, this.requestWithBody({ game_id: this.gameId, message }));
+  };
+
+  public claim = () => {
+    return fetch(`/game/claim`, this.requestWithBody({ game_id: this.gameId }));
+  };
+
+  public acceptClaim = (claimer: Seat) => {
+    return fetch(`/game/accept_claim`, this.requestWithBody({ game_id: this.gameId, claimer }));
+  };
+
+  public rejectClaim = (claimer: Seat) => {
+    return fetch(`/game/reject_claim`, this.requestWithBody({ game_id: this.gameId, claimer }));
   };
 
   public getUsers = async (userIds: string[]) => {

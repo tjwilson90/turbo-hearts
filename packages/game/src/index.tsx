@@ -5,7 +5,19 @@ import { Provider } from "react-redux";
 import { createGameAppStore } from "./state/createStore";
 import { UserDispatcher } from "./state/UserDispatcher";
 import { GameApp } from "./ui/GameApp";
-import { SitEventData, ChatEvent, Seat, HandCompleteEventData } from "./types";
+import {
+  SitEventData,
+  ChatEvent,
+  Seat,
+  HandCompleteEventData,
+  ClaimEventData,
+  AcceptClaimEventData,
+  RejectClaimEventData,
+  GAME_BOT,
+  DealEventData,
+  StartChargingEventData,
+  StartTrickEventData
+} from "./types";
 import {
   AppendChat,
   UpdateActions,
@@ -13,7 +25,9 @@ import {
   ResetTricks,
   AppendHandScore,
   EnableSpectatorMode,
-  SetLocalPass
+  SetLocalPass,
+  UpdateClaims,
+  ResetClaims
 } from "./state/actions";
 import { getBottomSeat } from "./view/TurboHeartsStage";
 
@@ -43,11 +57,64 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     userDispatcher.loadUsersForGame(event);
   });
+  ctx.eventSource.on("deal", (deal: DealEventData) => {
+    store.dispatch(
+      AppendChat({
+        userId: GAME_BOT,
+        message: `Dealing "${deal.pass}" hand.`
+      })
+    );
+  });
+  ctx.eventSource.on("start_charging", (_charge: StartChargingEventData) => {
+    store.dispatch(
+      AppendChat({
+        userId: GAME_BOT,
+        message: `Beginning charge phase.`
+      })
+    );
+  });
+  ctx.eventSource.on("start_trick", (_startTrick: StartTrickEventData) => {
+    if (store.getState().game.tricks.length === 0)
+    store.dispatch(
+      AppendChat({
+        userId: GAME_BOT,
+        message: `Beginning play.`
+      })
+    );
+  });
   ctx.eventSource.on("chat", (chat: ChatEvent) => {
     userDispatcher.loadUsers([chat.userId]);
     store.dispatch(AppendChat(chat));
   });
+  ctx.eventSource.on("claim", (event: ClaimEventData) => {
+    store.dispatch(UpdateClaims(event));
+    store.dispatch(
+      AppendChat({
+        userId: GAME_BOT,
+        message: `__${event.seat} has claimed the rest of the tricks.`
+      })
+    );
+  });
+  ctx.eventSource.on("accept_claim", (event: AcceptClaimEventData) => {
+    store.dispatch(UpdateClaims(event));
+    store.dispatch(
+      AppendChat({
+        userId: GAME_BOT,
+        message: `__${event.acceptor} has accepted __${event.claimer}'s claim.`
+      })
+    );
+  });
+  ctx.eventSource.on("reject_claim", (event: RejectClaimEventData) => {
+    store.dispatch(UpdateClaims(event));
+    store.dispatch(
+      AppendChat({
+        userId: GAME_BOT,
+        message: `__${event.rejector} has rejected __${event.claimer}'s claim.`
+      })
+    );
+  });
   ctx.eventSource.on("hand_complete", (scores: HandCompleteEventData) => {
+    store.dispatch(ResetClaims());
     store.dispatch(AppendHandScore(scores));
   });
   ctx.snapshotter.on("snapshot", snapshot => {

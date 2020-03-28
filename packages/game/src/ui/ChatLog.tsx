@@ -2,11 +2,19 @@ import * as React from "react";
 import { connect } from "react-redux";
 import { ChatMessage, GameAppState, User } from "../state/types";
 import { Suit, colorMap, suitMap } from "./PlayHistory";
+import classNames from "classnames";
+import { GAME_BOT, Seat } from "../types";
+import { POSITIONS } from "../util/seatPositions";
 
 export namespace ChatLog {
   export interface StoreProps {
     messages: ChatMessage[];
     users: { [key: string]: User };
+    top: User | undefined;
+    right: User | undefined;
+    bottom: User | undefined;
+    left: User | undefined;
+    bottomSeat: Seat;
   }
 
   export type Props = StoreProps;
@@ -58,10 +66,6 @@ function cardRuns(cardRun: string) {
     cardRun = "JD";
   } else if (cardRun === "T") {
     cardRun = "TC";
-  } else if (cardRun === "QT") {
-    cardRun = "QSTC";
-  } else if (cardRun === "JT") {
-    cardRun = "JDTC";
   }
   const runs: string[] = [];
   let start = 0;
@@ -79,6 +83,9 @@ class ChatLogInternal extends React.Component<ChatLog.Props> {
   private ref = React.createRef<HTMLDivElement>();
 
   public render() {
+    if (this.props.bottomSeat === undefined) {
+      return <div className="chat-log" ref={this.ref} />;
+    }
     return (
       <div className="chat-log" ref={this.ref}>
         {this.props.messages.map(this.renderMessage)}
@@ -94,30 +101,45 @@ class ChatLogInternal extends React.Component<ChatLog.Props> {
 
   private renderMessage = (message: ChatMessage, idx: number) => {
     const user = this.props.users[message.userId];
-    const cardRegex = /\b((T)|(J)|(QT)|(JT)|(Q)|([23456789TJQKAxX]+[CDHS]))+\b/g;
-    let result;
-    let last = 0;
-    const chunks = [];
-    while ((result = cardRegex.exec(message.message))) {
-      const sub = message.message.substring(last, result.index);
-      chunks.push(sub);
-      chunks.push(...cardRuns(result[0]));
-      last = result.index + result[0].length;
-    }
-    chunks.push(message.message.substring(last));
+    const chunks = this.convertToRichCardText(this.substituteDirections(message.message));
     return (
-      <div className="chat-message-container" key={idx}>
+      <div className={classNames("chat-message-container", { "game-bot": message.userId === GAME_BOT })} key={idx}>
         <span className="chat-user">{user?.name ?? "loading..."}</span>
         <span className="chat-message">{chunks}</span>
       </div>
     );
   };
+
+  private substituteDirections(message: string) {
+    const positions = POSITIONS[this.props.bottomSeat];
+    return message
+      .replace(/__north/g, this.props[positions.north]?.name ?? "north")
+      .replace(/__east/g, this.props[positions.east]?.name ?? "east")
+      .replace(/__south/g, this.props[positions.south]?.name ?? "south")
+      .replace(/__west/g, this.props[positions.west]?.name ?? "west");
+  }
+
+  private convertToRichCardText(message: string) {
+    const cardRegex = /\b((T)|(J)|(QT)|(JT)|(Q)|([23456789TJQKAxX]+[CDHS]))+\b/g;
+    let result;
+    let last = 0;
+    const chunks = [];
+    while ((result = cardRegex.exec(message))) {
+      const sub = message.substring(last, result.index);
+      chunks.push(sub);
+      chunks.push(...cardRuns(result[0]));
+      last = result.index + result[0].length;
+    }
+    chunks.push(message.substring(last));
+    return chunks;
+  }
 }
 
 function mapStateToProps(state: GameAppState): ChatLog.StoreProps {
   return {
     users: state.users.users,
-    messages: state.chat.messages
+    messages: state.chat.messages,
+    ...state.game
   };
 }
 

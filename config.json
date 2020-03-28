@@ -1,5 +1,5 @@
 {
-  "db_path": "turbo_hearts.db",
+  "db_path": "turbo-hearts.db",
   "external_uri": "http://localhost:7380",
   "fusion": {
     "client_id": "36306d88-169e-4bc0-bda1-22e5c73ef498",

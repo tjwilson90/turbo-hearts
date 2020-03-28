@@ -310,16 +310,19 @@ async fn test_new_game() -> Result<(), CardsError> {
         let players = games.start_game(game_id)?;
         lobby.start_game(game_id, players).await;
 
-        let mut twilson = games.subscribe(game_id, *TWILSON).await?;
+        let mut twilson = games.subscribe(game_id, *TWILSON, None).await?;
         match twilson.recv().await {
-            Some(GameEvent::Sit {
-                north,
-                east,
-                south,
-                west,
-                rules: ChargingRules::Classic,
-                ..
-            }) => assert_eq!(
+            Some((
+                GameEvent::Sit {
+                    north,
+                    east,
+                    south,
+                    west,
+                    rules: ChargingRules::Classic,
+                    ..
+                },
+                _,
+            )) => assert_eq!(
                 set![north, east, south, west],
                 set![h!(*TWILSON), h!(*TSLATCHER), h!(*DCERVELLI), h!(*CARRINO)]
             ),
@@ -451,18 +454,15 @@ async fn test_bot_game() -> Result<(), CardsError> {
             .await?;
         let players = games.start_game(game_id)?;
         lobby.start_game(game_id, players).await;
-        let mut rx = games.subscribe(game_id, UserId::new()).await?;
-        let mut plays = 0;
-        while let Some(event) = rx.recv().await {
-            match event {
-                GameEvent::Play { .. } => {
-                    plays += 1;
-                }
-                GameEvent::GameComplete { .. } => break,
-                _ => {}
+        let mut rx = games.subscribe(game_id, UserId::new(), None).await?;
+        let mut game_complete = false;
+        while let Some((event, _)) = rx.recv().await {
+            if let GameEvent::GameComplete { .. } = event {
+                game_complete = true;
+                break;
             }
         }
-        assert_eq!(plays, 208);
+        assert!(game_complete);
         Ok(())
     }
     let runner = TestRunner::new();

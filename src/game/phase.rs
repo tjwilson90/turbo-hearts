@@ -1,4 +1,7 @@
-use crate::{seat::Seat, types::ChargingRules};
+use crate::{
+    seat::Seat,
+    types::{ChargingRules, PassDirection},
+};
 use std::mem;
 
 #[repr(u8)]
@@ -88,6 +91,16 @@ impl GamePhase {
             PassRight | ChargeRight | PlayRight => seat.left(),
             PassAcross | ChargeAcross | PlayAcross => seat.across(),
             _ => seat,
+        }
+    }
+
+    pub fn direction(&self) -> PassDirection {
+        use GamePhase::*;
+        match self {
+            PassLeft | ChargeLeft | PlayLeft => PassDirection::Left,
+            PassRight | ChargeRight | PlayRight => PassDirection::Right,
+            PassAcross | ChargeAcross | PlayAcross => PassDirection::Across,
+            _ => PassDirection::Keeper,
         }
     }
 }

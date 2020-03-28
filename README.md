@@ -654,7 +654,7 @@ rejected and who rejected the claim.
 {
   "type": "reject_claim",
   "claimer": "west",
-  "acceptor": "north"
+  "rejector": "north"
 }
 ```
 
@@ -774,3 +774,19 @@ Request:
   "message": "carrino, it's your play"
 }
 ```
+
+### `GET /summary/leaderboard`
+
+Load summary information about recent games suitable for constructing a leaderboard or game summary
+table. Only completed games between four human players are included.
+
+An optional `game_id` query parameter can be passed to restrict the output only to games completed
+before the given game. This is useful for paging over games in multiple calls.
+
+An optional `page_size` query parameter can be passed to specify how many games should be included.
+The page size defaults to 100.
+
+### `GET /summary/hand/<game_id>/<hand>`
+
+Load an unredacted timeline of events for the given hand. This endpoint can only be called for
+hands after they have been completed.
