@@ -88,26 +88,18 @@ class GameListItemInternal extends React.PureComponent<GameListItem.Props> {
                         Join
                     </div>
                 }
-                {this.props.game.players.length >= 4
-                    ?
-                        <div className="button" onClick={this.props.startGame}>
+                <select className="select button add-bot-select" value="__add_bot" onChange={this.addBot}>
+                    <option disabled={true} value="__add_bot">Add bot</option>
+                    <option value="random" className="button">Random</option>
+                    <option value="duck" className="button">Duck</option>
+                    <option value="gotta_try" className="button">Gotta Try</option>
+                    <option value="heuristic" className="button">Heuristic</option>
+                </select>
+                {this.props.game.players.length >= 4 && (
+                    <div className="button" onClick={this.props.startGame}>
                             Start!
-                        </div>
-                    : <>
-                        <div className="button" onClick={this.addRandomBot}>
-                            + Rand
-                        </div>
-                        <div className="button" onClick={this.addDuckBot}>
-                            + Duck
-                        </div>
-                        <div className="button" onClick={this.addGottaTryBot}>
-                            + GT
-                        </div>
-                        <div className="button" onClick={this.addHeuristicBot}>
-                            + Heu
-                        </div>
-                    </>
-                }
+                    </div>
+                )}
             </div>
         )
     }
@@ -129,10 +121,9 @@ class GameListItemInternal extends React.PureComponent<GameListItem.Props> {
         )
     }
 
-    private addRandomBot = () => this.props.addBot("random");
-    private addDuckBot = () => this.props.addBot("duck");
-    private addGottaTryBot = () => this.props.addBot("gotta_try");
-    private addHeuristicBot = () => this.props.addBot("heuristic");
+    private addBot = (select: React.ChangeEvent<HTMLSelectElement>) => {
+        this.props.addBot(select.target.value as BotStrategy);
+    };
 }
 
 export const GameListItem = connect(mapStateToProps, mapDispatchToProps)(GameListItemInternal);
