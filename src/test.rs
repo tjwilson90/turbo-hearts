@@ -490,14 +490,49 @@ async fn test_bot_game() -> Result<(), CardsError> {
         let players = games.start_game(game_id)?;
         lobby.start_game(game_id, players).await;
         let mut rx = games.subscribe(game_id, UserId::new(), None).await?;
-        let mut game_complete = false;
+        let mut events = HashMap::new();
         while let Some((event, _)) = rx.recv().await {
-            if let GameEvent::GameComplete { .. } = event {
-                game_complete = true;
-                break;
+            match event {
+                GameEvent::Chat { .. } => {
+                    *events.entry("Chat").or_insert(0) += 1;
+                }
+                GameEvent::Sit { .. } => {
+                    *events.entry("Sit").or_insert(0) += 1;
+                }
+                GameEvent::Deal { .. } => {
+                    *events.entry("Deal").or_insert(0) += 1;
+                }
+                GameEvent::StartPassing { .. } => {
+                    *events.entry("StartPassing").or_insert(0) += 1;
+                }
+                GameEvent::SendPass { .. } => {
+                    *events.entry("SendPass").or_insert(0) += 1;
+                }
+                GameEvent::RecvPass { .. } => {
+                    *events.entry("RecvPass").or_insert(0) += 1;
+                }
+                GameEvent::StartCharging { .. } => {
+                    *events.entry("StartCharging").or_insert(0) += 1;
+                }
+                GameEvent::HandComplete { .. } => {
+                    *events.entry("HandComplete").or_insert(0) += 1;
+                }
+                GameEvent::GameComplete { .. } => {
+                    *events.entry("GameComplete").or_insert(0) += 1;
+                    break;
+                }
+                _ => {}
             }
         }
-        assert!(game_complete);
+        assert_eq!(events.remove("Chat"), None);
+        assert_eq!(events.remove("Sit"), Some(1));
+        assert_eq!(events.remove("Deal"), Some(4));
+        assert!(matches!(events.remove("StartPassing"), Some(x) if x == 3 || x == 4));
+        assert!(matches!(events.remove("SendPass"), Some(x) if x == 12 || x == 16));
+        assert!(matches!(events.remove("RecvPass"), Some(x) if x == 12 || x == 16));
+        assert!(matches!(events.remove("StartCharging"), Some(x) if x == 4 || x == 5));
+        assert_eq!(events.remove("HandComplete"), Some(4));
+        assert_eq!(events.remove("GameComplete"), Some(1));
         Ok(())
     }
     let runner = TestRunner::new();

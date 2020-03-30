@@ -31,6 +31,7 @@ use tokio::{
 
 pub mod charge;
 pub mod claim;
+pub mod done;
 pub mod endpoints;
 pub mod event;
 pub mod id;
@@ -246,7 +247,7 @@ impl Games {
                     let mut events = vec![GameEvent::SendPass { from: seat, cards }];
                     if game.state.phase != GamePhase::PassKeeper {
                         let sender = game.state.phase.pass_sender(seat);
-                        if game.state.done_with_phase[sender.idx()] {
+                        if game.state.done.sent_pass(sender) {
                             events.push(GameEvent::RecvPass {
                                 to: seat,
                                 cards: game.pre_pass_hand[sender.idx()]
@@ -254,7 +255,7 @@ impl Games {
                             });
                         }
                         let receiver = game.state.phase.pass_receiver(seat);
-                        if game.state.done_with_phase[receiver.idx()] {
+                        if game.state.done.sent_pass(receiver) {
                             events.push(GameEvent::RecvPass {
                                 to: receiver,
                                 cards,
@@ -262,7 +263,7 @@ impl Games {
                         }
                     }
                     if game.state.phase == GamePhase::PassKeeper
-                        && Seat::all(|s| s == seat || game.state.done_with_phase[s.idx()])
+                        && Seat::all(|s| s == seat || game.state.done.sent_pass(s))
                     {
                         let passes = Cards::ALL
                             - game.post_pass_hand[0]

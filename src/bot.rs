@@ -195,7 +195,7 @@ impl Bot {
         if self.state.game.phase.is_charging() {
             if !self.state.pre_pass_hand.is_empty()
                 && self.state.game.can_charge(self.state.seat)
-                && !self.state.game.done_with_phase[self.state.seat.idx()]
+                && !self.state.game.done.charged(self.state.seat)
             {
                 Some(Action::Charge(self.algorithm.charge(&self.state)))
             } else {
@@ -203,7 +203,7 @@ impl Bot {
             }
         } else if self.state.game.phase.is_passing() {
             if !self.state.pre_pass_hand.is_empty()
-                && !self.state.game.done_with_phase[self.state.seat.idx()]
+                && !self.state.game.done.sent_pass(self.state.seat)
             {
                 Some(Action::Pass(self.algorithm.pass(&self.state)))
             } else {

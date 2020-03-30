@@ -1,5 +1,3 @@
-use rand::SeedableRng;
-use rand_chacha::ChaCha20Rng;
 use serde::{export::Formatter, Deserialize, Serialize};
 use std::{
     convert::Infallible,
@@ -76,13 +74,5 @@ impl FromStr for PassDirection {
             "keeper" => Ok(PassDirection::Keeper),
             _ => panic!("Invalid pass direction {}", s),
         }
-    }
-}
-
-impl PassDirection {
-    pub fn rng(&self, seed: [u8; 32]) -> ChaCha20Rng {
-        let mut rng = ChaCha20Rng::from_seed(seed);
-        rng.set_stream(*self as u8 as u64);
-        rng
     }
 }

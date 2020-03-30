@@ -2,7 +2,8 @@ use crate::{
     card::Card,
     cards::Cards,
     game::{
-        charge::ChargeState, claim::ClaimState, event::GameEvent, phase::GamePhase, trick::Trick,
+        charge::ChargeState, claim::ClaimState, done::DoneState, event::GameEvent,
+        phase::GamePhase, trick::Trick,
     },
     seat::Seat,
     suits::Suits,
@@ -12,18 +13,18 @@ use crate::{
 
 #[derive(Debug)]
 pub struct GameState {
-    pub players: [UserId; 4],       // 64
-    pub rules: ChargingRules,       // 1
-    pub phase: GamePhase,           // 1
-    pub done_with_phase: [bool; 4], // 4
-    pub charge_count: u8,           // 1
-    pub charges: ChargeState,       // 2
-    pub next_actor: Option<Seat>,   // 1
-    pub played: Cards,              // 8
-    pub claims: ClaimState,         // 2
-    pub won: [Cards; 4],            // 32
-    pub led_suits: Suits,           // 1
-    pub current_trick: Trick,       // 9
+    pub players: [UserId; 4],     // 64
+    pub rules: ChargingRules,     // 1
+    pub phase: GamePhase,         // 1
+    pub done: DoneState,          // 1
+    pub charge_count: u8,         // 1
+    pub charges: ChargeState,     // 2
+    pub next_actor: Option<Seat>, // 1
+    pub played: Cards,            // 8
+    pub claims: ClaimState,       // 2
+    pub won: [Cards; 4],          // 32
+    pub led_suits: Suits,         // 1
+    pub current_trick: Trick,     // 9
 }
 
 impl GameState {
@@ -32,7 +33,7 @@ impl GameState {
             players: [UserId::null(); 4],
             rules: ChargingRules::Classic,
             phase: GamePhase::PassLeft,
-            done_with_phase: [false; 4],
+            done: DoneState::new(),
             charge_count: 0,
             charges: ChargeState::new(),
             next_actor: None,
@@ -44,30 +45,26 @@ impl GameState {
         }
     }
 
-    pub fn all_done(&self) -> bool {
-        self.done_with_phase.iter().all(|b| *b)
-    }
-
     pub fn all_won(&self) -> Cards {
         self.won.iter().cloned().collect()
     }
 
     pub fn pass_status_event(&self) -> GameEvent {
         GameEvent::PassStatus {
-            north_done: self.done_with_phase[Seat::North.idx()],
-            east_done: self.done_with_phase[Seat::East.idx()],
-            south_done: self.done_with_phase[Seat::South.idx()],
-            west_done: self.done_with_phase[Seat::West.idx()],
+            north_done: self.done.sent_pass(Seat::North),
+            east_done: self.done.sent_pass(Seat::East),
+            south_done: self.done.sent_pass(Seat::South),
+            west_done: self.done.sent_pass(Seat::West),
         }
     }
 
     pub fn charge_status_event(&self) -> GameEvent {
         GameEvent::ChargeStatus {
             next_charger: self.next_actor,
-            north_done: self.done_with_phase[Seat::North.idx()],
-            east_done: self.done_with_phase[Seat::East.idx()],
-            south_done: self.done_with_phase[Seat::South.idx()],
-            west_done: self.done_with_phase[Seat::West.idx()],
+            north_done: self.done.charged(Seat::North),
+            east_done: self.done.charged(Seat::East),
+            south_done: self.done.charged(Seat::South),
+            west_done: self.done.charged(Seat::West),
         }
     }
 
@@ -146,12 +143,13 @@ impl GameState {
                 self.current_trick.clear();
             }
             GameEvent::SendPass { from, .. } => {
-                self.done_with_phase[from.idx()] = true;
+                self.done.send_pass(*from);
             }
-            GameEvent::RecvPass { .. } => {
-                if self.all_done() {
+            GameEvent::RecvPass { to, .. } => {
+                self.done.recv_pass(*to);
+                if self.done.all_recv_pass() {
                     self.phase = self.phase.next(self.charge_count != 0);
-                    self.done_with_phase = [false; 4];
+                    self.done.reset();
                     self.next_actor = self.phase.first_charger(self.rules);
                 }
             }
@@ -187,7 +185,7 @@ impl GameState {
                     self.next_actor = Some(winning_seat);
                     if self.played == Cards::ALL {
                         self.phase = self.phase.next(self.charge_count != 0);
-                        self.done_with_phase = [false; 4];
+                        self.done.reset();
                     }
                 }
             }
@@ -200,7 +198,7 @@ impl GameState {
                     self.won[claimer.idx()] |= self.current_trick.cards();
                     self.current_trick.clear();
                     self.phase = self.phase.next(self.charge_count != 0);
-                    self.done_with_phase = [false; 4];
+                    self.done.reset();
                     self.next_actor = None;
                 }
             }
@@ -216,15 +214,17 @@ impl GameState {
             *charger = charger.left();
         }
         if count == 0 {
-            self.done_with_phase[seat.idx()] = true;
-            if self.all_done() {
+            self.done.charge(seat);
+            if self.done.all_charge() {
                 self.phase = self.phase.next(self.charge_count != 0);
-                self.done_with_phase = [false; 4];
+                self.done.reset();
                 self.next_actor = None;
             }
         } else {
-            self.done_with_phase = [false; 4];
-            self.done_with_phase[seat.idx()] = !self.rules.chain();
+            self.done.reset();
+            if !self.rules.chain() {
+                self.done.charge(seat);
+            }
         }
     }
 
