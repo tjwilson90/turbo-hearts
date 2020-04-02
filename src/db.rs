@@ -1,9 +1,11 @@
 use crate::error::CardsError;
 use r2d2::{CustomizeConnection, Pool};
 use r2d2_sqlite::SqliteConnectionManager;
-use rusqlite::{Connection, DropBehavior, Transaction, TransactionBehavior};
+use rusqlite::{Connection, DropBehavior, Transaction, TransactionBehavior, NO_PARAMS};
 use std::time::Duration;
 use tokio::task;
+
+static SQL: &[&'static str] = &[include_str!("../sql/schema.sql")];
 
 #[derive(Clone)]
 pub struct Database {
@@ -16,9 +18,20 @@ impl Database {
             .connection_customizer(Box::new(Customizer))
             .build(manager)
             .unwrap();
-        pool.get()
-            .unwrap()
-            .execute_batch(include_str!("../schema.sql"))?;
+        let conn = pool.get().unwrap();
+        let version = conn.query_row("PRAGMA user_version", NO_PARAMS, |row| {
+            Ok(row.get::<_, i64>(0)? as usize)
+        })?;
+        if version < SQL.len() {
+            if version == 0 {
+                conn.execute_batch(SQL[0])?;
+            } else {
+                for upgrade in SQL[version..].iter() {
+                    conn.execute_batch(upgrade)?;
+                }
+            }
+            conn.execute_batch(&format!("PRAGMA user_version = {}", SQL.len()))?;
+        }
         Ok(Self { pool })
     }
 
