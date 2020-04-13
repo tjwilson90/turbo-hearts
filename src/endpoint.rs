@@ -13,7 +13,7 @@ pub fn assets() -> reply!() {
         .and(warp::fs::dir("./assets"))
 }
 
-pub fn users(users: infallible!(Users)) -> reply!() {
+pub fn users<'a>(users: infallible!(&'a Users)) -> reply!() {
     #[derive(Debug, Deserialize)]
     struct Request {
         ids: Vec<UserId>,
@@ -24,7 +24,7 @@ pub fn users(users: infallible!(Users)) -> reply!() {
         users: HashSet<User>,
     }
 
-    async fn handle(users: Users, request: Request) -> Result<impl Reply, Rejection> {
+    async fn handle(users: &Users, request: Request) -> Result<impl Reply, Rejection> {
         let Request { ids } = request;
         let users = users.get_users(ids).await?;
         Ok(warp::reply::json(&users))

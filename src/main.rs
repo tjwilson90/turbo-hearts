@@ -41,15 +41,15 @@ mod types;
 mod user;
 mod util;
 
-pub fn user_id(users: infallible!(Users)) -> rejection!(UserId) {
-    async fn handle(users: Users, auth_token: String) -> Result<UserId, Rejection> {
+fn user_id<'a>(users: infallible!(&'a Users)) -> rejection!(UserId) {
+    async fn handle(users: &Users, auth_token: String) -> Result<UserId, Rejection> {
         Ok(users.get_user_id(auth_token).await?)
     }
 
     users.and(warp::cookie("AUTH_TOKEN")).and_then(handle)
 }
 
-pub fn start_stale_game_cleanup(lobby: Lobby) {
+fn start_stale_game_cleanup(lobby: &'static Lobby) {
     tokio::task::spawn(async move {
         let mut stream = time::interval(Duration::from_secs(60 * 60));
         while let Some(_) = stream.next().await {
@@ -60,7 +60,7 @@ pub fn start_stale_game_cleanup(lobby: Lobby) {
     });
 }
 
-pub fn start_background_pings(lobby: Lobby, games: Games) {
+fn start_background_pings(lobby: &'static Lobby, games: &'static Games) {
     tokio::task::spawn(async move {
         let mut stream = time::interval(Duration::from_secs(15));
         while let Some(_) = stream.next().await {
@@ -73,30 +73,37 @@ pub fn start_background_pings(lobby: Lobby, games: Games) {
 #[tokio::main]
 async fn main() -> Result<(), CardsError> {
     env_logger::init();
-    let db = Database::new(SqliteConnectionManager::file(&CONFIG.db_path))?;
-    let bot_delay = Gamma::new(2.0, 1.0).unwrap();
-    let lobby = Lobby::new(db.clone())?;
-    let games = Games::new(db.clone(), Some(bot_delay));
-    let users = Users::new(db.clone());
-    let http_client = Client::new();
-    start_stale_game_cleanup(lobby.clone());
-    start_background_pings(lobby.clone(), games.clone());
 
-    let db = warp::any().map(move || db.clone());
-    let lobby = warp::any().map(move || lobby.clone());
-    let games = warp::any().map(move || games.clone());
-    let users = warp::any().map(move || users.clone());
-    let http_client = warp::any().map(move || http_client.clone());
-    let user_id = user_id(users.clone());
+    let db = Database::new(SqliteConnectionManager::file(&CONFIG.db_path))?;
+    let db = &*Box::leak(Box::new(db));
+
+    let lobby = Lobby::new(db)?;
+    let lobby = &*Box::leak(Box::new(lobby));
+
+    let bot_delay = Gamma::new(2.0, 1.0).unwrap();
+    let games = Games::new(db, Some(bot_delay));
+    let games = &*Box::leak(Box::new(games));
+
+    let users = Users::new(db);
+    let users = &*Box::leak(Box::new(users));
+
+    let http_client = Client::new();
+    let http_client = &*Box::leak(Box::new(http_client));
+
+    start_stale_game_cleanup(lobby);
+    start_background_pings(lobby, games);
+
+    let db = warp::any().map(move || db);
+    let lobby = warp::any().map(move || lobby);
+    let games = warp::any().map(move || games);
+    let users = warp::any().map(move || users);
+    let http_client = warp::any().map(move || http_client);
+    let user_id = user_id(users);
 
     let app = endpoint::assets()
-        .or(game::endpoints::router(
-            lobby.clone(),
-            games.clone(),
-            user_id.clone(),
-        ))
+        .or(game::endpoints::router(lobby, games, user_id.clone()))
         .or(lobby::endpoints::router(lobby, games, user_id))
-        .or(auth::endpoints::router(users.clone(), http_client))
+        .or(auth::endpoints::router(users, http_client))
         .or(endpoint::users(users))
         .or(summary::router(db))
         .with(

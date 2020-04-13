@@ -6,7 +6,6 @@ use std::{
     fmt,
     fmt::Display,
     str::FromStr,
-    sync::Arc,
 };
 use tokio::sync::Mutex;
 use uuid::Uuid;
@@ -86,17 +85,16 @@ impl Cache {
     }
 }
 
-#[derive(Clone)]
 pub struct Users {
-    db: Database,
-    cache: Arc<Mutex<Cache>>,
+    db: &'static Database,
+    cache: Mutex<Cache>,
 }
 
 impl Users {
-    pub fn new(db: Database) -> Self {
+    pub fn new(db: &'static Database) -> Self {
         Self {
             db,
-            cache: Arc::new(Mutex::new(Cache::new())),
+            cache: Mutex::new(Cache::new()),
         }
     }
 
