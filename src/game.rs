@@ -41,13 +41,13 @@ pub mod trick;
 
 #[derive(Clone)]
 pub struct Games {
-    db: Database,
+    db: &'static Database,
     bot_delay: Option<Gamma<f32>>,
     inner: Arc<Mutex<HashMap<GameId, Arc<Mutex<Game>>>>>,
 }
 
 impl Games {
-    pub fn new(db: Database, bot_delay: Option<Gamma<f32>>) -> Self {
+    pub fn new(db: &'static Database, bot_delay: Option<Gamma<f32>>) -> Self {
         Self {
             db,
             bot_delay,

@@ -15,9 +15,9 @@ use tokio::{
 };
 use warp::{sse, sse::ServerSentEvent, Filter, Rejection, Reply};
 
-pub fn router(
-    lobby: infallible!(Lobby),
-    games: infallible!(Games),
+pub fn router<'a>(
+    lobby: infallible!(&'a Lobby),
+    games: infallible!(&'a Games),
     user_id: rejection!(UserId),
 ) -> reply!() {
     warp::path("lobby")
@@ -43,8 +43,8 @@ fn html() -> reply!() {
         .and(warp::fs::file("./assets/lobby/index.html"))
 }
 
-fn subscribe(lobby: infallible!(Lobby), user_id: rejection!(UserId)) -> reply!() {
-    async fn handle(lobby: Lobby, user_id: UserId) -> Result<impl Reply, Rejection> {
+fn subscribe<'a>(lobby: infallible!(&'a Lobby), user_id: rejection!(UserId)) -> reply!() {
+    async fn handle(lobby: &Lobby, user_id: UserId) -> Result<impl Reply, Rejection> {
         let rx = lobby.subscribe(user_id).await?;
         Ok(sse::reply(stream(rx)))
     }
@@ -68,7 +68,7 @@ fn subscribe(lobby: infallible!(Lobby), user_id: rejection!(UserId)) -> reply!()
         .and_then(handle)
 }
 
-fn new_game(lobby: infallible!(Lobby), user_id: rejection!(UserId)) -> reply!() {
+fn new_game<'a>(lobby: infallible!(&'a Lobby), user_id: rejection!(UserId)) -> reply!() {
     #[derive(Debug, Deserialize)]
     struct Request {
         rules: ChargingRules,
@@ -77,7 +77,7 @@ fn new_game(lobby: infallible!(Lobby), user_id: rejection!(UserId)) -> reply!() 
     }
 
     async fn handle(
-        lobby: Lobby,
+        lobby: &Lobby,
         user_id: UserId,
         request: Request,
     ) -> Result<impl Reply, Rejection> {
@@ -99,7 +99,7 @@ fn new_game(lobby: infallible!(Lobby), user_id: rejection!(UserId)) -> reply!() 
         .and_then(handle)
 }
 
-fn join_game(lobby: infallible!(Lobby), user_id: rejection!(UserId)) -> reply!() {
+fn join_game<'a>(lobby: infallible!(&'a Lobby), user_id: rejection!(UserId)) -> reply!() {
     #[derive(Debug, Deserialize)]
     struct Request {
         game_id: GameId,
@@ -108,7 +108,7 @@ fn join_game(lobby: infallible!(Lobby), user_id: rejection!(UserId)) -> reply!()
     }
 
     async fn handle(
-        lobby: Lobby,
+        lobby: &Lobby,
         user_id: UserId,
         request: Request,
     ) -> Result<impl Reply, Rejection> {
@@ -134,9 +134,9 @@ fn join_game(lobby: infallible!(Lobby), user_id: rejection!(UserId)) -> reply!()
         .and_then(handle)
 }
 
-fn start_game(
-    lobby: infallible!(Lobby),
-    games: infallible!(Games),
+fn start_game<'a>(
+    lobby: infallible!(&'a Lobby),
+    games: infallible!(&'a Games),
     user_id: rejection!(UserId),
 ) -> reply!() {
     #[derive(Debug, Deserialize)]
@@ -145,8 +145,8 @@ fn start_game(
     }
 
     async fn handle(
-        lobby: Lobby,
-        games: Games,
+        lobby: &Lobby,
+        games: &Games,
         _user_id: UserId,
         request: Request,
     ) -> Result<impl Reply, Rejection> {
@@ -165,14 +165,14 @@ fn start_game(
         .and_then(handle)
 }
 
-fn leave_game(lobby: infallible!(Lobby), user_id: rejection!(UserId)) -> reply!() {
+fn leave_game<'a>(lobby: infallible!(&'a Lobby), user_id: rejection!(UserId)) -> reply!() {
     #[derive(Debug, Deserialize)]
     struct Request {
         game_id: GameId,
     }
 
     async fn handle(
-        lobby: Lobby,
+        lobby: &Lobby,
         user_id: UserId,
         request: Request,
     ) -> Result<impl Reply, Rejection> {
@@ -189,7 +189,7 @@ fn leave_game(lobby: infallible!(Lobby), user_id: rejection!(UserId)) -> reply!(
         .and_then(handle)
 }
 
-fn add_bot(lobby: infallible!(Lobby), user_id: rejection!(UserId)) -> reply!() {
+fn add_bot<'a>(lobby: infallible!(&'a Lobby), user_id: rejection!(UserId)) -> reply!() {
     #[derive(Debug, Deserialize)]
     struct Request {
         game_id: GameId,
@@ -198,7 +198,7 @@ fn add_bot(lobby: infallible!(Lobby), user_id: rejection!(UserId)) -> reply!() {
     }
 
     async fn handle(
-        lobby: Lobby,
+        lobby: &Lobby,
         _user_id: UserId,
         request: Request,
     ) -> Result<impl Reply, Rejection> {
@@ -228,7 +228,7 @@ fn add_bot(lobby: infallible!(Lobby), user_id: rejection!(UserId)) -> reply!() {
         .and_then(handle)
 }
 
-fn remove(lobby: infallible!(Lobby), user_id: rejection!(UserId)) -> reply!() {
+fn remove<'a>(lobby: infallible!(&'a Lobby), user_id: rejection!(UserId)) -> reply!() {
     #[derive(Debug, Deserialize)]
     struct Request {
         game_id: GameId,
@@ -236,7 +236,7 @@ fn remove(lobby: infallible!(Lobby), user_id: rejection!(UserId)) -> reply!() {
     }
 
     async fn handle(
-        lobby: Lobby,
+        lobby: &Lobby,
         _user_id: UserId,
         request: Request,
     ) -> Result<impl Reply, Rejection> {
@@ -253,14 +253,14 @@ fn remove(lobby: infallible!(Lobby), user_id: rejection!(UserId)) -> reply!() {
         .and_then(handle)
 }
 
-fn chat(lobby: infallible!(Lobby), user_id: rejection!(UserId)) -> reply!() {
+fn chat<'a>(lobby: infallible!(&'a Lobby), user_id: rejection!(UserId)) -> reply!() {
     #[derive(Debug, Deserialize)]
     struct Request {
         message: String,
     }
 
     async fn handle(
-        lobby: Lobby,
+        lobby: &Lobby,
         user_id: UserId,
         request: Request,
     ) -> Result<impl Reply, Rejection> {

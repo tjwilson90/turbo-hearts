@@ -42,9 +42,9 @@ static DCERVELLI: Lazy<UserId> = Lazy::new(|| UserId::new());
 
 struct TestRunner {
     _temp_dir: TempDir,
-    db: Database,
-    lobby: Lobby,
-    games: Games,
+    db: &'static Database,
+    lobby: &'static Lobby,
+    games: &'static Games,
 }
 
 impl TestRunner {
@@ -57,8 +57,11 @@ impl TestRunner {
         let mut path = temp_dir.path().to_owned();
         path.push("test.db");
         let db = Database::new(SqliteConnectionManager::file(path)).unwrap();
-        let lobby = Lobby::new(db.clone()).unwrap();
-        let games = Games::new(db.clone(), None);
+        let db = &*Box::leak(Box::new(db));
+        let lobby = Lobby::new(db).unwrap();
+        let lobby = &*Box::leak(Box::new(lobby));
+        let games = Games::new(db, None);
+        let games = &*Box::leak(Box::new(games));
         Self {
             _temp_dir: temp_dir,
             db,
@@ -69,13 +72,13 @@ impl TestRunner {
 
     async fn run<F, T>(&self, task: T) -> F::Output
     where
-        T: FnOnce(Database, Lobby, Games) -> F + Send + 'static,
+        T: FnOnce(&'static Database, &'static Lobby, &'static Games) -> F + Send + 'static,
         F: Future + Send + 'static,
         F::Output: Send + 'static,
     {
-        let db = self.db.clone();
-        let lobby = self.lobby.clone();
-        let games = self.games.clone();
+        let db = self.db;
+        let lobby = self.lobby;
+        let games = self.games;
         let result = tokio::spawn(async move { task(db, lobby, games).await }).await;
         match result {
             Ok(v) => v,
@@ -86,7 +89,7 @@ impl TestRunner {
 
 #[tokio::test(threaded_scheduler)]
 async fn test_lobby() -> Result<(), CardsError> {
-    async fn test(_: Database, lobby: Lobby, _games: Games) -> Result<(), CardsError> {
+    async fn test(_: &Database, lobby: &Lobby, _games: &Games) -> Result<(), CardsError> {
         let mut twilson = lobby.subscribe(*TWILSON).await?;
         assert_eq!(
             twilson.recv().await,
@@ -189,7 +192,7 @@ async fn test_lobby() -> Result<(), CardsError> {
 
 #[tokio::test(threaded_scheduler)]
 async fn test_new_game() -> Result<(), CardsError> {
-    async fn test(_: Database, lobby: Lobby, games: Games) -> Result<(), CardsError> {
+    async fn test(_: &Database, lobby: &Lobby, games: &Games) -> Result<(), CardsError> {
         let game_id = lobby
             .new_game(
                 PlayerWithOptions {
@@ -258,7 +261,7 @@ async fn test_new_game() -> Result<(), CardsError> {
 
 #[tokio::test(threaded_scheduler)]
 async fn test_pass() -> Result<(), CardsError> {
-    async fn test(db: Database, _lobby: Lobby, games: Games) -> Result<(), CardsError> {
+    async fn test(db: &Database, _lobby: &Lobby, games: &Games) -> Result<(), CardsError> {
         let game_id = GameId::new();
         db.run_with_retry(|tx| {
             persist_events(
@@ -320,7 +323,7 @@ async fn test_pass() -> Result<(), CardsError> {
 
 #[tokio::test(threaded_scheduler)]
 async fn test_seeded_game() -> Result<(), CardsError> {
-    async fn test(_db: Database, lobby: Lobby, games: Games) -> Result<(), CardsError> {
+    async fn test(_db: &Database, lobby: &Lobby, games: &Games) -> Result<(), CardsError> {
         let game_id = lobby
             .new_game(
                 PlayerWithOptions {
@@ -434,7 +437,7 @@ async fn test_seeded_game() -> Result<(), CardsError> {
 
 #[tokio::test(threaded_scheduler)]
 async fn test_bot_game() -> Result<(), CardsError> {
-    async fn test(_: Database, lobby: Lobby, games: Games) -> Result<(), CardsError> {
+    async fn test(_: &Database, lobby: &Lobby, games: &Games) -> Result<(), CardsError> {
         let game_id = lobby
             .new_game(
                 PlayerWithOptions {

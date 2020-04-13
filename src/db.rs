@@ -7,7 +7,6 @@ use tokio::task;
 
 static SQL: &[&'static str] = &[include_str!("../sql/schema.sql")];
 
-#[derive(Clone)]
 pub struct Database {
     pool: Pool<SqliteConnectionManager>,
 }
@@ -33,13 +32,6 @@ impl Database {
             conn.execute_batch(&format!("PRAGMA user_version = {}", SQL.len()))?;
         }
         Ok(Self { pool })
-    }
-
-    pub fn run_blocking_read_only<F, T>(&self, f: F) -> Result<T, CardsError>
-    where
-        F: FnMut(Transaction) -> Result<T, CardsError>,
-    {
-        self.run_blocking(TransactionBehavior::Deferred, f)
     }
 
     pub fn run_read_only<F, T>(&self, f: F) -> Result<T, CardsError>

@@ -11,10 +11,7 @@ use crate::{
 use log::info;
 use rusqlite::{OptionalExtension, ToSql, Transaction, NO_PARAMS};
 use serde::Serialize;
-use std::{
-    collections::{HashMap, HashSet},
-    sync::Arc,
-};
+use std::collections::{HashMap, HashSet};
 use tokio::sync::{
     mpsc::{self, UnboundedReceiver, UnboundedSender},
     Mutex,
@@ -23,19 +20,19 @@ use tokio::sync::{
 pub mod endpoints;
 pub mod event;
 
-#[derive(Clone)]
+//#[derive(Clone)]
 pub struct Lobby {
-    db: Database,
-    inner: Arc<Mutex<Inner>>,
+    db: &'static Database,
+    inner: Mutex<Inner>,
 }
 
 impl Lobby {
-    pub fn new(db: Database) -> Result<Self, CardsError> {
+    pub fn new(db: &'static Database) -> Result<Self, CardsError> {
         Ok(Self {
             db,
-            inner: Arc::new(Mutex::new(Inner {
+            inner: Mutex::new(Inner {
                 subscribers: Vec::new(),
-            })),
+            }),
         })
     }
 

@@ -10,7 +10,7 @@ use std::convert::Infallible;
 use uuid::Uuid;
 use warp::{Filter, Rejection, Reply};
 
-pub fn router(users: infallible!(Users), http_client: infallible!(Client)) -> reply!() {
+pub fn router<'a>(users: infallible!(&'a Users), http_client: infallible!(&'a Client)) -> reply!() {
     redirect(users, http_client)
         .or(warp::path("auth").and(html().or(fusion()).or(github()).or(google())))
         .boxed()
@@ -76,7 +76,7 @@ fn google() -> reply!() {
     warp::path!("google").and(warp::get()).and_then(handle)
 }
 
-fn redirect(users: infallible!(Users), http_client: infallible!(Client)) -> reply!() {
+fn redirect<'a>(users: infallible!(&'a Users), http_client: infallible!(&'a Client)) -> reply!() {
     #[derive(Debug, Deserialize)]
     struct QueryParams {
         code: String,
@@ -84,8 +84,8 @@ fn redirect(users: infallible!(Users), http_client: infallible!(Client)) -> repl
     }
 
     async fn handle(
-        users: Users,
-        http_client: Client,
+        users: &Users,
+        http_client: &Client,
         query: QueryParams,
         state_cookie: String,
     ) -> Result<impl Reply, Rejection> {

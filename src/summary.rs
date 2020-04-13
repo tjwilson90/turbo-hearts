@@ -74,20 +74,20 @@ struct CompleteHand {
     jack_winner: UserId,
 }
 
-pub fn router(db: infallible!(Database)) -> reply!() {
+pub fn router<'a>(db: infallible!(&'a Database)) -> reply!() {
     warp::path("summary")
         .and(leaderboard(db.clone()).or(hand(db)))
         .boxed()
 }
 
-fn leaderboard(db: infallible!(Database)) -> reply!() {
+fn leaderboard<'a>(db: infallible!(&'a Database)) -> reply!() {
     #[derive(Debug, Deserialize)]
     struct Request {
         game_id: Option<GameId>,
         page_size: Option<u32>,
     }
 
-    async fn handle(db: Database, request: Request) -> Result<impl Reply, Rejection> {
+    async fn handle(db: &Database, request: Request) -> Result<impl Reply, Rejection> {
         let Request { game_id, page_size } = request;
         let page_size = page_size.unwrap_or(100);
         let games = db.run_read_only(|tx| {
@@ -181,7 +181,7 @@ fn winner_of(state: &GameState, card: Card) -> UserId {
     unreachable!()
 }
 
-fn hand(db: infallible!(Database)) -> reply!() {
+fn hand<'a>(db: infallible!(&'a Database)) -> reply!() {
     #[derive(Debug, Deserialize)]
     struct Request {
         game_id: GameId,
@@ -208,7 +208,7 @@ fn hand(db: infallible!(Database)) -> reply!() {
     async fn handle(
         game_id: GameId,
         hand: PassDirection,
-        db: Database,
+        db: &Database,
     ) -> Result<impl Reply, Rejection> {
         let reply = db.run_read_only(|tx| {
             let mut stmt = tx.prepare_cached(
