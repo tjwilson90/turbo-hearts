@@ -36,6 +36,8 @@ function unrustify(event: EventData): EventData {
     case "game_complete":
       return event;
     case "chat":
+    case "join_game":
+    case "leave_game":
       renameProp(event, "user_id", "userId");
       return event;
     case "play_status":

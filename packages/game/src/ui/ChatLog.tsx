@@ -116,7 +116,8 @@ class ChatLogInternal extends React.Component<ChatLog.Props> {
       .replace(/__north/g, this.props[positions.north]?.name ?? "north")
       .replace(/__east/g, this.props[positions.east]?.name ?? "east")
       .replace(/__south/g, this.props[positions.south]?.name ?? "south")
-      .replace(/__west/g, this.props[positions.west]?.name ?? "west");
+      .replace(/__west/g, this.props[positions.west]?.name ?? "west")
+      .replace(/__([0-9a-fA-F]{8}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{12})/g, (_match, p1) => this.props.users[p1]?.name ?? "User");
   }
 
   private convertToRichCardText(message: string) {
