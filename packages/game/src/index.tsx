@@ -16,7 +16,9 @@ import {
   GAME_BOT,
   DealEventData,
   StartChargingEventData,
-  StartTrickEventData
+  StartTrickEventData,
+  JoinGameEventData,
+  LeaveGameEventData,
 } from "./types";
 import {
   AppendChat,
@@ -85,6 +87,24 @@ document.addEventListener("DOMContentLoaded", () => {
   ctx.eventSource.on("chat", (chat: ChatEvent) => {
     userDispatcher.loadUsers([chat.userId]);
     store.dispatch(AppendChat(chat));
+  });
+  ctx.eventSource.on("join_game", (event: JoinGameEventData) => {
+    userDispatcher.loadUsers([event.userId]);
+    store.dispatch(
+      AppendChat({
+        userId: GAME_BOT,
+        message: `__${event.userId} has joined the game.`
+      })
+    );
+  });
+  ctx.eventSource.on("leave_game", (event: LeaveGameEventData) => {
+    userDispatcher.loadUsers([event.userId]);
+    store.dispatch(
+      AppendChat({
+        userId: GAME_BOT,
+        message: `__${event.userId} has left the game.`
+      })
+    );
   });
   ctx.eventSource.on("claim", (event: ClaimEventData) => {
     store.dispatch(UpdateClaims(event));
