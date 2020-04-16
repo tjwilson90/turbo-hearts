@@ -137,6 +137,16 @@ export interface GameCompleteEventData {
   type: "game_complete";
 }
 
+export interface JoinGameEventData {
+  type: "join_game";
+  userId: string;
+}
+
+export interface LeaveGameEventData {
+  type: "leave_game";
+  userId: string;
+}
+
 export interface Event {
   type: EventData["type"];
   begin(): void;
@@ -190,7 +200,9 @@ export type EventData =
   | AcceptClaimEventData
   | RejectClaimEventData
   | HandCompleteEventData
-  | GameCompleteEventData;
+  | GameCompleteEventData
+  | JoinGameEventData
+  | LeaveGameEventData;
 
 export interface Animation {
   start(): void;
