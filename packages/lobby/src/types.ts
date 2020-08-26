@@ -1,4 +1,4 @@
-export type BotStrategy = "random" | "duck" | "gotta_try" | "heuristic";
+export type BotStrategy = "random" | "duck" | "gotta_try" | "heuristic" | "simulate";
 
 export type Rules = "classic" | "blind" | "bridge" | "blind-bridge" | "chain" | "blind-chain";
 

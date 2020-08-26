@@ -1,5 +1,7 @@
 use crate::{
-    bot::{duck::Duck, gottatry::GottaTry, heuristic::Heuristic, random::Random},
+    bot::{
+        duck::Duck, gottatry::GottaTry, heuristic::Heuristic, random::Random, simulate::Simulate,
+    },
     card::Card,
     cards::Cards,
     error::CardsError,
@@ -13,9 +15,10 @@ use log::debug;
 use rand::distributions::Distribution;
 use rand_distr::Gamma;
 use serde::{Deserialize, Serialize};
+use std::time::Instant;
 use tokio::{
     sync::mpsc::{error::TryRecvError, UnboundedReceiver},
-    time,
+    task, time,
     time::Duration,
 };
 
@@ -23,11 +26,14 @@ mod duck;
 mod gottatry;
 mod heuristic;
 mod random;
+mod simulate;
+mod void;
 
 pub struct Bot {
     game_id: GameId,
     user_id: UserId,
-    state: BotState,
+    bot_state: BotState,
+    game_state: GameState,
     algorithm: Box<dyn Algorithm + Send + Sync>,
 }
 
@@ -39,13 +45,13 @@ pub enum Strategy {
     GottaTry,
     Heuristic,
     Random,
+    Simulate,
 }
 
 pub struct BotState {
     seat: Seat,
     pre_pass_hand: Cards,
     post_pass_hand: Cards,
-    game: GameState,
 }
 
 impl Bot {
@@ -55,16 +61,17 @@ impl Bot {
             Strategy::GottaTry => Box::new(GottaTry::new()),
             Strategy::Heuristic => Box::new(Heuristic::new()),
             Strategy::Random => Box::new(Random::new()),
+            Strategy::Simulate => Box::new(Simulate::new()),
         };
         Self {
             game_id,
             user_id,
-            state: BotState {
+            bot_state: BotState {
                 seat: Seat::North,
                 pre_pass_hand: Cards::NONE,
                 post_pass_hand: Cards::NONE,
-                game: GameState::new(),
             },
+            game_state: GameState::new(),
             algorithm,
         }
     }
@@ -77,6 +84,7 @@ impl Bot {
     ) -> Result<(), CardsError> {
         let mut action = None;
         loop {
+            let now = Instant::now();
             loop {
                 match rx.try_recv() {
                     Ok((event, _)) => {
@@ -86,35 +94,42 @@ impl Bot {
                     Err(TryRecvError::Closed) => return Ok(()),
                 }
             }
-            if action.is_some() {
-                if let Some(delay) = delay {
-                    let seconds = delay.sample(&mut rand::thread_rng());
-                    time::delay_for(Duration::from_secs_f32(seconds)).await;
-                }
-            }
+            let delay =
+                delay.map(|delay| Duration::from_secs_f32(delay.sample(&mut rand::thread_rng())));
             match action {
-                Some(Action::Pass(cards)) => {
+                Some(Action::Pass) => {
+                    let cards = self.algorithm.pass(&self.bot_state, &self.game_state);
+                    Bot::delay(delay, now).await;
                     let _ = games.pass_cards(self.game_id, self.user_id, cards).await;
                 }
-                Some(Action::Charge(cards)) => {
+                Some(Action::Charge) => {
+                    let cards = self.algorithm.charge(&self.bot_state, &self.game_state);
+                    Bot::delay(delay, now).await;
                     let _ = games.charge_cards(self.game_id, self.user_id, cards).await;
                 }
-                Some(Action::Play(card)) => {
+                Some(Action::Play) => {
+                    let card = task::block_in_place(|| {
+                        self.algorithm.play(&self.bot_state, &self.game_state)
+                    });
+                    Bot::delay(delay, now).await;
                     match games.play_card(self.game_id, self.user_id, card).await {
                         Ok(true) => return Ok(()),
                         _ => {}
                     }
                 }
                 Some(Action::Claim) => {
+                    Bot::delay(delay, now).await;
                     let _ = games.claim(self.game_id, self.user_id).await;
                 }
                 Some(Action::AcceptClaim(seat)) => {
+                    Bot::delay(delay, now).await;
                     match games.accept_claim(self.game_id, self.user_id, seat).await {
                         Ok(true) => return Ok(()),
                         _ => {}
                     }
                 }
                 Some(Action::RejectClaim(seat)) => {
+                    Bot::delay(delay, now).await;
                     let _ = games.reject_claim(self.game_id, self.user_id, seat).await;
                 }
                 None => {}
@@ -128,16 +143,23 @@ impl Bot {
         }
     }
 
+    async fn delay(delay: Option<Duration>, start: Instant) {
+        let delay = delay.and_then(|delay| delay.checked_sub(start.elapsed()));
+        if let Some(delay) = delay {
+            time::delay_for(delay).await;
+        }
+    }
+
     fn handle(&mut self, event: GameEvent) -> Option<Action> {
         debug!(
             "handle: game_id={}, user_id={}, event={:?}",
             self.game_id, self.user_id, event
         );
-        let phase = self.state.game.phase;
-        self.state.game.apply(&event);
-        if phase.is_playing() && !self.state.game.phase.is_playing() {
-            self.state.pre_pass_hand = Cards::NONE;
-            self.state.post_pass_hand = Cards::NONE;
+        let phase = self.game_state.phase;
+        self.game_state.apply(&event);
+        if phase.is_playing() && !self.game_state.phase.is_playing() {
+            self.bot_state.pre_pass_hand = Cards::NONE;
+            self.bot_state.post_pass_hand = Cards::NONE;
         }
         match &event {
             GameEvent::Sit {
@@ -147,7 +169,7 @@ impl Bot {
                 west,
                 ..
             } => {
-                self.state.seat = if self.user_id == north.user_id() {
+                self.bot_state.seat = if self.user_id == north.user_id() {
                     Seat::North
                 } else if self.user_id == east.user_id() {
                     Seat::East
@@ -166,19 +188,19 @@ impl Bot {
                 west,
                 ..
             } => {
-                self.state.pre_pass_hand = *north | *east | *south | *west;
-                self.state.post_pass_hand = self.state.pre_pass_hand;
+                self.bot_state.pre_pass_hand = *north | *east | *south | *west;
+                self.bot_state.post_pass_hand = self.bot_state.pre_pass_hand;
             }
             GameEvent::SendPass { cards, .. } => {
-                self.state.post_pass_hand -= *cards;
+                self.bot_state.post_pass_hand -= *cards;
             }
             GameEvent::RecvPass { cards, .. } => {
-                self.state.post_pass_hand |= *cards;
+                self.bot_state.post_pass_hand |= *cards;
             }
             GameEvent::Claim { seat, hand } => {
-                return if *seat == self.state.seat {
+                return if *seat == self.bot_state.seat {
                     None
-                } else if can_claim(*hand, &self.state.game) {
+                } else if can_claim(*hand, &self.game_state) {
                     Some(Action::AcceptClaim(*seat))
                 } else {
                     Some(Action::RejectClaim(*seat))
@@ -190,41 +212,42 @@ impl Bot {
             _ => {}
         }
 
-        self.algorithm.on_event(&self.state, &event);
+        self.algorithm
+            .on_event(&self.bot_state, &self.game_state, &event);
 
-        if self.state.game.phase.is_charging() {
-            if !self.state.pre_pass_hand.is_empty()
-                && self.state.game.can_charge(self.state.seat)
-                && !self.state.game.done.charged(self.state.seat)
+        if self.game_state.phase.is_charging() {
+            if !self.bot_state.pre_pass_hand.is_empty()
+                && self.game_state.can_charge(self.bot_state.seat)
+                && !self.game_state.done.charged(self.bot_state.seat)
             {
-                Some(Action::Charge(self.algorithm.charge(&self.state)))
+                Some(Action::Charge)
             } else {
                 None
             }
-        } else if self.state.game.phase.is_passing() {
-            if !self.state.pre_pass_hand.is_empty()
-                && !self.state.game.done.sent_pass(self.state.seat)
+        } else if self.game_state.phase.is_passing() {
+            if !self.bot_state.pre_pass_hand.is_empty()
+                && !self.game_state.done.sent_pass(self.bot_state.seat)
             {
-                Some(Action::Pass(self.algorithm.pass(&self.state)))
+                Some(Action::Pass)
             } else {
                 None
             }
-        } else if self.state.game.phase.is_playing() {
-            if (self.state.post_pass_hand - self.state.game.played).contains(Card::TwoClubs)
-                || Some(self.state.seat) == self.state.game.next_actor
+        } else if self.game_state.phase.is_playing() {
+            if (self.bot_state.post_pass_hand - self.game_state.played).contains(Card::TwoClubs)
+                || Some(self.bot_state.seat) == self.game_state.next_actor
             {
                 Some(
-                    if self.state.game.current_trick.is_empty()
-                        && !self.state.game.claims.is_claiming(self.state.seat)
-                        && self.state.game.played.len() < 48
+                    if self.game_state.current_trick.is_empty()
+                        && !self.game_state.claims.is_claiming(self.bot_state.seat)
+                        && self.game_state.played.len() < 48
                         && must_claim(
-                            self.state.post_pass_hand - self.state.game.played,
-                            self.state.game.played,
+                            self.bot_state.post_pass_hand - self.game_state.played,
+                            self.game_state.played,
                         )
                     {
                         Action::Claim
                     } else {
-                        Action::Play(self.algorithm.play(&self.state))
+                        Action::Play
                     },
                 )
             } else {
@@ -238,9 +261,9 @@ impl Bot {
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 enum Action {
-    Pass(Cards),
-    Charge(Cards),
-    Play(Card),
+    Pass,
+    Charge,
+    Play,
     Claim,
     AcceptClaim(Seat),
     RejectClaim(Seat),
@@ -248,11 +271,10 @@ enum Action {
 
 #[allow(unused_variables)]
 trait Algorithm {
-    fn pass(&mut self, state: &BotState) -> Cards;
-    fn charge(&mut self, state: &BotState) -> Cards;
-    fn play(&mut self, state: &BotState) -> Card;
-
-    fn on_event(&mut self, state: &BotState, event: &GameEvent);
+    fn pass(&mut self, bot_state: &BotState, game_state: &GameState) -> Cards;
+    fn charge(&mut self, bot_state: &BotState, game_state: &GameState) -> Cards;
+    fn play(&mut self, bot_state: &BotState, game_state: &GameState) -> Card;
+    fn on_event(&mut self, bot_state: &BotState, game_state: &GameState, event: &GameEvent);
 }
 
 fn must_claim(hand: Cards, played: Cards) -> bool {

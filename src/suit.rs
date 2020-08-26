@@ -18,8 +18,14 @@ pub enum Suit {
 }
 
 impl Suit {
+    pub const VALUES: [Suit; 4] = [Suit::Clubs, Suit::Diamonds, Suit::Hearts, Suit::Spades];
+
+    pub fn idx(self) -> usize {
+        self as usize
+    }
+
     pub fn char(self) -> char {
-        SUITS[self as usize]
+        SUITS[self.idx()]
     }
 
     pub fn cards(self) -> Cards {

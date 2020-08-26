@@ -11,7 +11,7 @@ use crate::{
     user::UserId,
 };
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct GameState {
     pub players: [UserId; 4],     // 64
     pub rules: ChargingRules,     // 1

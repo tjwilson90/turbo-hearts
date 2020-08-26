@@ -1,8 +1,8 @@
 use crate::{
-    bot::{Algorithm, BotState},
+    bot::{void::VoidState, Algorithm, BotState},
     card::Card,
     cards::Cards,
-    game::event::GameEvent,
+    game::{event::GameEvent, state::GameState},
     rank::Rank,
     suit::Suit,
 };
@@ -18,17 +18,25 @@ macro_rules! check {
     };
 }
 
-pub struct Heuristic;
+pub struct Heuristic {
+    void: VoidState,
+}
 
 impl Heuristic {
     pub fn new() -> Self {
-        Self
+        Self {
+            void: VoidState::new(),
+        }
+    }
+
+    pub fn with_void(void: VoidState) -> Self {
+        Self { void }
     }
 }
 
 impl Algorithm for Heuristic {
-    fn pass(&mut self, state: &BotState) -> Cards {
-        let mut hand = state.pre_pass_hand;
+    fn pass(&mut self, bot_state: &BotState, _: &GameState) -> Cards {
+        let mut hand = bot_state.pre_pass_hand;
         if hand.contains_any(Cards::HEARTS) {
             if (hand & Cards::HEARTS).len() == 1 {
                 hand -= Cards::HEARTS;
@@ -65,12 +73,12 @@ impl Algorithm for Heuristic {
             check!(hand, Cards::DIAMONDS, 13);
             check!(hand, Cards::SPADES, 13);
         }
-        state.pre_pass_hand - hand
+        bot_state.pre_pass_hand - hand
     }
 
-    fn charge(&mut self, state: &BotState) -> Cards {
-        let hand = state.post_pass_hand;
-        let chargeable = hand - state.game.charges.charges(state.seat);
+    fn charge(&mut self, bot_state: &BotState, game_state: &GameState) -> Cards {
+        let hand = bot_state.post_pass_hand;
+        let chargeable = hand - game_state.charges.charges(bot_state.seat);
         let mut charge = Cards::NONE;
         if chargeable.contains(Card::QueenSpades) {
             let spades = hand & Cards::SPADES;
@@ -117,15 +125,15 @@ impl Algorithm for Heuristic {
         charge
     }
 
-    fn play(&mut self, state: &BotState) -> Card {
-        let cards = state.game.legal_plays(state.post_pass_hand);
+    fn play(&mut self, bot_state: &BotState, game_state: &GameState) -> Card {
+        let mut cards = game_state.legal_plays(bot_state.post_pass_hand);
 
         // If we only have one legal play, play it
         if cards.len() == 1 {
             return cards.max();
         }
-        let remaining = Cards::ALL - state.post_pass_hand - state.game.played;
-        if state.game.current_trick.is_empty() {
+        let remaining = Cards::ALL - bot_state.post_pass_hand - game_state.played;
+        if game_state.current_trick.is_empty() {
             let spades = cards & Cards::SPADES;
             if remaining.contains(Card::QueenSpades) && !spades.is_empty() {
                 let low_spades = spades.below(Card::QueenSpades);
@@ -144,8 +152,8 @@ impl Algorithm for Heuristic {
                 // We don't believe in fake charges (and we have few enough low
                 // spades that the test above didn't trigger).
                 if !high_spades.is_empty()
-                    && state.game.charges.is_charged(Card::QueenSpades)
-                    && !state.game.led_suits.contains(Suit::Spades)
+                    && game_state.charges.is_charged(Card::QueenSpades)
+                    && !game_state.led_suits.contains(Suit::Spades)
                 {
                     return random(high_spades);
                 }
@@ -174,6 +182,12 @@ impl Algorithm for Heuristic {
                 }
             }
 
+            // If we can lead the jack and win it, do so.
+            if cards.contains(Card::JackDiamonds) && remaining.above(Card::JackDiamonds).is_empty()
+            {
+                return Card::JackDiamonds;
+            }
+
             // If someone else would be forced to take the ten should we lead it, do so.
             if cards.contains(Card::TenClubs)
                 && remaining.below(Card::TenClubs).is_empty()
@@ -182,29 +196,79 @@ impl Algorithm for Heuristic {
                 return Card::TenClubs;
             }
         } else {
-            let trick: Cards = state.game.current_trick.cards();
-            let suit = state.game.current_trick.suit();
+            let trick: Cards = game_state.current_trick.cards();
+            let suit = game_state.current_trick.suit();
+            let winning = game_state.current_trick.winning_seat(bot_state.seat) == bot_state.seat;
+            let winning_card = game_state.current_trick.winning_card();
+
+            // If the queen's on the trick and we can duck, do so.
+            if trick.contains(Card::QueenSpades)
+                && !winning
+                && !cards.below(winning_card).is_empty()
+            {
+                return random(cards.below(winning_card));
+            }
 
             // If we can play the queen and not win the trick, do so.
             if cards.contains(Card::QueenSpades)
-                && state.game.current_trick.winning_seat(state.seat) != state.seat
+                && !winning
                 && (suit != Suit::Spades || !trick.above(Card::QueenSpades).is_empty())
             {
                 return Card::QueenSpades;
             }
 
+            // If the jack's on the trick and we might win it, attempt to do so.
+            if trick.contains(Card::JackDiamonds) && !cards.above(winning_card).is_empty() {
+                return cards.above(winning_card).max();
+            }
+
+            // If we can play the jack and win the trick, do so.
+            if cards.contains(Card::JackDiamonds) {
+                if winning && remaining.above(winning_card).is_empty() {
+                    return Card::JackDiamonds;
+                }
+                if winning_card.suit() == Suit::Diamonds
+                    && winning_card.rank() < Rank::Jack
+                    && remaining.above(Card::JackDiamonds).is_empty()
+                {
+                    return Card::JackDiamonds;
+                }
+            }
+
             // If we can play the ten and not win the trick, do so.
             if cards.contains(Card::TenClubs)
-                && state.game.current_trick.winning_seat(state.seat) != state.seat
+                && !winning
                 && (suit != Suit::Clubs || !trick.above(Card::TenClubs).is_empty())
             {
                 return Card::TenClubs;
             }
+
+            if !suit.cards().contains_all(cards) {
+                // If the queen is still in someone else's hand, slough high spades.
+                if remaining.contains(Card::QueenSpades)
+                    && !cards.above(Card::QueenSpades).is_empty()
+                {
+                    return cards.above(Card::QueenSpades).max();
+                }
+
+                // If the ten is still in someone else's hand, slough high clubs.
+                if remaining.contains(Card::TenClubs) && !cards.above(Card::TenClubs).is_empty() {
+                    return cards.above(Card::TenClubs).max();
+                }
+            }
         }
+
+        // Don't throw awy the jack if the queen's gone.
+        if cards.contains(Card::JackDiamonds) && !remaining.contains(Card::QueenSpades) {
+            cards -= Card::JackDiamonds;
+        }
+
         random(cards)
     }
 
-    fn on_event(&mut self, _: &BotState, _: &GameEvent) {}
+    fn on_event(&mut self, _: &BotState, state: &GameState, event: &GameEvent) {
+        self.void.on_event(state, event);
+    }
 }
 
 fn random(cards: Cards) -> Card {
