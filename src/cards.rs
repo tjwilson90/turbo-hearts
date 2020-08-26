@@ -122,17 +122,15 @@ impl Cards {
     }
 
     pub fn above(self, card: Card) -> Self {
-        (self & card.suit().cards())
-            .into_iter()
-            .filter(|c| *c > card)
-            .collect()
+        Cards {
+            bits: (self & card.suit().cards()).bits & !(2 * Cards::from(card).bits - 1),
+        }
     }
 
     pub fn below(self, card: Card) -> Self {
-        (self & card.suit().cards())
-            .into_iter()
-            .filter(|c| *c < card)
-            .collect()
+        Cards {
+            bits: (self & card.suit().cards()).bits & (Cards::from(card).bits - 1),
+        }
     }
 }
 
@@ -390,5 +388,25 @@ mod test {
     #[test]
     fn test_parse() {
         assert_eq!(Cards::from(Card::AceHearts), "AH".parse().unwrap())
+    }
+
+    #[test]
+    fn test_above() {
+        assert_eq!(
+            Cards::from_str("AQJH").unwrap(),
+            Cards::from_str("5S AQJT9H 3C")
+                .unwrap()
+                .above(Card::TenHearts)
+        )
+    }
+
+    #[test]
+    fn test_below() {
+        assert_eq!(
+            Cards::from_str("97H").unwrap(),
+            Cards::from_str("5S AQJT97H 3C")
+                .unwrap()
+                .below(Card::TenHearts)
+        )
     }
 }

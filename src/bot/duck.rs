@@ -2,7 +2,7 @@ use crate::{
     bot::{random::Random, Algorithm, BotState},
     card::Card,
     cards::Cards,
-    game::event::GameEvent,
+    game::{event::GameEvent, state::GameState},
 };
 
 pub struct Duck;
@@ -14,9 +14,9 @@ impl Duck {
 }
 
 impl Algorithm for Duck {
-    fn pass(&mut self, state: &BotState) -> Cards {
+    fn pass(&mut self, bot_state: &BotState, _: &GameState) -> Cards {
         let mut pass = Cards::NONE;
-        let mut hand = state.pre_pass_hand;
+        let mut hand = bot_state.pre_pass_hand;
         for _ in 0..3 {
             let worst_card = hand
                 .into_iter()
@@ -28,23 +28,23 @@ impl Algorithm for Duck {
         pass
     }
 
-    fn charge(&mut self, _: &BotState) -> Cards {
+    fn charge(&mut self, _: &BotState, _: &GameState) -> Cards {
         Cards::NONE
     }
 
-    fn play(&mut self, state: &BotState) -> Card {
-        let cards = state.game.legal_plays(state.post_pass_hand);
-        if state.game.current_trick.is_empty() {
-            return Random::new().play(state);
+    fn play(&mut self, bot_state: &BotState, game_state: &GameState) -> Card {
+        let cards = game_state.legal_plays(bot_state.post_pass_hand);
+        if game_state.current_trick.is_empty() {
+            return Random::new().play(bot_state, game_state);
         }
-        let suit = state.game.current_trick.suit();
+        let suit = game_state.current_trick.suit();
         if !suit.cards().contains_any(cards) {
             return cards
                 .into_iter()
-                .max_by_key(|card| score(*card, state.post_pass_hand - state.game.played))
+                .max_by_key(|card| score(*card, bot_state.post_pass_hand - game_state.played))
                 .unwrap();
         }
-        let winner = state.game.current_trick.winning_card();
+        let winner = game_state.current_trick.winning_card();
         let duck = cards.into_iter().filter(|card| *card < winner).max();
         match duck {
             Some(card) => card,
@@ -52,7 +52,7 @@ impl Algorithm for Duck {
         }
     }
 
-    fn on_event(&mut self, _: &BotState, _: &GameEvent) {}
+    fn on_event(&mut self, _: &BotState, _: &GameState, _: &GameEvent) {}
 }
 
 fn score(card: Card, hand: Cards) -> usize {

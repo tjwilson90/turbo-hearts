@@ -1,6 +1,6 @@
 use crate::{card::Card, cards::Cards, seat::Seat};
 
-#[derive(Debug)]
+#[derive(Copy, Clone, Debug)]
 pub struct ChargeState {
     charges: u16,
 }

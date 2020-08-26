@@ -10,7 +10,7 @@ use std::{
 };
 
 #[repr(u8)]
-#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Serialize, Deserialize)]
+#[derive(Copy, Clone, Eq, PartialEq, Hash, Ord, PartialOrd, Serialize, Deserialize)]
 #[serde(from = "String")]
 #[serde(into = "String")]
 pub enum Card {

@@ -1,6 +1,6 @@
 use crate::seat::Seat;
 
-#[derive(Debug)]
+#[derive(Copy, Clone, Debug)]
 pub struct DoneState {
     state: u8,
 }

@@ -1,6 +1,6 @@
 use crate::{card::Card, cards::Cards, rank::Rank, seat::Seat, suit::Suit};
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Trick {
     cards: [Card; 8],
     len: u8,
