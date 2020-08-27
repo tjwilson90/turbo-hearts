@@ -32,9 +32,19 @@ impl Algorithm for Simulate {
 
     fn play(&mut self, bot_state: &BotState, game_state: &GameState) -> Card {
         let cards = game_state.legal_plays(bot_state.post_pass_hand);
+        if cards.contains(Card::TwoClubs) {
+            return Card::TwoClubs;
+        }
+        let deadline = if game_state.current_trick.is_empty()
+            || !cards.contains_any(game_state.current_trick.suit().cards())
+        {
+            2500
+        } else {
+            2000
+        };
         let mut dist: HashMap<Card, i64> = HashMap::new();
         let now = Instant::now();
-        while now.elapsed().as_secs() < 3 {
+        while now.elapsed().as_millis() < deadline {
             let hands = make_hands(bot_state, game_state, self.void);
             for _ in 0..100 {
                 for card in cards {
