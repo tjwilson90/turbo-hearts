@@ -111,7 +111,9 @@ impl Bot {
                     let card = task::block_in_place(|| {
                         self.algorithm.play(&self.bot_state, &self.game_state)
                     });
-                    Bot::delay(delay, now).await;
+                    if card != Card::TwoClubs {
+                        Bot::delay(delay, now).await;
+                    }
                     match games.play_card(self.game_id, self.user_id, card).await {
                         Ok(true) => return Ok(()),
                         _ => {}
