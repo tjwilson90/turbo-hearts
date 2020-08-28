@@ -1,0 +1,23 @@
+[package]
+name = "turbo-hearts-api"
+version = "0.1.0"
+authors = ["Tim Wilson <twilson@palantir.com>"]
+edition = "2018"
+
+[dependencies]
+log = "*"
+r2d2 = "*"
+r2d2_sqlite = "*"
+rand = "*"
+rand_chacha = "*"
+rand_distr = "*"
+rusqlite = { version = "*", features = ["bundled"] }
+serde = { version = "*", features = ["derive"] }
+serde_json = "*"
+sha2 = "*"
+thiserror = "*"
+tokio = { version = "*", features = ["blocking", "macros", "rt-threaded", "sync", "time"] }
+uuid = { version = "*", features = ["serde", "v4"] }
+
+[dev-dependencies]
+tempfile = "*"

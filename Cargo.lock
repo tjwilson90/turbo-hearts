@@ -1233,12 +1233,27 @@ dependencies = [
  "http",
  "log",
  "once_cell",
+ "reqwest",
+ "rusqlite",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "tokio",
+ "turbo-hearts-api",
+ "uuid",
+ "warp",
+]
+
+[[package]]
+name = "turbo-hearts-api"
+version = "0.1.0"
+dependencies = [
+ "log",
  "r2d2",
  "r2d2_sqlite",
  "rand",
  "rand_chacha",
  "rand_distr",
- "reqwest",
  "rusqlite",
  "serde",
  "serde_json",
@@ -1247,7 +1262,6 @@ dependencies = [
  "thiserror",
  "tokio",
  "uuid",
- "warp",
 ]
 
 [[package]]
