@@ -1,4 +1,4 @@
-use crate::{Bot, BotState, Card, Cards, GameEvent, GameState, RandomBot};
+use crate::{BotState, Card, Cards, GameEvent, GameState, RandomBot};
 
 pub struct DuckBot;
 
@@ -8,8 +8,8 @@ impl DuckBot {
     }
 }
 
-impl Bot for DuckBot {
-    fn pass(&mut self, bot_state: &BotState, _: &GameState) -> Cards {
+impl DuckBot {
+    pub async fn pass(&mut self, bot_state: &BotState, _: &GameState) -> Cards {
         let mut pass = Cards::NONE;
         let mut hand = bot_state.pre_pass_hand;
         for _ in 0..3 {
@@ -23,14 +23,14 @@ impl Bot for DuckBot {
         pass
     }
 
-    fn charge(&mut self, _: &BotState, _: &GameState) -> Cards {
+    pub async fn charge(&mut self, _: &BotState, _: &GameState) -> Cards {
         Cards::NONE
     }
 
-    fn play(&mut self, bot_state: &BotState, game_state: &GameState) -> Card {
+    pub async fn play(&mut self, bot_state: &BotState, game_state: &GameState) -> Card {
         let cards = game_state.legal_plays(bot_state.post_pass_hand);
         if game_state.current_trick.is_empty() {
-            return RandomBot::new().play(bot_state, game_state);
+            return RandomBot::new().play(bot_state, game_state).await;
         }
         let suit = game_state.current_trick.suit();
         if !suit.cards().contains_any(cards) {
@@ -47,7 +47,7 @@ impl Bot for DuckBot {
         }
     }
 
-    fn on_event(&mut self, _: &BotState, _: &GameState, _: &GameEvent) {}
+    pub fn on_event(&mut self, _: &BotState, _: &GameState, _: &GameEvent) {}
 }
 
 fn score(card: Card, hand: Cards) -> usize {

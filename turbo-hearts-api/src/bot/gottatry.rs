@@ -1,4 +1,4 @@
-use crate::{Bot, BotState, Card, Cards, DuckBot, GameEvent, GameState, RandomBot};
+use crate::{BotState, Card, Cards, DuckBot, GameEvent, GameState, RandomBot};
 
 pub struct GottaTryBot;
 
@@ -8,8 +8,8 @@ impl GottaTryBot {
     }
 }
 
-impl Bot for GottaTryBot {
-    fn pass(&mut self, bot_state: &BotState, _: &GameState) -> Cards {
+impl GottaTryBot {
+    pub async fn pass(&mut self, bot_state: &BotState, _: &GameState) -> Cards {
         let mut pass = Cards::NONE;
         let mut hand = bot_state.pre_pass_hand;
         for _ in 0..3 {
@@ -23,24 +23,24 @@ impl Bot for GottaTryBot {
         pass
     }
 
-    fn charge(&mut self, bot_state: &BotState, game_state: &GameState) -> Cards {
+    pub async fn charge(&mut self, bot_state: &BotState, game_state: &GameState) -> Cards {
         (bot_state.post_pass_hand & Cards::CHARGEABLE) - game_state.charges.charges(bot_state.seat)
     }
 
-    fn play(&mut self, bot_state: &BotState, game_state: &GameState) -> Card {
+    pub async fn play(&mut self, bot_state: &BotState, game_state: &GameState) -> Card {
         let cards = game_state.legal_plays(bot_state.post_pass_hand);
         let our_won = game_state.won[bot_state.seat.idx()];
         let all_won = game_state.all_won();
         if Cards::POINTS.contains_any(all_won - our_won) {
-            return DuckBot::new().play(bot_state, game_state);
+            return DuckBot::new().play(bot_state, game_state).await;
         }
         if game_state.current_trick.is_empty() {
-            return RandomBot::new().play(bot_state, game_state);
+            return RandomBot::new().play(bot_state, game_state).await;
         }
         let trick_cards = game_state.current_trick.cards();
         if Cards::POINTS.contains_any(trick_cards) {
             if !game_state.current_trick.suit().cards().contains_any(cards) {
-                DuckBot::new().play(bot_state, game_state)
+                DuckBot::new().play(bot_state, game_state).await
             } else {
                 cards
                     .into_iter()
@@ -55,7 +55,7 @@ impl Bot for GottaTryBot {
         }
     }
 
-    fn on_event(&mut self, _: &BotState, _: &GameState, _: &GameEvent) {}
+    pub fn on_event(&mut self, _: &BotState, _: &GameState, _: &GameEvent) {}
 }
 
 fn score(card: Card, hand: Cards) -> usize {
