@@ -1,7 +1,6 @@
 use crate::lobby::{event::LobbyEvent, Lobby};
 use log::LevelFilter;
 use once_cell::sync::Lazy;
-use r2d2_sqlite::SqliteConnectionManager;
 use std::{collections::HashMap, future::Future};
 use tempfile::TempDir;
 use turbo_hearts_api::{
@@ -11,7 +10,7 @@ use turbo_hearts_api::{
 
 macro_rules! h {
     ($user_id:expr) => {
-        crate::player::Player::Human { user_id: $user_id }
+        Player::Human { user_id: $user_id }
     };
 }
 
@@ -48,7 +47,7 @@ impl TestRunner {
         let temp_dir = tempfile::tempdir().unwrap();
         let mut path = temp_dir.path().to_owned();
         path.push("test.db");
-        let db = Database::new(SqliteConnectionManager::file(path)).unwrap();
+        let db = Database::new(path).unwrap();
         let db = &*Box::leak(Box::new(db));
         let lobby = Lobby::new(db).unwrap();
         let lobby = &*Box::leak(Box::new(lobby));
@@ -436,7 +435,7 @@ async fn test_bot_game() -> Result<(), CardsError> {
                 PlayerWithOptions {
                     player: Player::Bot {
                         user_id: *TWILSON,
-                        strategy: Strategy::Random,
+                        strategy: BotStrategy::Random,
                     },
                     rules: ChargingRules::BlindChain,
                     seat: None,
@@ -450,7 +449,7 @@ async fn test_bot_game() -> Result<(), CardsError> {
                 PlayerWithOptions {
                     player: Player::Bot {
                         user_id: *TSLATCHER,
-                        strategy: Strategy::Heuristic,
+                        strategy: BotStrategy::Heuristic,
                     },
                     rules: ChargingRules::Classic,
                     seat: None,
@@ -463,7 +462,7 @@ async fn test_bot_game() -> Result<(), CardsError> {
                 PlayerWithOptions {
                     player: Player::Bot {
                         user_id: *CARRINO,
-                        strategy: Strategy::Duck,
+                        strategy: BotStrategy::Duck,
                     },
                     rules: ChargingRules::Bridge,
                     seat: None,
@@ -476,7 +475,7 @@ async fn test_bot_game() -> Result<(), CardsError> {
                 PlayerWithOptions {
                     player: Player::Bot {
                         user_id: *DCERVELLI,
-                        strategy: Strategy::GottaTry,
+                        strategy: BotStrategy::GottaTry,
                     },
                     rules: ChargingRules::Blind,
                     seat: None,

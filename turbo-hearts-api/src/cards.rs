@@ -94,7 +94,7 @@ impl Cards {
     };
 
     pub fn is_empty(self) -> bool {
-        self.len() == 0
+        self == Self::NONE
     }
 
     pub fn len(self) -> usize {
@@ -130,6 +130,20 @@ impl Cards {
     pub fn below(self, card: Card) -> Self {
         Cards {
             bits: (self & card.suit().cards()).bits & (Cards::from(card).bits - 1),
+        }
+    }
+
+    pub fn powerset(self) -> impl Iterator<Item = Cards> {
+        Powerset {
+            cards: self,
+            index: (1 << self.len()) - 1,
+        }
+    }
+
+    pub fn choose(self, k: usize) -> impl Iterator<Item = Cards> {
+        Choose {
+            cards: self,
+            set: (1 << k) - 1,
         }
     }
 }
@@ -344,6 +358,70 @@ impl FromIterator<Cards> for Cards {
     }
 }
 
+struct Powerset {
+    cards: Cards,
+    index: usize,
+}
+
+impl Iterator for Powerset {
+    type Item = Cards;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.index == usize::MAX {
+            return None;
+        }
+        let mut cards = Cards::NONE;
+        let mut index = self.index;
+        let mut remaining = self.cards;
+        while index != 0 {
+            let card = remaining.max();
+            if index & 1 == 1 {
+                cards |= card;
+            }
+            index /= 2;
+            remaining -= card;
+        }
+        self.index = self.index.wrapping_sub(1);
+        Some(cards)
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (self.index, Some(self.index))
+    }
+}
+
+impl ExactSizeIterator for Powerset {}
+
+struct Choose {
+    cards: Cards,
+    set: usize,
+}
+
+impl Iterator for Choose {
+    type Item = Cards;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.set >= 1 << self.cards.len() {
+            return None;
+        }
+        let mut cards = Cards::NONE;
+        let mut set = self.set;
+        let mut remaining = self.cards;
+        while set != 0 {
+            let card = remaining.max();
+            if set & 1 == 1 {
+                cards |= card;
+            }
+            set /= 2;
+            remaining -= card;
+        }
+        let c = self.set & self.set.wrapping_neg();
+        let r = self.set + c;
+        self.set = (((r ^ self.set) >> 2) / c) | r;
+        Some(cards)
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -408,5 +486,60 @@ mod test {
                 .unwrap()
                 .below(Card::TenHearts)
         )
+    }
+
+    #[test]
+    fn test_powerset_none() {
+        let mut pset = Cards::NONE.powerset();
+        assert_eq!(pset.next(), Some(Cards::NONE));
+        assert_eq!(pset.next(), None);
+    }
+
+    #[test]
+    fn test_powerset_one() {
+        let mut pset = Cards::from(Card::FiveSpades).powerset();
+        assert_eq!(pset.next(), Some(Cards::from(Card::FiveSpades)));
+        assert_eq!(pset.next(), Some(Cards::NONE));
+        assert_eq!(pset.next(), None);
+    }
+
+    #[test]
+    fn test_powerset_two() {
+        let mut pset = Cards::from_str("QS TC").unwrap().powerset();
+        assert_eq!(pset.next(), Some(Cards::from_str("QS TC").unwrap()));
+        assert_eq!(pset.next(), Some(Cards::from_str("TC").unwrap()));
+        assert_eq!(pset.next(), Some(Cards::from_str("QS").unwrap()));
+        assert_eq!(pset.next(), Some(Cards::NONE));
+        assert_eq!(pset.next(), None);
+    }
+
+    #[test]
+    fn test_powerset_three() {
+        let mut pset = Cards::from_str("QS AH TC").unwrap().powerset();
+        assert_eq!(pset.next(), Some(Cards::from_str("QS AH TC").unwrap()));
+        assert_eq!(pset.next(), Some(Cards::from_str("AH TC").unwrap()));
+        assert_eq!(pset.next(), Some(Cards::from_str("QS TC").unwrap()));
+        assert_eq!(pset.next(), Some(Cards::from_str("TC").unwrap()));
+        assert_eq!(pset.next(), Some(Cards::from_str("QS AH").unwrap()));
+        assert_eq!(pset.next(), Some(Cards::from_str("AH").unwrap()));
+        assert_eq!(pset.next(), Some(Cards::from_str("QS").unwrap()));
+        assert_eq!(pset.next(), Some(Cards::NONE));
+        assert_eq!(pset.next(), None);
+    }
+
+    #[test]
+    fn test_choose() {
+        let mut choose = Cards::from_str("AKQJTS").unwrap().choose(3);
+        assert_eq!(choose.next(), Some(Cards::from_str("AKQS").unwrap()));
+        assert_eq!(choose.next(), Some(Cards::from_str("AKJS").unwrap()));
+        assert_eq!(choose.next(), Some(Cards::from_str("AQJS").unwrap()));
+        assert_eq!(choose.next(), Some(Cards::from_str("KQJS").unwrap()));
+        assert_eq!(choose.next(), Some(Cards::from_str("AKTS").unwrap()));
+        assert_eq!(choose.next(), Some(Cards::from_str("AQTS").unwrap()));
+        assert_eq!(choose.next(), Some(Cards::from_str("KQTS").unwrap()));
+        assert_eq!(choose.next(), Some(Cards::from_str("AJTS").unwrap()));
+        assert_eq!(choose.next(), Some(Cards::from_str("KJTS").unwrap()));
+        assert_eq!(choose.next(), Some(Cards::from_str("QJTS").unwrap()));
+        assert_eq!(choose.next(), None);
     }
 }

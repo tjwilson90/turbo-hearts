@@ -22,11 +22,6 @@ impl Trick {
         self.cards[0].suit()
     }
 
-    pub fn nined(&self) -> bool {
-        let nine = self.suit().with_rank(Rank::Nine);
-        self.slice().contains(&nine)
-    }
-
     pub fn is_complete(&self) -> bool {
         self.len == 8 || (self.len == 4 && !self.nined())
     }
@@ -46,14 +41,16 @@ impl Trick {
     }
 
     pub fn winning_seat(&self, next: Seat) -> Seat {
-        let suit = self.suit();
-        let (index, _) = self
-            .slice()
-            .iter()
-            .enumerate()
-            .filter(|(_, c)| c.suit() == suit)
-            .max_by_key(|(_, c)| **c)
-            .unwrap();
+        let cards = self.slice();
+        let mut index = 0;
+        let mut max = cards[0];
+        for i in 1..cards.len() {
+            let card = cards[i];
+            if card.suit() == max.suit() && card > max {
+                max = card;
+                index = i;
+            }
+        }
         match (self.len - index as u8) % 4 {
             0 => next,
             1 => next.right(),
@@ -69,6 +66,11 @@ impl Trick {
 
     pub fn clear(&mut self) {
         self.len = 0;
+    }
+
+    fn nined(&self) -> bool {
+        let nine = self.suit().with_rank(Rank::Nine);
+        self.slice().contains(&nine)
     }
 
     fn slice(&self) -> &[Card] {
