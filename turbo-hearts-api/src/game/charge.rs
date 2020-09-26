@@ -80,8 +80,8 @@ mod test {
     fn no_charges() {
         let state = ChargeState::new();
         assert_eq!(state.all_charges(), Cards::NONE);
-        for seat in &Seat::VALUES {
-            assert_eq!(state.charges(*seat), Cards::NONE);
+        for &seat in &Seat::VALUES {
+            assert_eq!(state.charges(seat), Cards::NONE);
         }
         for card in Cards::ALL {
             assert!(!state.is_charged(card));

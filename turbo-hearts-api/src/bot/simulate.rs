@@ -38,9 +38,9 @@ impl SimulateBot {
                     do_charges(&mut game, hands).await;
                     do_passes(&mut game);
                     do_charges(&mut game, hands).await;
-                    for seat in &Seat::VALUES {
+                    for &seat in &Seat::VALUES {
                         if hands[seat.idx()].contains(Card::TwoClubs) {
-                            game.next_actor = Some(*seat);
+                            game.next_actor = Some(seat);
                             break;
                         }
                     }
@@ -199,8 +199,8 @@ fn make_hands(bot_state: &BotState, game_state: &GameState, void: VoidState) -> 
     if receiver != bot_state.seat {
         hands[receiver.idx()] |= bot_state.pre_pass_hand - bot_state.post_pass_hand;
     }
-    for seat in &Seat::VALUES {
-        hands[seat.idx()] |= game_state.charges.charges(*seat);
+    for &seat in &Seat::VALUES {
+        hands[seat.idx()] |= game_state.charges.charges(seat);
         hands[seat.idx()] -= game_state.played;
     }
     let unplayed = Cards::ALL - game_state.played;
@@ -243,10 +243,10 @@ impl State {
         if self.cards.is_empty() {
             return true;
         }
-        for seat in &Seat::VALUES {
+        for &seat in &Seat::VALUES {
             let mut available = 0;
-            for suit in &Suit::VALUES {
-                if !self.void.is_void(*seat, *suit) {
+            for &suit in &Suit::VALUES {
+                if !self.void.is_void(seat, suit) {
                     available += (self.unassigned & suit.cards()).len();
                 }
             }
@@ -257,11 +257,11 @@ impl State {
         }
         let card = self.cards.pop().unwrap();
         self.unassigned -= card;
-        for seat in &Seat::VALUES {
+        for &seat in &Seat::VALUES {
             if self.hands[seat.idx()].len() >= self.sizes[seat.idx()] {
                 continue;
             }
-            if self.void.is_void(*seat, card.suit()) {
+            if self.void.is_void(seat, card.suit()) {
                 continue;
             }
             self.hands[seat.idx()] |= card;
