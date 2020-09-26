@@ -486,9 +486,9 @@ impl Game {
     }
 
     fn owner(&self, card: Card) -> Seat {
-        for (idx, cards) in self.post_pass_hand.iter().enumerate() {
-            if cards.contains(card) {
-                return Seat::VALUES[idx];
+        for seat in &Seat::VALUES {
+            if self.post_pass_hand[seat.idx()].contains(card) {
+                return *seat;
             }
         }
         unreachable!()
@@ -537,7 +537,7 @@ impl Game {
     where
         F: FnMut(&mut Game, &GameEvent),
     {
-        broadcast(&mut *self, &event);
+        broadcast(self, &event);
         self.state.apply(&event);
         self.events.push(event.clone());
         match &event {
@@ -560,35 +560,29 @@ impl Game {
                 self.pre_pass_hand[Seat::West.idx()] = *west;
                 self.post_pass_hand[Seat::West.idx()] = *west;
                 if self.state.phase.is_passing() {
-                    broadcast(&mut *self, &GameEvent::StartPassing);
-                    let pass_status = self.state.pass_status_event();
-                    broadcast(&mut *self, &pass_status);
+                    broadcast(self, &GameEvent::StartPassing);
+                    broadcast(self, &self.state.pass_status_event());
                 } else {
-                    broadcast(&mut *self, &GameEvent::StartCharging);
-                    let charge_status = self.state.charge_status_event();
-                    broadcast(&mut *self, &charge_status);
+                    broadcast(self, &GameEvent::StartCharging);
+                    broadcast(self, &self.state.charge_status_event());
                 }
             }
             GameEvent::SendPass { from, cards } => {
                 self.post_pass_hand[from.idx()] -= *cards;
-                let pass_status = self.state.pass_status_event();
-                broadcast(&mut *self, &pass_status);
+                broadcast(self, &self.state.pass_status_event());
             }
             GameEvent::RecvPass { to, cards } => {
                 self.post_pass_hand[to.idx()] |= *cards;
                 if self.state.phase.is_charging() {
-                    broadcast(&mut *self, &GameEvent::StartCharging);
-                    let charge_status = self.state.charge_status_event();
-                    broadcast(&mut *self, &charge_status);
+                    broadcast(self, &GameEvent::StartCharging);
+                    broadcast(self, &self.state.charge_status_event());
                 }
             }
             GameEvent::Charge { .. } => {
-                let charge_status = self.state.charge_status_event();
-                broadcast(&mut *self, &charge_status);
+                broadcast(self, &self.state.charge_status_event());
                 if self.state.phase.is_passing() {
-                    broadcast(&mut *self, &GameEvent::StartPassing);
-                    let pass_status = self.state.pass_status_event();
-                    broadcast(&mut *self, &pass_status);
+                    broadcast(self, &GameEvent::StartPassing);
+                    broadcast(self, &self.state.pass_status_event());
                 } else if self.state.phase.is_playing() {
                     let leader = self.owner(Card::TwoClubs);
                     self.state.next_actor = Some(leader);
@@ -599,25 +593,26 @@ impl Game {
                             south: self.state.charges.charges(Seat::South),
                             west: self.state.charges.charges(Seat::West),
                         };
-                        broadcast(&mut *self, &reveal);
+                        broadcast(self, &reveal);
                         self.state.apply(&reveal);
                     }
-                    broadcast(&mut *self, &GameEvent::StartTrick { leader });
-                    let play_status = self.play_status_event(leader);
-                    broadcast(&mut *self, &play_status);
+                    broadcast(self, &GameEvent::StartTrick { leader });
+                    broadcast(self, &self.play_status_event(leader));
                 }
             }
             GameEvent::Play { .. } => {
                 if self.state.current_trick.is_empty() {
                     let winner = self.state.next_actor.unwrap();
-                    broadcast(&mut *self, &GameEvent::EndTrick { winner });
+                    broadcast(self, &GameEvent::EndTrick { winner });
                     if self.state.phase.is_playing() {
-                        broadcast(&mut *self, &GameEvent::StartTrick { leader: winner });
+                        broadcast(self, &GameEvent::StartTrick { leader: winner });
                     }
                 }
                 if self.state.phase.is_playing() {
-                    let play_status = self.play_status_event(self.state.next_actor.unwrap());
-                    broadcast(&mut *self, &play_status);
+                    broadcast(
+                        self,
+                        &self.play_status_event(self.state.next_actor.unwrap()),
+                    );
                 } else {
                     self.finish_hand(broadcast);
                 }
@@ -635,20 +630,22 @@ impl Game {
     where
         F: FnMut(&mut Game, &GameEvent),
     {
-        let hand_complete = GameEvent::HandComplete {
-            north_score: self.state.score(Seat::North),
-            east_score: self.state.score(Seat::East),
-            south_score: self.state.score(Seat::South),
-            west_score: self.state.score(Seat::West),
-        };
-        broadcast(&mut *self, &hand_complete);
+        broadcast(
+            self,
+            &GameEvent::HandComplete {
+                north_score: self.state.score(Seat::North),
+                east_score: self.state.score(Seat::East),
+                south_score: self.state.score(Seat::South),
+                west_score: self.state.score(Seat::West),
+            },
+        );
         if self.state.phase.is_complete() {
             let seed = if let GameEvent::Sit { seed, .. } = &self.events[0] {
                 seed.clone()
             } else {
                 panic!("First event must be a sit event");
             };
-            broadcast(&mut *self, &GameEvent::GameComplete { seed });
+            broadcast(self, &GameEvent::GameComplete { seed });
         }
     }
 

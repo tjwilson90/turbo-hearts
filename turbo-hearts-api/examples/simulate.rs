@@ -1,5 +1,5 @@
 use turbo_hearts_api::{
-    BotStrategy, Card, CardsError, ChargingRules, Database, GameEvent, GameId, Games, Player,
+    BotStrategy, Cards, CardsError, ChargingRules, Database, GameEvent, GameId, Games, Player,
     PlayerWithOptions, Seed, UserId,
 };
 
@@ -16,6 +16,7 @@ fn player() -> PlayerWithOptions {
 
 #[tokio::main]
 async fn main() -> Result<(), CardsError> {
+    env_logger::init();
     let temp_dir = tempfile::tempdir().unwrap();
     let mut path = temp_dir.path().to_owned();
     path.push("test.db");
@@ -28,6 +29,7 @@ async fn main() -> Result<(), CardsError> {
         Seed::random(),
     )?;
     let mut rx = games.subscribe(game_id, UserId::new(), None).await?;
+    let mut hands = [Cards::NONE; 4];
     while let Some((event, _)) = rx.recv().await {
         use GameEvent::*;
         match event {
@@ -38,16 +40,25 @@ async fn main() -> Result<(), CardsError> {
                 west,
                 ..
             } => {
+                hands = [north, east, south, west];
                 println!("North {}", north);
                 println!("East  {}", east);
                 println!("South {}", south);
                 println!("West  {}", west);
             }
             SendPass { from, cards } => {
+                hands[from.idx()] -= cards;
                 println!("{} passes {}", from, cards);
             }
             RecvPass { to, cards } => {
+                hands[to.idx()] |= cards;
                 println!("{} receives {}", to, cards);
+            }
+            StartCharging => {
+                println!("North {}", hands[0]);
+                println!("East  {}", hands[1]);
+                println!("South {}", hands[2]);
+                println!("West  {}", hands[3]);
             }
             Charge { seat, cards } => {
                 if cards.is_empty() {
@@ -57,7 +68,8 @@ async fn main() -> Result<(), CardsError> {
                 }
             }
             Play { seat, card } => {
-                println!("{} plays {}", seat, card);
+                println!("{} plays {} from {}", seat, card, hands[seat.idx()]);
+                hands[seat.idx()] -= card;
             }
             EndTrick { winner } => {
                 println!("{} wins the trick", winner);

@@ -152,7 +152,7 @@ fn start_game<'a>(
         request: Request,
     ) -> Result<impl Reply, Rejection> {
         let Request { game_id } = request;
-        let (players, seed) = lobby.start_game(game_id).map_err(CardsReject)?;
+        let (players, seed) = lobby.start_game(game_id).await.map_err(CardsReject)?;
         games
             .start_game(game_id, players, seed)
             .map_err(CardsReject)?;

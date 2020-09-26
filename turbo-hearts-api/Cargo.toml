@@ -20,4 +20,14 @@ tokio = { version = "*", features = ["blocking", "macros", "rt-threaded", "sync"
 uuid = { version = "*", features = ["serde", "v4"] }
 
 [dev-dependencies]
+criterion = "*"
+env_logger = { version = "*", default-features = false, features = ["humantime"] }
 tempfile = "*"
+
+[[bench]]
+name = "trick"
+harness = false
+
+[[bench]]
+name = "game_state"
+harness = false
