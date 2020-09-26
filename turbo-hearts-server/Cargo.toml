@@ -1,0 +1,23 @@
+[package]
+name = "turbo-hearts"
+version = "0.1.0"
+authors = ["Tim Wilson <twilson@palantir.com>"]
+edition = "2018"
+
+[dependencies]
+base64 = "*"
+env_logger = { version = "*", default-features = false, features = ["humantime"] }
+http = "*"
+log = "*"
+once_cell = "*"
+reqwest = { version = "*", default-features = false, features = ["json", "rustls-tls"] }
+rusqlite = { version = "*", features = ["bundled"] }
+serde = { version = "*", features = ["derive"] }
+serde_json = "*"
+tokio = { version = "*", features = ["macros", "rt-threaded"] }
+turbo-hearts-api = { path = "../turbo-hearts-api" }
+uuid = { version = "*", features = ["serde", "v4"] }
+warp = { version = "*", default-features = false }
+
+[dev-dependencies]
+tempfile = "*"
