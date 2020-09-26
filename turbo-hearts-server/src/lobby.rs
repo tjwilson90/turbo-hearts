@@ -171,8 +171,8 @@ impl Lobby {
             if players.len() < 4 {
                 return Err(CardsError::NotEnoughPlayers);
             }
-            for seat in &Seat::VALUES {
-                if let Some(idx) = players.iter().position(|p| p.seat == Some(*seat)) {
+            for &seat in &Seat::VALUES {
+                if let Some(idx) = players.iter().position(|p| p.seat == Some(seat)) {
                     players.swap(idx, seat.idx());
                 }
             }
