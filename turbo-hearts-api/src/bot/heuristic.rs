@@ -1,6 +1,5 @@
+use crate::{BotState, Card, Cards, GameEvent, GameState, Rank, Suit, VoidState};
 use rand::Rng;
-
-use crate::{Bot, BotState, Card, Cards, GameEvent, GameState, Rank, Suit, VoidState};
 
 macro_rules! check {
     ($hand:ident, $cards:expr, $len:literal) => {
@@ -47,32 +46,115 @@ impl HeuristicBot {
         Self { void }
     }
 
-    fn is_last_play_in_suit(
-        &self,
-        trick: Cards,
-        bot_state: &BotState,
-        game_state: &GameState,
-    ) -> bool {
-        let suit = game_state.current_trick.suit();
-        if (game_state.played | bot_state.post_pass_hand).contains_all(suit.cards()) {
-            return true;
-        }
-        let seat = bot_state.seat;
-        match trick.len() {
-            7 => true,
-            6 => self.void.is_void(seat.left(), suit),
-            5 => self.void.is_void(seat.left(), suit) && self.void.is_void(seat.across(), suit),
-            3 => !trick.contains(suit.with_rank(Rank::Nine)),
-            2 => {
-                !trick.contains(suit.with_rank(Rank::Nine)) && self.void.is_void(seat.left(), suit)
+    pub async fn pass(&mut self, bot_state: &BotState, _: &GameState) -> Cards {
+        let mut hand = bot_state.pre_pass_hand;
+        if hand.contains_any(Cards::HEARTS) {
+            if (hand & Cards::HEARTS).len() == 1 {
+                hand -= Cards::HEARTS;
+            } else {
+                hand -= (hand & Cards::HEARTS).into_iter().nth(1).unwrap();
             }
-            1 => {
-                !trick.contains(suit.with_rank(Rank::Nine))
-                    && self.void.is_void(seat.left(), suit)
-                    && self.void.is_void(seat.across(), suit)
-            }
-            _ => false,
         }
+        while hand.len() > 10 {
+            check!(hand, Card::QueenSpades, 2);
+            check!(hand, Card::AceSpades, 2);
+            check!(hand, Card::KingSpades, 2);
+            check!(hand, Card::TenClubs, 2);
+            check!(hand, Card::AceClubs, 2);
+            check!(hand, Card::KingClubs, 2);
+            check!(hand, Card::QueenClubs, 2);
+            check!(hand, Card::JackClubs, 2);
+            check!(hand, Cards::HEARTS, 1);
+            check!(hand, Cards::CLUBS, 1);
+            check!(hand, Cards::DIAMONDS, 1);
+            check!(hand, Card::QueenSpades, 4);
+            check!(hand, Card::AceSpades, 4);
+            check!(hand, Card::KingSpades, 4);
+            check!(hand, Card::TenClubs, 4);
+            check!(hand, Card::AceClubs, 4);
+            check!(hand, Card::KingClubs, 4);
+            check!(hand, Card::QueenClubs, 4);
+            check!(hand, Card::JackClubs, 4);
+            check!(hand, Cards::HEARTS, 2);
+            check!(hand, Cards::CLUBS, 2);
+            check!(hand, Cards::DIAMONDS, 2);
+            check!(hand, Cards::SPADES, 1);
+            check!(hand, Cards::HEARTS, 13);
+            check!(hand, Cards::CLUBS, 13);
+            check!(hand, Cards::DIAMONDS, 13);
+            check!(hand, Cards::SPADES, 13);
+        }
+        bot_state.pre_pass_hand - hand
+    }
+
+    pub async fn charge(&mut self, bot_state: &BotState, game_state: &GameState) -> Cards {
+        let hand = bot_state.post_pass_hand;
+        let chargeable = hand - game_state.charges.charges(bot_state.seat);
+        let mut charge = Cards::NONE;
+        if chargeable.contains(Card::QueenSpades) {
+            let spades = hand & Cards::SPADES;
+            if spades.len() >= 6 || (spades.len() >= 5 && hand.contains(Card::NineSpades)) {
+                if (hand - Cards::SPADES - Card::TwoClubs)
+                    .into_iter()
+                    .any(|c| c.rank() < Rank::Five)
+                {
+                    charge |= Card::QueenSpades;
+                }
+            }
+        }
+        if chargeable.contains(Card::TenClubs) {
+            let clubs = hand & Cards::CLUBS;
+            if clubs.len() >= 6 || (clubs.len() >= 5 && hand.contains(Card::NineClubs)) {
+                if (hand - Cards::CLUBS)
+                    .into_iter()
+                    .any(|c| c.rank() < Rank::Five)
+                {
+                    charge |= Card::TenClubs;
+                }
+            }
+        }
+        if chargeable.contains(Card::AceHearts) {
+            let hearts = hand & Cards::HEARTS;
+            if hearts.below(Card::EightHearts).len() >= 3 {
+                charge |= Card::AceHearts;
+            }
+        }
+        if chargeable.contains(Card::JackDiamonds) {
+            let diamonds = hand & Cards::DIAMONDS;
+            let high_diamonds = diamonds.above(Card::JackDiamonds).len();
+            let high_cards = (hand - Cards::DIAMONDS)
+                .into_iter()
+                .filter(|c| *c == Card::QueenSpades || c.rank() > Rank::Queen)
+                .count();
+            if high_diamonds == 3
+                || (diamonds.len() >= 5 && high_diamonds == 2 && high_cards > 1)
+                || (diamonds.len() >= 6 && high_diamonds == 1 && high_cards > 2)
+            {
+                charge |= Card::JackDiamonds;
+            }
+        }
+        charge
+    }
+
+    pub async fn play(&mut self, bot_state: &BotState, game_state: &GameState) -> Card {
+        let ours = game_state.legal_plays(bot_state.post_pass_hand);
+
+        // If we only have one legal play, play it
+        if ours.len() == 1 {
+            return ours.max();
+        }
+        let theirs = Cards::ALL - bot_state.post_pass_hand - game_state.played;
+        if game_state.current_trick.is_empty() {
+            self.lead(ours, theirs, game_state)
+        } else if game_state.current_trick.suit().cards().contains_any(ours) {
+            self.follow(ours, theirs, bot_state, game_state)
+        } else {
+            self.slough(ours, theirs, bot_state, game_state)
+        }
+    }
+
+    pub fn on_event(&mut self, _: &BotState, state: &GameState, event: &GameEvent) {
+        self.void.on_event(state, event);
     }
 
     fn lead(&self, mut ours: Cards, theirs: Cards, game_state: &GameState) -> Card {
@@ -347,118 +429,33 @@ impl HeuristicBot {
             random(ours)
         }
     }
-}
 
-impl Bot for HeuristicBot {
-    fn pass(&mut self, bot_state: &BotState, _: &GameState) -> Cards {
-        let mut hand = bot_state.pre_pass_hand;
-        if hand.contains_any(Cards::HEARTS) {
-            if (hand & Cards::HEARTS).len() == 1 {
-                hand -= Cards::HEARTS;
-            } else {
-                hand -= (hand & Cards::HEARTS).into_iter().nth(1).unwrap();
+    fn is_last_play_in_suit(
+        &self,
+        trick: Cards,
+        bot_state: &BotState,
+        game_state: &GameState,
+    ) -> bool {
+        let suit = game_state.current_trick.suit();
+        if (game_state.played | bot_state.post_pass_hand).contains_all(suit.cards()) {
+            return true;
+        }
+        let seat = bot_state.seat;
+        match trick.len() {
+            7 => true,
+            6 => self.void.is_void(seat.left(), suit),
+            5 => self.void.is_void(seat.left(), suit) && self.void.is_void(seat.across(), suit),
+            3 => !trick.contains(suit.with_rank(Rank::Nine)),
+            2 => {
+                !trick.contains(suit.with_rank(Rank::Nine)) && self.void.is_void(seat.left(), suit)
             }
-        }
-        while hand.len() > 10 {
-            check!(hand, Card::QueenSpades, 2);
-            check!(hand, Card::AceSpades, 2);
-            check!(hand, Card::KingSpades, 2);
-            check!(hand, Card::TenClubs, 2);
-            check!(hand, Card::AceClubs, 2);
-            check!(hand, Card::KingClubs, 2);
-            check!(hand, Card::QueenClubs, 2);
-            check!(hand, Card::JackClubs, 2);
-            check!(hand, Cards::HEARTS, 1);
-            check!(hand, Cards::CLUBS, 1);
-            check!(hand, Cards::DIAMONDS, 1);
-            check!(hand, Card::QueenSpades, 4);
-            check!(hand, Card::AceSpades, 4);
-            check!(hand, Card::KingSpades, 4);
-            check!(hand, Card::TenClubs, 4);
-            check!(hand, Card::AceClubs, 4);
-            check!(hand, Card::KingClubs, 4);
-            check!(hand, Card::QueenClubs, 4);
-            check!(hand, Card::JackClubs, 4);
-            check!(hand, Cards::HEARTS, 2);
-            check!(hand, Cards::CLUBS, 2);
-            check!(hand, Cards::DIAMONDS, 2);
-            check!(hand, Cards::SPADES, 1);
-            check!(hand, Cards::HEARTS, 13);
-            check!(hand, Cards::CLUBS, 13);
-            check!(hand, Cards::DIAMONDS, 13);
-            check!(hand, Cards::SPADES, 13);
-        }
-        bot_state.pre_pass_hand - hand
-    }
-
-    fn charge(&mut self, bot_state: &BotState, game_state: &GameState) -> Cards {
-        let hand = bot_state.post_pass_hand;
-        let chargeable = hand - game_state.charges.charges(bot_state.seat);
-        let mut charge = Cards::NONE;
-        if chargeable.contains(Card::QueenSpades) {
-            let spades = hand & Cards::SPADES;
-            if spades.len() >= 6 || (spades.len() >= 5 && hand.contains(Card::NineSpades)) {
-                if (hand - Cards::SPADES - Card::TwoClubs)
-                    .into_iter()
-                    .any(|c| c.rank() < Rank::Five)
-                {
-                    charge |= Card::QueenSpades;
-                }
+            1 => {
+                !trick.contains(suit.with_rank(Rank::Nine))
+                    && self.void.is_void(seat.left(), suit)
+                    && self.void.is_void(seat.across(), suit)
             }
+            _ => false,
         }
-        if chargeable.contains(Card::TenClubs) {
-            let clubs = hand & Cards::CLUBS;
-            if clubs.len() >= 6 || (clubs.len() >= 5 && hand.contains(Card::NineClubs)) {
-                if (hand - Cards::CLUBS)
-                    .into_iter()
-                    .any(|c| c.rank() < Rank::Five)
-                {
-                    charge |= Card::TenClubs;
-                }
-            }
-        }
-        if chargeable.contains(Card::AceHearts) {
-            let hearts = hand & Cards::HEARTS;
-            if hearts.below(Card::EightHearts).len() >= 3 {
-                charge |= Card::AceHearts;
-            }
-        }
-        if chargeable.contains(Card::JackDiamonds) {
-            let diamonds = hand & Cards::DIAMONDS;
-            let high_diamonds = diamonds.above(Card::JackDiamonds).len();
-            let high_cards = (hand - Cards::DIAMONDS)
-                .into_iter()
-                .filter(|c| *c == Card::QueenSpades || c.rank() > Rank::Queen)
-                .count();
-            if high_diamonds == 3
-                || (diamonds.len() >= 5 && high_diamonds == 2 && high_cards > 1)
-                || (diamonds.len() >= 6 && high_diamonds == 1 && high_cards > 2)
-            {
-                charge |= Card::JackDiamonds;
-            }
-        }
-        charge
-    }
-
-    fn play(&mut self, bot_state: &BotState, game_state: &GameState) -> Card {
-        let ours = game_state.legal_plays(bot_state.post_pass_hand);
-
-        // If we only have one legal play, play it
-        if ours.len() == 1 {
-            return ours.max();
-        }
-        let theirs = Cards::ALL - bot_state.post_pass_hand - game_state.played;
-        if game_state.current_trick.is_empty() {
-            self.lead(ours, theirs, game_state)
-        } else if game_state.current_trick.suit().cards().contains_any(ours) {
-            self.follow(ours, theirs, bot_state, game_state)
-        } else {
-            self.slough(ours, theirs, bot_state, game_state)
-        }
-    }
-
-    fn on_event(&mut self, _: &BotState, state: &GameState, event: &GameEvent) {
-        self.void.on_event(state, event);
     }
 }
 

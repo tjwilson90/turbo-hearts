@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use std::time::Instant;
 use tokio::{
     sync::mpsc::{error::TryRecvError, UnboundedReceiver},
-    task, time,
+    time,
     time::Duration,
 };
 
@@ -26,14 +26,6 @@ pub use random::*;
 pub use simulate::*;
 pub use void::*;
 
-pub struct BotRunner {
-    game_id: GameId,
-    user_id: UserId,
-    bot_state: BotState,
-    game_state: GameState,
-    algorithm: Box<dyn Bot + Send + Sync>,
-}
-
 #[repr(u8)]
 #[serde(rename_all = "snake_case")]
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash, Serialize, Deserialize)]
@@ -45,20 +37,60 @@ pub enum BotStrategy {
     Simulate,
 }
 
+enum Bot {
+    Duck(DuckBot),
+    GottaTry(GottaTryBot),
+    Heuristic(HeuristicBot),
+    Random(RandomBot),
+    Simulate(SimulateBot),
+}
+
+macro_rules! dispatch {
+    ($self:expr, $fun:ident, $($arg:expr),*) => {
+        match &mut $self {
+            Bot::Duck(bot) => bot.$fun($($arg),+),
+            Bot::GottaTry(bot) => bot.$fun($($arg),+),
+            Bot::Heuristic(bot) => bot.$fun($($arg),+),
+            Bot::Random(bot) => bot.$fun($($arg),+),
+            Bot::Simulate(bot) => bot.$fun($($arg),+),
+        }
+    };
+}
+
+macro_rules! dispatch_async {
+    ($self:expr, $fun:ident, $($arg:expr),*) => {
+        match &mut $self {
+            Bot::Duck(bot) => bot.$fun($($arg),+).await,
+            Bot::GottaTry(bot) => bot.$fun($($arg),+).await,
+            Bot::Heuristic(bot) => bot.$fun($($arg),+).await,
+            Bot::Random(bot) => bot.$fun($($arg),+).await,
+            Bot::Simulate(bot) => bot.$fun($($arg),+).await,
+        }
+    };
+}
+
 pub struct BotState {
     seat: Seat,
     pre_pass_hand: Cards,
     post_pass_hand: Cards,
 }
 
+pub struct BotRunner {
+    game_id: GameId,
+    user_id: UserId,
+    bot_state: BotState,
+    game_state: GameState,
+    bot: Bot,
+}
+
 impl BotRunner {
     pub fn new(game_id: GameId, user_id: UserId, strategy: BotStrategy) -> Self {
-        let algorithm: Box<dyn Bot + Send + Sync> = match strategy {
-            BotStrategy::Duck => Box::new(DuckBot::new()),
-            BotStrategy::GottaTry => Box::new(GottaTryBot::new()),
-            BotStrategy::Heuristic => Box::new(HeuristicBot::new()),
-            BotStrategy::Random => Box::new(RandomBot::new()),
-            BotStrategy::Simulate => Box::new(SimulateBot::new()),
+        let bot = match strategy {
+            BotStrategy::Duck => Bot::Duck(DuckBot::new()),
+            BotStrategy::GottaTry => Bot::GottaTry(GottaTryBot::new()),
+            BotStrategy::Heuristic => Bot::Heuristic(HeuristicBot::new()),
+            BotStrategy::Random => Bot::Random(RandomBot::new()),
+            BotStrategy::Simulate => Bot::Simulate(SimulateBot::new()),
         };
         Self {
             game_id,
@@ -69,7 +101,7 @@ impl BotRunner {
                 post_pass_hand: Cards::NONE,
             },
             game_state: GameState::new(),
-            algorithm,
+            bot,
         }
     }
 
@@ -95,19 +127,18 @@ impl BotRunner {
                 delay.map(|delay| Duration::from_secs_f32(delay.sample(&mut rand::thread_rng())));
             match action {
                 Some(Action::Pass) => {
-                    let cards = self.algorithm.pass(&self.bot_state, &self.game_state);
+                    let cards = dispatch_async!(self.bot, pass, &self.bot_state, &self.game_state);
                     BotRunner::delay(delay, now).await;
                     let _ = games.pass_cards(self.game_id, self.user_id, cards).await;
                 }
                 Some(Action::Charge) => {
-                    let cards = self.algorithm.charge(&self.bot_state, &self.game_state);
+                    let cards =
+                        dispatch_async!(self.bot, charge, &self.bot_state, &self.game_state);
                     BotRunner::delay(delay, now).await;
                     let _ = games.charge_cards(self.game_id, self.user_id, cards).await;
                 }
                 Some(Action::Play) => {
-                    let card = task::block_in_place(|| {
-                        self.algorithm.play(&self.bot_state, &self.game_state)
-                    });
+                    let card = dispatch_async!(self.bot, play, &self.bot_state, &self.game_state);
                     if card != Card::TwoClubs {
                         BotRunner::delay(delay, now).await;
                     }
@@ -211,8 +242,13 @@ impl BotRunner {
             _ => {}
         }
 
-        self.algorithm
-            .on_event(&self.bot_state, &self.game_state, &event);
+        dispatch!(
+            self.bot,
+            on_event,
+            &self.bot_state,
+            &self.game_state,
+            &event
+        );
 
         if self.game_state.phase.is_charging() {
             if !self.bot_state.pre_pass_hand.is_empty()
@@ -266,14 +302,6 @@ enum Action {
     Claim,
     AcceptClaim(Seat),
     RejectClaim(Seat),
-}
-
-#[allow(unused_variables)]
-pub trait Bot {
-    fn pass(&mut self, bot_state: &BotState, game_state: &GameState) -> Cards;
-    fn charge(&mut self, bot_state: &BotState, game_state: &GameState) -> Cards;
-    fn play(&mut self, bot_state: &BotState, game_state: &GameState) -> Card;
-    fn on_event(&mut self, bot_state: &BotState, game_state: &GameState, event: &GameEvent);
 }
 
 fn must_claim(hand: Cards, played: Cards) -> bool {
