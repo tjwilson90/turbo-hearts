@@ -80,6 +80,7 @@ pub struct BotRunner {
     user_id: UserId,
     bot_state: BotState,
     game_state: GameState,
+    claim_hands: [Cards; 4],
     bot: Bot,
 }
 
@@ -101,6 +102,7 @@ impl BotRunner {
                 post_pass_hand: Cards::NONE,
             },
             game_state: GameState::new(),
+            claim_hands: [Cards::NONE; 4],
             bot,
         }
     }
@@ -125,6 +127,24 @@ impl BotRunner {
             }
             let delay =
                 delay.map(|delay| Duration::from_secs_f32(delay.sample(&mut rand::thread_rng())));
+            for &seat in &Seat::VALUES {
+                if seat != self.bot_state.seat && self.game_state.claims.is_claiming(seat) {
+                    BotRunner::delay(delay, now).await;
+                    if can_claim(
+                        self.claim_hands[seat.idx()] - self.game_state.played,
+                        &self.game_state,
+                    ) {
+                        match games.accept_claim(self.game_id, self.user_id, seat).await {
+                            Ok(true) => return Ok(()),
+                            _ => {}
+                        }
+                    } else {
+                        let _ = games.reject_claim(self.game_id, self.user_id, seat).await;
+                    }
+                } else {
+                    self.claim_hands[seat.idx()] = Cards::NONE;
+                }
+            }
             match action {
                 Some(Action::Pass) => {
                     let cards = dispatch_async!(self.bot, pass, &self.bot_state, &self.game_state);
@@ -150,17 +170,6 @@ impl BotRunner {
                 Some(Action::Claim) => {
                     BotRunner::delay(delay, now).await;
                     let _ = games.claim(self.game_id, self.user_id).await;
-                }
-                Some(Action::AcceptClaim(seat)) => {
-                    BotRunner::delay(delay, now).await;
-                    match games.accept_claim(self.game_id, self.user_id, seat).await {
-                        Ok(true) => return Ok(()),
-                        _ => {}
-                    }
-                }
-                Some(Action::RejectClaim(seat)) => {
-                    BotRunner::delay(delay, now).await;
-                    let _ = games.reject_claim(self.game_id, self.user_id, seat).await;
                 }
                 None => {}
             }
@@ -228,16 +237,7 @@ impl BotRunner {
                 self.bot_state.post_pass_hand |= *cards;
             }
             GameEvent::Claim { seat, hand } => {
-                return if *seat == self.bot_state.seat {
-                    None
-                } else if can_claim(*hand, &self.game_state) {
-                    Some(Action::AcceptClaim(*seat))
-                } else {
-                    Some(Action::RejectClaim(*seat))
-                };
-            }
-            GameEvent::AcceptClaim { .. } => {
-                return None;
+                self.claim_hands[seat.idx()] = *hand;
             }
             _ => {}
         }
@@ -300,8 +300,6 @@ enum Action {
     Charge,
     Play,
     Claim,
-    AcceptClaim(Seat),
-    RejectClaim(Seat),
 }
 
 fn must_claim(hand: Cards, played: Cards) -> bool {

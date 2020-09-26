@@ -50,9 +50,9 @@ mod test {
     #[test]
     fn empty() {
         let state = DoneState::new();
-        for seat in &Seat::VALUES {
-            assert!(!state.sent_pass(*seat));
-            assert!(!state.charged(*seat));
+        for &seat in &Seat::VALUES {
+            assert!(!state.sent_pass(seat));
+            assert!(!state.charged(seat));
         }
         assert!(!state.all_recv_pass());
         assert!(!state.all_charge());
@@ -63,9 +63,9 @@ mod test {
         let mut state = DoneState::new();
         state.send_pass(Seat::North);
         state.reset();
-        for seat in &Seat::VALUES {
-            assert!(!state.sent_pass(*seat));
-            assert!(!state.charged(*seat));
+        for &seat in &Seat::VALUES {
+            assert!(!state.sent_pass(seat));
+            assert!(!state.charged(seat));
         }
         assert!(!state.all_recv_pass());
         assert!(!state.all_charge());

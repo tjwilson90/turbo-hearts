@@ -486,9 +486,9 @@ impl Game {
     }
 
     fn owner(&self, card: Card) -> Seat {
-        for seat in &Seat::VALUES {
+        for &seat in &Seat::VALUES {
             if self.post_pass_hand[seat.idx()].contains(card) {
-                return *seat;
+                return seat;
             }
         }
         unreachable!()
@@ -845,7 +845,7 @@ impl Game {
 fn seat(players: [UserId; 4], user_id: UserId) -> Option<Seat> {
     players
         .iter()
-        .position(|id| *id == user_id)
+        .position(|&id| id == user_id)
         .map(|idx| Seat::VALUES[idx])
 }
 

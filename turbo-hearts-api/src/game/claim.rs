@@ -55,12 +55,12 @@ mod test {
     #[test]
     fn no_claim() {
         let state = ClaimState::new();
-        for s1 in &Seat::VALUES {
-            assert!(!state.successfully_claimed(*s1));
-            assert!(!state.is_claiming(*s1));
-            for s2 in &Seat::VALUES {
-                assert!(!state.will_successfully_claim(*s1, *s2));
-                assert!(!state.has_accepted(*s1, *s2));
+        for &s1 in &Seat::VALUES {
+            assert!(!state.successfully_claimed(s1));
+            assert!(!state.is_claiming(s1));
+            for &s2 in &Seat::VALUES {
+                assert!(!state.will_successfully_claim(s1, s2));
+                assert!(!state.has_accepted(s1, s2));
             }
         }
     }
@@ -69,19 +69,19 @@ mod test {
     fn claim() {
         let mut state = ClaimState::new();
         state.claim(Seat::East);
-        for s1 in &Seat::VALUES {
-            assert!(!state.successfully_claimed(*s1));
-            if *s1 == Seat::East {
-                assert!(state.is_claiming(*s1));
+        for &s1 in &Seat::VALUES {
+            assert!(!state.successfully_claimed(s1));
+            if s1 == Seat::East {
+                assert!(state.is_claiming(s1));
             } else {
-                assert!(!state.is_claiming(*s1));
+                assert!(!state.is_claiming(s1));
             }
-            for s2 in &Seat::VALUES {
-                assert!(!state.will_successfully_claim(*s1, *s2));
-                if *s1 == Seat::East && *s2 == Seat::East {
-                    assert!(state.has_accepted(*s1, *s2));
+            for &s2 in &Seat::VALUES {
+                assert!(!state.will_successfully_claim(s1, s2));
+                if s1 == Seat::East && s2 == Seat::East {
+                    assert!(state.has_accepted(s1, s2));
                 } else {
-                    assert!(!state.has_accepted(*s1, *s2));
+                    assert!(!state.has_accepted(s1, s2));
                 }
             }
         }
@@ -92,19 +92,19 @@ mod test {
         let mut state = ClaimState::new();
         state.claim(Seat::East);
         state.accept(Seat::East, Seat::North);
-        for s1 in &Seat::VALUES {
-            assert!(!state.successfully_claimed(*s1));
-            if *s1 == Seat::East {
-                assert!(state.is_claiming(*s1));
+        for &s1 in &Seat::VALUES {
+            assert!(!state.successfully_claimed(s1));
+            if s1 == Seat::East {
+                assert!(state.is_claiming(s1));
             } else {
-                assert!(!state.is_claiming(*s1));
+                assert!(!state.is_claiming(s1));
             }
-            for s2 in &Seat::VALUES {
-                assert!(!state.will_successfully_claim(*s1, *s2));
-                if *s1 == Seat::East && (*s2 == Seat::East || *s2 == Seat::North) {
-                    assert!(state.has_accepted(*s1, *s2));
+            for &s2 in &Seat::VALUES {
+                assert!(!state.will_successfully_claim(s1, s2));
+                if s1 == Seat::East && (s2 == Seat::East || s2 == Seat::North) {
+                    assert!(state.has_accepted(s1, s2));
                 } else {
-                    assert!(!state.has_accepted(*s1, *s2));
+                    assert!(!state.has_accepted(s1, s2));
                 }
             }
         }
@@ -116,23 +116,23 @@ mod test {
         state.claim(Seat::East);
         state.accept(Seat::East, Seat::North);
         state.accept(Seat::East, Seat::South);
-        for s1 in &Seat::VALUES {
-            assert!(!state.successfully_claimed(*s1));
-            if *s1 == Seat::East {
-                assert!(state.is_claiming(*s1));
+        for &s1 in &Seat::VALUES {
+            assert!(!state.successfully_claimed(s1));
+            if s1 == Seat::East {
+                assert!(state.is_claiming(s1));
             } else {
-                assert!(!state.is_claiming(*s1));
+                assert!(!state.is_claiming(s1));
             }
-            for s2 in &Seat::VALUES {
-                if *s1 == Seat::East && *s2 == Seat::West {
-                    assert!(state.will_successfully_claim(*s1, *s2));
+            for &s2 in &Seat::VALUES {
+                if s1 == Seat::East && s2 == Seat::West {
+                    assert!(state.will_successfully_claim(s1, s2));
                 } else {
-                    assert!(!state.will_successfully_claim(*s1, *s2));
+                    assert!(!state.will_successfully_claim(s1, s2));
                 }
-                if *s1 == Seat::East && *s2 != Seat::West {
-                    assert!(state.has_accepted(*s1, *s2));
+                if s1 == Seat::East && s2 != Seat::West {
+                    assert!(state.has_accepted(s1, s2));
                 } else {
-                    assert!(!state.has_accepted(*s1, *s2));
+                    assert!(!state.has_accepted(s1, s2));
                 }
             }
         }
@@ -145,27 +145,27 @@ mod test {
         state.accept(Seat::East, Seat::North);
         state.accept(Seat::East, Seat::South);
         state.accept(Seat::East, Seat::West);
-        for s1 in &Seat::VALUES {
-            if *s1 == Seat::East {
-                assert!(state.successfully_claimed(*s1));
+        for &s1 in &Seat::VALUES {
+            if s1 == Seat::East {
+                assert!(state.successfully_claimed(s1));
             } else {
-                assert!(!state.successfully_claimed(*s1));
+                assert!(!state.successfully_claimed(s1));
             }
-            if *s1 == Seat::East {
-                assert!(state.is_claiming(*s1));
+            if s1 == Seat::East {
+                assert!(state.is_claiming(s1));
             } else {
-                assert!(!state.is_claiming(*s1));
+                assert!(!state.is_claiming(s1));
             }
-            for s2 in &Seat::VALUES {
-                if *s1 == Seat::East {
-                    assert!(state.will_successfully_claim(*s1, *s2));
+            for &s2 in &Seat::VALUES {
+                if s1 == Seat::East {
+                    assert!(state.will_successfully_claim(s1, s2));
                 } else {
-                    assert!(!state.will_successfully_claim(*s1, *s2));
+                    assert!(!state.will_successfully_claim(s1, s2));
                 }
-                if *s1 == Seat::East {
-                    assert!(state.has_accepted(*s1, *s2));
+                if s1 == Seat::East {
+                    assert!(state.has_accepted(s1, s2));
                 } else {
-                    assert!(!state.has_accepted(*s1, *s2));
+                    assert!(!state.has_accepted(s1, s2));
                 }
             }
         }
@@ -177,12 +177,12 @@ mod test {
         state.claim(Seat::East);
         state.accept(Seat::East, Seat::North);
         state.reject(Seat::East);
-        for s1 in &Seat::VALUES {
-            assert!(!state.successfully_claimed(*s1));
-            assert!(!state.is_claiming(*s1));
-            for s2 in &Seat::VALUES {
-                assert!(!state.will_successfully_claim(*s1, *s2));
-                assert!(!state.has_accepted(*s1, *s2));
+        for &s1 in &Seat::VALUES {
+            assert!(!state.successfully_claimed(s1));
+            assert!(!state.is_claiming(s1));
+            for &s2 in &Seat::VALUES {
+                assert!(!state.will_successfully_claim(s1, s2));
+                assert!(!state.has_accepted(s1, s2));
             }
         }
     }
