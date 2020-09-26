@@ -1,32 +1,9 @@
-[package]
-name = "turbo-hearts"
-version = "0.1.0"
-authors = ["Tim Wilson <twilson@palantir.com>"]
-edition = "2018"
+[workspace]
 
-[dependencies]
-base64 = "*"
-env_logger = { version = "*", default-features = false, features = ["humantime"] }
-http = "*"
-log = "*"
-once_cell = "*"
-rand = "*"
-rand_chacha = "*"
-rand_distr = "*"
-r2d2 = "*"
-r2d2_sqlite = "*"
-reqwest = { version = "*", default-features = false, features = ["json", "rustls-tls"] }
-rusqlite = { version = "*", features = ["bundled"] }
-serde = { version = "*", features = ["derive"] }
-serde_json = "*"
-sha2 = "*"
-thiserror = "*"
-tokio = { version = "*", features = ["macros", "rt-threaded"] }
-uuid = { version = "*", features = ["serde", "v4"] }
-warp = { version = "*", default-features = false }
-
-[dev-dependencies]
-tempfile = "*"
+members = [
+    "turbo-hearts-api",
+    "turbo-hearts-server",
+]
 
 [profile.release]
 lto = "thin"
