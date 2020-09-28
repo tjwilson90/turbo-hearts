@@ -21,22 +21,6 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cache-yarn-v1-
 
-      - name: Cache target
-        uses: actions/cache@v1
-        with:
-          path: target
-          key: ${{ runner.os }}-cache-target-v1-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-cache-target-v1-
-
-      - name: Cache .cargo
-        uses: actions/cache@v1
-        with:
-          path: ~/.cargo
-          key: ${{ runner.os }}-cache-cargo-v1-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-cache-cargo-v1-
-
       - name: Yarn install (game)
         run: yarn install
         working-directory: packages/game
@@ -56,14 +40,42 @@ jobs:
       - name: Install musl
         run: sudo apt-get install musl-tools
 
-      - name: Add rust target
-        run: rustup target add x86_64-unknown-linux-musl
+      - name: Install rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          target: x86_64-unknown-linux-musl
+          override: true
 
-      - name: Cargo build
-        run: cargo build --target x86_64-unknown-linux-musl --release
+      - name: Cache target
+        uses: actions/cache@v1
+        with:
+          path: target
+          key: ${{ runner.os }}-cache-target-v1-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cache-target-v1-
+
+      - name: Cache .cargo
+        uses: actions/cache@v1
+        with:
+          path: ~/.cargo
+          key: ${{ runner.os }}-cache-cargo-v1-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cache-cargo-v1-
 
       - name: Cargo test
-        run: cargo test --target x86_64-unknown-linux-musl --release
+        uses: actions-rs/cargo@v1
+        with:
+          use-cross: true
+          command: test
+          args: --target x86_64-unknown-linux-musl --release
+
+      - name: Cargo build
+        uses: actions-rs/cargo@v1
+        with:
+          use-cross: true
+          command: build
+          args: --target x86_64-unknown-linux-musl --release
 
       - name: Make dist
         run: ./scripts/make-dist.sh
