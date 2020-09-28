@@ -493,7 +493,7 @@ export class TurboHeartsStage {
     this.tweenTo(card.sprite, pos);
   }
 
-  private onOver = (event: PIXI.interaction.InteractionEvent) => {
+  private onOver = (event: PIXI.InteractionEvent) => {
     const sprite = event.currentTarget as PIXI.Sprite;
     const card = this.cardMap.get(sprite);
     if (card === undefined) {
@@ -503,7 +503,7 @@ export class TurboHeartsStage {
     this.animate(card);
   };
 
-  private onOut = (event: PIXI.interaction.InteractionEvent) => {
+  private onOut = (event: PIXI.InteractionEvent) => {
     const sprite = event.currentTarget as PIXI.Sprite;
     const card = this.cardMap.get(sprite);
     if (card === undefined) {
@@ -515,7 +515,7 @@ export class TurboHeartsStage {
     this.animate(card);
   };
 
-  private onClick = (event: PIXI.interaction.InteractionEvent) => {
+  private onClick = (event: PIXI.InteractionEvent) => {
     const card = this.cardMap.get(event.currentTarget as PIXI.Sprite);
     if (card !== undefined) {
       if (this.picked.has(card)) {
