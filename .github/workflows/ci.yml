@@ -1,9 +1,24 @@
-name: Push
+name: CI
 
 on: push
 
 jobs:
-  run:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Install musl
+        run: sudo apt-get install musl-tools
+
+      - name: Add rust target
+        run: rustup target add x86_64-unknown-linux-musl
+
+      - name: Cargo test
+        run: cargo test --target x86_64-unknown-linux-musl
+
+  build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -20,22 +35,6 @@ jobs:
           key: ${{ runner.os }}-cache-yarn-v1-${{ hashFiles('**/yarn.lock') }}
           restore-keys: |
             ${{ runner.os }}-cache-yarn-v1-
-
-      - name: Cache target
-        uses: actions/cache@v1
-        with:
-          path: target
-          key: ${{ runner.os }}-cache-target-v1-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-cache-target-v1-
-
-      - name: Cache .cargo
-        uses: actions/cache@v1
-        with:
-          path: ~/.cargo
-          key: ${{ runner.os }}-cache-cargo-v1-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-cache-cargo-v1-
 
       - name: Yarn install (game)
         run: yarn install
@@ -61,9 +60,6 @@ jobs:
 
       - name: Cargo build
         run: cargo build --target x86_64-unknown-linux-musl --release
-
-      - name: Cargo test
-        run: cargo test --target x86_64-unknown-linux-musl --release
 
       - name: Make dist
         run: ./scripts/make-dist.sh
