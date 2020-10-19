@@ -16,37 +16,42 @@ impl SimulateBot {
         }
     }
 
-    pub async fn pass(&mut self, bot_state: &BotState, game_state: &GameState) -> Cards {
-        HeuristicBot::new().pass(bot_state, game_state).await
+    pub async fn pass(&mut self, bot_state: &BotState, _: &GameState) -> Cards {
+        HeuristicBot::pass_sync(bot_state)
     }
 
     pub async fn charge(&mut self, bot_state: &BotState, game_state: &GameState) -> Cards {
+        let mut bot = HeuristicBot::with_void(self.void);
         let chargeable =
             (bot_state.post_pass_hand - game_state.charges.all_charges()) & Cards::CHARGEABLE;
         let mut money_counts = HashMap::new();
         let now = Instant::now();
         let deadline = 4000 + rand::thread_rng().gen_range(0, 1000);
         while now.elapsed().as_millis() < deadline {
-            let hands = make_hands(bot_state, game_state, self.void);
-            for _ in 0..100 {
+            let now = Instant::now();
+            while now.elapsed().as_millis() < 10 {
+                let hands = make_hands(bot_state, game_state, self.void);
                 for cards in chargeable.powerset() {
-                    let mut game = game_state.clone();
-                    game.apply(&GameEvent::Charge {
-                        seat: bot_state.seat,
-                        cards,
-                    });
-                    do_charges(&mut game, hands).await;
-                    do_passes(&mut game);
-                    do_charges(&mut game, hands).await;
-                    for &seat in &Seat::VALUES {
-                        if hands[seat.idx()].contains(Card::TwoClubs) {
-                            game.next_actor = Some(seat);
-                            break;
+                    let mut worst_money = i16::max_value();
+                    for _ in 0..20 {
+                        let mut game = game_state.clone();
+                        game.apply(&GameEvent::Charge {
+                            seat: bot_state.seat,
+                            cards,
+                        });
+                        do_charges(&mut game, hands);
+                        do_passes(&mut game);
+                        do_charges(&mut game, hands);
+                        for &seat in &Seat::VALUES {
+                            if hands[seat.idx()].contains(Card::TwoClubs) {
+                                game.next_actor = Some(seat);
+                                break;
+                            }
                         }
+                        do_plays(&mut game, hands, &mut bot);
+                        worst_money = worst_money.min(money(&bot_state, &game));
                     }
-                    self.do_plays(&mut game, hands).await;
-                    let money = money(&bot_state, &game);
-                    *money_counts.entry((cards, money)).or_default() += 1;
+                    *money_counts.entry((cards, worst_money)).or_default() += 1;
                 }
             }
             task::yield_now().await;
@@ -59,20 +64,26 @@ impl SimulateBot {
         if cards.contains(Card::TwoClubs) {
             return Card::TwoClubs;
         }
+        let mut bot = HeuristicBot::with_void(self.void);
         let mut money_counts = HashMap::new();
         let now = Instant::now();
         while now.elapsed().as_millis() < 3500 {
-            let hands = make_hands(bot_state, game_state, self.void);
-            for _ in 0..100 {
+            let now = Instant::now();
+            while now.elapsed().as_millis() < 10 {
+                let hands = make_hands(bot_state, game_state, self.void);
                 for card in cards {
+                    let mut worst_money = i16::max_value();
                     let mut game = game_state.clone();
                     game.apply(&GameEvent::Play {
                         seat: bot_state.seat,
                         card,
                     });
-                    self.do_plays(&mut game, hands).await;
-                    let money = money(&bot_state, &game);
-                    *money_counts.entry((card, money)).or_default() += 1;
+                    for _ in 0..50 {
+                        let mut game = game.clone();
+                        do_plays(&mut game, hands, &mut bot);
+                        worst_money = worst_money.min(money(&bot_state, &game));
+                    }
+                    *money_counts.entry((card, worst_money)).or_default() += 1;
                 }
             }
             task::yield_now().await;
@@ -82,30 +93,6 @@ impl SimulateBot {
 
     pub fn on_event(&mut self, _: &BotState, game_state: &GameState, event: &GameEvent) {
         self.void.on_event(game_state, event);
-    }
-
-    async fn do_plays(&self, game: &mut GameState, hands: [Cards; 4]) {
-        while game.phase.is_playing() {
-            let seat = game.next_actor.unwrap();
-            if game.current_trick.is_empty()
-                && game.won.can_run(seat)
-                && can_claim(seat, hands[seat.idx()], game)
-            {
-                game.won.win(seat, Cards::ALL - game.played);
-                return;
-            }
-            let card = HeuristicBot::with_void(self.void)
-                .play(
-                    &BotState {
-                        seat,
-                        pre_pass_hand: hands[seat.idx()],
-                        post_pass_hand: hands[seat.idx()],
-                    },
-                    &game,
-                )
-                .await;
-            game.apply(&GameEvent::Play { seat, card });
-        }
     }
 }
 
@@ -120,23 +107,43 @@ fn do_passes(game: &mut GameState) {
     }
 }
 
-async fn do_charges(game: &mut GameState, hands: [Cards; 4]) {
+fn do_charges(game: &mut GameState, hands: [Cards; 4]) {
     while game.phase.is_charging() {
         for &seat in &Seat::VALUES {
             if !game.done.charged(seat) {
-                let cards = HeuristicBot::new()
-                    .charge(
-                        &BotState {
-                            seat,
-                            pre_pass_hand: hands[seat.idx()],
-                            post_pass_hand: hands[seat.idx()],
-                        },
-                        &game,
-                    )
-                    .await;
+                let cards = HeuristicBot::charge_sync(
+                    &BotState {
+                        seat,
+                        pre_pass_hand: hands[seat.idx()],
+                        post_pass_hand: hands[seat.idx()],
+                    },
+                    &game,
+                );
                 game.apply(&GameEvent::Charge { seat, cards });
             }
         }
+    }
+}
+
+fn do_plays(game: &mut GameState, hands: [Cards; 4], bot: &mut HeuristicBot) {
+    while game.phase.is_playing() {
+        let seat = game.next_actor.unwrap();
+        if game.current_trick.is_empty()
+            && game.won.can_run(seat)
+            && can_claim(seat, hands[seat.idx()], game)
+        {
+            game.won.win(seat, Cards::ALL - game.played);
+            return;
+        }
+        let card = bot.play_sync(
+            &BotState {
+                seat,
+                pre_pass_hand: hands[seat.idx()],
+                post_pass_hand: hands[seat.idx()],
+            },
+            &game,
+        );
+        game.apply(&GameEvent::Play { seat, card });
     }
 }
 
