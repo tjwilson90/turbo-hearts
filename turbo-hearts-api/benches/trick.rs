@@ -119,18 +119,6 @@ pub fn cards(c: &mut Criterion) {
     g.finish();
 }
 
-pub fn winning_card(c: &mut Criterion) {
-    let mut g = c.benchmark_group("winning_card");
-    let mut trick = Trick::new();
-    for i in 0..8 {
-        trick.push(Card::from(i));
-        g.bench_with_input(format!("{}", i + 1), &trick, |b, trick| {
-            b.iter(|| trick.winning_card());
-        });
-    }
-    g.finish();
-}
-
 pub fn winning_seat(c: &mut Criterion) {
     let mut g = c.benchmark_group("winning_seat");
     let mut trick = Trick::new();
@@ -164,7 +152,6 @@ criterion_group!(
     suit,
     is_complete,
     cards,
-    winning_card,
     winning_seat,
     push,
 );
