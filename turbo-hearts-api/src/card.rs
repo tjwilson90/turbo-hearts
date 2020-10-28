@@ -92,7 +92,7 @@ impl Card {
 
 impl From<u8> for Card {
     fn from(n: u8) -> Self {
-        assert!(n < 64 && n % 16 < 13, "n={}", n);
+        debug_assert!(n < 64 && n % 16 < 13, "n={}", n);
         unsafe { mem::transmute(n) }
     }
 }

@@ -39,7 +39,7 @@ impl DuckBot {
                 .max_by_key(|card| score(*card, bot_state.post_pass_hand - game_state.played))
                 .unwrap();
         }
-        let winner = game_state.current_trick.winning_card();
+        let winner = (game_state.current_trick.cards() & suit.cards()).max();
         let duck = cards.into_iter().filter(|card| *card < winner).max();
         match duck {
             Some(card) => card,

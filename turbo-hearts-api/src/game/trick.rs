@@ -1,80 +1,85 @@
-use crate::{Card, Cards, Rank, Seat, Suit};
+use crate::{Card, Cards, Seat, Suit};
+
+const NINE_MASKS: [u32; 4] = [0x07_07_07_07, 0x17_17_17_17, 0x27_27_27_27, 0x37_37_37_37];
+const SUIT_XORS: [u64; 4] = [
+    0xB0_B0_B0_B0_B0_B0_B0_B0,
+    0xA0_A0_A0_A0_A0_A0_A0_A0,
+    0x90_90_90_90_90_90_90_90,
+    0x80_80_80_80_80_80_80_80,
+];
+const EMPTY: u64 = 0x80_80_80_80_80_80_80_80;
 
 #[derive(Clone, Debug)]
 pub struct Trick {
-    cards: [Card; 8],
-    len: u8,
+    state: u64,
 }
 
 impl Trick {
     pub fn new() -> Self {
-        Self {
-            cards: [Card::TwoClubs; 8],
-            len: 0,
-        }
+        Self { state: EMPTY }
     }
 
     pub fn is_empty(&self) -> bool {
-        self.len == 0
+        self.state == EMPTY
     }
 
     pub fn suit(&self) -> Suit {
-        self.cards[0].suit()
+        let shift = 60 - (self.state ^ EMPTY).leading_zeros();
+        Suit::from(((self.state >> shift) & 3) as u8)
     }
 
     pub fn is_complete(&self) -> bool {
-        self.len == 8 || (self.len == 4 && !self.nined())
+        if self.state & EMPTY == 0 {
+            return true;
+        }
+        if self.state & EMPTY != 0x80_80_80_80_00_00_00_00 {
+            return false;
+        }
+        let suit = (self.state >> 28) & 3;
+        let xor = self.state as u32 ^ NINE_MASKS[suit as usize];
+        xor.wrapping_sub(0x01_01_01_01) & (!xor) & 0x80_80_80_80 == 0
     }
 
     pub fn cards(&self) -> Cards {
-        self.slice().iter().cloned().collect()
-    }
-
-    pub fn winning_card(&self) -> Card {
-        let suit = self.suit();
-        self.slice()
-            .iter()
-            .cloned()
-            .filter(|c| c.suit() == suit)
-            .max()
-            .unwrap()
+        let mut cards = Cards::NONE;
+        let mut state = self.state;
+        for _ in 0..8 - (self.state ^ EMPTY).leading_zeros() / 8 {
+            cards |= Card::from(state as u8);
+            state >>= 8;
+        }
+        cards
     }
 
     pub fn winning_seat(&self, next: Seat) -> Seat {
-        let cards = self.slice();
-        let mut index = 0;
-        let mut max = cards[0];
-        for i in 1..cards.len() {
-            let card = cards[i];
-            if card.suit() == max.suit() && card > max {
-                max = card;
+        let leading = (self.state ^ EMPTY).leading_zeros();
+        let first_index = 7 - leading / 8;
+        let suit = (self.state >> (60 - leading)) & 3;
+        let mut state = self.state ^ SUIT_XORS[suit as usize];
+        let mut max = (state >> (56 - leading)) as u8;
+        let mut index = first_index;
+        for i in 0..first_index {
+            let byte = state as u8;
+            if byte > max {
+                max = byte;
                 index = i;
             }
+            state >>= 8;
         }
-        match (self.len - index as u8) % 4 {
-            0 => next,
-            1 => next.right(),
-            2 => next.across(),
-            _ => next.left(),
+        match (2 * first_index - index) % 4 {
+            0 => next.right(),
+            1 => next.across(),
+            2 => next.left(),
+            _ => next,
         }
     }
 
     pub fn push(&mut self, card: Card) {
-        self.cards[self.len as usize] = card;
-        self.len += 1;
+        self.state <<= 8;
+        self.state |= card as u8 as u64;
     }
 
     pub fn clear(&mut self) {
-        self.len = 0;
-    }
-
-    fn nined(&self) -> bool {
-        let nine = self.suit().with_rank(Rank::Nine);
-        self.slice().contains(&nine)
-    }
-
-    fn slice(&self) -> &[Card] {
-        &self.cards[..self.len as usize]
+        self.state = EMPTY;
     }
 }
 
@@ -95,20 +100,8 @@ mod test {
         let mut trick = Trick::new();
         trick.push(Card::FiveClubs);
         assert_eq!(trick.suit(), Suit::Clubs);
-    }
-
-    #[test]
-    fn test_nined() {
-        let mut trick = Trick::new();
-        assert!(!trick.nined());
-        trick.push(Card::FiveClubs);
-        assert!(!trick.nined());
-        trick.push(Card::NineDiamonds);
-        assert!(!trick.nined());
-        trick.push(Card::NineClubs);
-        assert!(trick.nined());
-        trick.push(Card::FourClubs);
-        assert!(trick.nined());
+        trick.push(Card::ThreeHearts);
+        assert_eq!(trick.suit(), Suit::Clubs);
     }
 
     #[test]
@@ -151,24 +144,17 @@ mod test {
     fn test_cards() {
         let mut trick = Trick::new();
         trick.push(Card::FiveClubs);
+        assert_eq!(trick.cards(), "5C".parse().unwrap());
         trick.push(Card::NineDiamonds);
+        assert_eq!(trick.cards(), "9D 5C".parse().unwrap());
         trick.push(Card::NineClubs);
+        assert_eq!(trick.cards(), "9D 95C".parse().unwrap());
         trick.push(Card::FourClubs);
+        assert_eq!(trick.cards(), "9D 954C".parse().unwrap());
         trick.push(Card::AceClubs);
+        assert_eq!(trick.cards(), "9D A954C".parse().unwrap());
         trick.push(Card::EightHearts);
         assert_eq!(trick.cards(), "8H 9D A954C".parse().unwrap());
-    }
-
-    #[test]
-    fn test_winning_card() {
-        let mut trick = Trick::new();
-        trick.push(Card::FiveClubs);
-        trick.push(Card::NineDiamonds);
-        trick.push(Card::NineClubs);
-        trick.push(Card::FourClubs);
-        trick.push(Card::KingClubs);
-        trick.push(Card::AceHearts);
-        assert_eq!(trick.winning_card(), Card::KingClubs);
     }
 
     #[test]

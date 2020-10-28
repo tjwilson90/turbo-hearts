@@ -41,7 +41,7 @@ impl Suit {
 
 impl From<u8> for Suit {
     fn from(n: u8) -> Self {
-        assert!(n < 4, "n={}", n);
+        debug_assert!(n < 4, "n={}", n);
         unsafe { mem::transmute(n) }
     }
 }
