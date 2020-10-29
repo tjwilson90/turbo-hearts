@@ -3,8 +3,8 @@ use rusqlite::{Rows, ToSql};
 use serde::{Deserialize, Serialize};
 use std::mem;
 use turbo_hearts_api::{
-    Card, Cards, CardsError, ChargingRules, Database, Game, GameEvent, GameId, GameState,
-    PassDirection, Player, Seat, UserId,
+    Cards, CardsError, ChargingRules, Database, Game, GameEvent, GameId, GameState, PassDirection,
+    Player, Seat, UserId,
 };
 use warp::{Filter, Rejection, Reply};
 
@@ -112,6 +112,9 @@ fn leaderboard<'a>(db: infallible!(&'a Database)) -> reply!() {
 fn read_games(mut rows: Rows<'_>) -> Result<Vec<CompleteGame>, rusqlite::Error> {
     let mut games = Vec::new();
     let mut hands = Vec::with_capacity(4);
+    let mut players = [Player::Human {
+        user_id: UserId::null(),
+    }; 4];
     let mut state = GameState::new();
     while let Some(row) = rows.next()? {
         let game_id = row.get(0)?;
@@ -119,6 +122,16 @@ fn read_games(mut rows: Rows<'_>) -> Result<Vec<CompleteGame>, rusqlite::Error> 
         let event = row.get(2)?;
         let was_playing = state.phase.is_playing();
         state.apply(&event);
+        if let GameEvent::Sit {
+            north,
+            east,
+            south,
+            west,
+            ..
+        } = event
+        {
+            players = [north, east, south, west];
+        }
         let is_playing = state.phase.is_playing();
         if was_playing && !is_playing {
             hands.push(CompleteHand {
@@ -134,9 +147,9 @@ fn read_games(mut rows: Rows<'_>) -> Result<Vec<CompleteGame>, rusqlite::Error> 
                     state.won.hearts(Seat::South),
                     state.won.hearts(Seat::West),
                 ],
-                queen_winner: state.players[state.won.queen_winner().unwrap().idx()],
-                ten_winner: state.players[state.won.ten_winner().unwrap().idx()],
-                jack_winner: state.players[state.won.jack_winner().unwrap().idx()],
+                queen_winner: players[state.won.queen_winner().unwrap().idx()].user_id(),
+                ten_winner: players[state.won.ten_winner().unwrap().idx()].user_id(),
+                jack_winner: players[state.won.jack_winner().unwrap().idx()].user_id(),
             });
             if hands.len() == 4 {
                 let mut complete_hands = Vec::new();
@@ -144,20 +157,7 @@ fn read_games(mut rows: Rows<'_>) -> Result<Vec<CompleteGame>, rusqlite::Error> 
                 games.push(CompleteGame {
                     game_id,
                     completed_time: timestamp,
-                    players: [
-                        Player::Human {
-                            user_id: state.players[0],
-                        },
-                        Player::Human {
-                            user_id: state.players[1],
-                        },
-                        Player::Human {
-                            user_id: state.players[2],
-                        },
-                        Player::Human {
-                            user_id: state.players[3],
-                        },
-                    ],
+                    players,
                     hands: complete_hands,
                 });
                 state = GameState::new();
