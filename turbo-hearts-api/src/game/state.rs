@@ -1,11 +1,10 @@
 use crate::{
     Card, Cards, ChargeState, ChargingRules, ClaimState, DoneState, GameEvent, GamePhase, Seat,
-    Suits, Trick, UserId, WonState,
+    Suits, Trick, WonState,
 };
 
 #[derive(Clone, Debug)]
 pub struct GameState {
-    pub players: [UserId; 4],     // 64
     pub rules: ChargingRules,     // 1
     pub phase: GamePhase,         // 1
     pub done: DoneState,          // 1
@@ -22,7 +21,6 @@ pub struct GameState {
 impl GameState {
     pub fn new() -> Self {
         Self {
-            players: [UserId::null(); 4],
             rules: ChargingRules::Classic,
             phase: GamePhase::PassLeft,
             done: DoneState::new(),
@@ -69,18 +67,7 @@ impl GameState {
 
     pub fn apply(&mut self, event: &GameEvent) {
         match event {
-            GameEvent::Sit {
-                north,
-                east,
-                south,
-                west,
-                rules,
-                ..
-            } => {
-                self.players[0] = north.user_id();
-                self.players[1] = east.user_id();
-                self.players[2] = south.user_id();
-                self.players[3] = west.user_id();
+            GameEvent::Sit { rules, .. } => {
                 self.rules = *rules;
             }
             GameEvent::Deal { .. } => {

@@ -1,5 +1,6 @@
 use crate::{Card, Cards, Seat};
 
+#[derive(Clone, Debug)]
 pub struct WonState {
     state: u32,
 }
@@ -11,7 +12,7 @@ impl WonState {
 
     pub fn win(&mut self, seat: Seat, cards: Cards) {
         let mut update = 0;
-        update += (cards & Cards::HEARTS).len();
+        update += (cards & Cards::HEARTS).len() as u32;
         if cards.contains(Card::QueenSpades) {
             update += 16;
         }
@@ -42,7 +43,7 @@ impl WonState {
 
     pub fn queen_winner(&self) -> Option<Seat> {
         Seat::VALUES
-            .get((self.state & 0x10_10_10_10).trailing_zeros() / 8)
+            .get(((self.state & 0x10_10_10_10).trailing_zeros() / 8) as usize)
             .cloned()
     }
 
@@ -52,7 +53,7 @@ impl WonState {
 
     pub fn jack_winner(&self) -> Option<Seat> {
         Seat::VALUES
-            .get((self.state & 0x20_20_20_20).trailing_zeros() / 8)
+            .get(((self.state & 0x20_20_20_20).trailing_zeros() / 8) as usize)
             .cloned()
     }
 
@@ -62,7 +63,7 @@ impl WonState {
 
     pub fn ten_winner(&self) -> Option<Seat> {
         Seat::VALUES
-            .get((self.state & 0x40_40_40_40).trailing_zeros() / 8)
+            .get(((self.state & 0x40_40_40_40).trailing_zeros() / 8) as usize)
             .cloned()
     }
 

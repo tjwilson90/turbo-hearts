@@ -24,6 +24,7 @@ impl Trick {
     }
 
     pub fn suit(&self) -> Suit {
+        eprintln!("{:x}", self.state);
         let shift = 60 - (self.state ^ EMPTY).leading_zeros();
         Suit::from(((self.state >> shift) & 3) as u8)
     }
