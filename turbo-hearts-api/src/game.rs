@@ -22,6 +22,7 @@ mod phase;
 mod sender;
 mod state;
 mod trick;
+mod won;
 
 pub use charge::*;
 pub use claim::*;
@@ -31,6 +32,7 @@ pub use phase::*;
 pub use sender::*;
 pub use state::*;
 pub use trick::*;
+pub use won::*;
 
 #[derive(Clone)]
 pub struct Games {

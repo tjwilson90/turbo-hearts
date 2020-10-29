@@ -1,6 +1,6 @@
 use crate::{
     Card, Cards, ChargeState, ChargingRules, ClaimState, DoneState, GameEvent, GamePhase, Seat,
-    Suits, Trick, UserId,
+    Suits, Trick, UserId, WonState,
 };
 
 #[derive(Clone, Debug)]
@@ -14,9 +14,9 @@ pub struct GameState {
     pub next_actor: Option<Seat>, // 1
     pub played: Cards,            // 8
     pub claims: ClaimState,       // 2
-    pub won: [Cards; 4],          // 32
+    pub won: WonState,            // 4
     pub led_suits: Suits,         // 1
-    pub current_trick: Trick,     // 9
+    pub current_trick: Trick,     // 8
 }
 
 impl GameState {
@@ -31,14 +31,10 @@ impl GameState {
             next_actor: None,
             played: Cards::NONE,
             claims: ClaimState::new(),
-            won: [Cards::NONE; 4],
+            won: WonState::new(),
             led_suits: Suits::NONE,
             current_trick: Trick::new(),
         }
-    }
-
-    pub fn all_won(&self) -> Cards {
-        self.won.iter().cloned().collect()
     }
 
     pub fn pass_status_event(&self) -> GameEvent {
@@ -61,44 +57,7 @@ impl GameState {
     }
 
     pub fn score(&self, seat: Seat) -> i16 {
-        let charged = self.charges.all_charges();
-        let won = self.won[seat.idx()];
-        let hearts = match (
-            (won & Cards::HEARTS).len() as i16,
-            charged.contains(Card::AceHearts),
-        ) {
-            (hearts, true) => 2 * hearts,
-            (hearts, _) => hearts,
-        };
-        let queen = match (
-            won.contains(Card::QueenSpades),
-            charged.contains(Card::QueenSpades),
-        ) {
-            (true, true) => 26,
-            (true, false) => 13,
-            _ => 0,
-        };
-        let jack = match (
-            won.contains(Card::JackDiamonds),
-            charged.contains(Card::JackDiamonds),
-        ) {
-            (true, true) => -20,
-            (true, false) => -10,
-            _ => 0,
-        };
-        let ten = match (
-            won.contains(Card::TenClubs),
-            charged.contains(Card::TenClubs),
-        ) {
-            (true, true) => 4,
-            (true, false) => 2,
-            _ => 1,
-        };
-        if won.contains(Card::QueenSpades) && won.contains_all(Cards::HEARTS) {
-            ten * (jack - hearts - queen)
-        } else {
-            ten * (jack + hearts + queen)
-        }
+        self.won.score(seat, self.charges.all_charges())
     }
 
     pub fn can_charge(&self, seat: Seat) -> bool {
@@ -130,7 +89,7 @@ impl GameState {
                 self.next_actor = self.phase.first_charger(self.rules);
                 self.played = Cards::NONE;
                 self.claims = ClaimState::new();
-                self.won = [Cards::NONE; 4];
+                self.won = WonState::new();
                 self.led_suits = Suits::NONE;
                 self.current_trick.clear();
             }
@@ -172,7 +131,7 @@ impl GameState {
                 if self.current_trick.is_complete() || self.played == Cards::ALL {
                     self.led_suits |= self.current_trick.suit();
                     let winning_seat = self.current_trick.winning_seat(seat.left());
-                    self.won[winning_seat.idx()] |= self.current_trick.cards();
+                    self.won.win(winning_seat, self.current_trick.cards());
                     self.current_trick.clear();
                     self.next_actor = Some(winning_seat);
                     if self.played == Cards::ALL {
@@ -186,8 +145,10 @@ impl GameState {
             }
             GameEvent::AcceptClaim { claimer, acceptor } => {
                 if self.claims.accept(*claimer, *acceptor) {
-                    self.won[claimer.idx()] |= Cards::ALL - self.played;
-                    self.won[claimer.idx()] |= self.current_trick.cards();
+                    self.won.win(
+                        *claimer,
+                        (Cards::ALL - self.played) | self.current_trick.cards(),
+                    );
                     self.current_trick.clear();
                     self.phase = self.phase.next(self.charge_count != 0);
                     self.done.reset();
@@ -222,14 +183,15 @@ impl GameState {
 
     pub fn legal_plays(&self, cards: Cards) -> Cards {
         let mut plays = cards - self.played;
-        // if this is the first trick
-        if self.all_won().is_empty() {
-            // if you have the two of clubs
-            if plays.contains(Card::TwoClubs) {
-                // you must play it
-                return Card::TwoClubs.into();
-            }
 
+        // if you have the two of clubs
+        if plays.contains(Card::TwoClubs) {
+            // you must play it
+            return Card::TwoClubs.into();
+        }
+
+        // if this is the first trick
+        if self.current_trick.cards().contains(Card::TwoClubs) {
             // if you have a non-point card
             if !Cards::POINTS.contains_all(plays) {
                 // you cannot play points
