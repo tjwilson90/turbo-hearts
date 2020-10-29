@@ -29,9 +29,7 @@ impl GottaTryBot {
 
     pub async fn play(&mut self, bot_state: &BotState, game_state: &GameState) -> Card {
         let cards = game_state.legal_plays(bot_state.post_pass_hand);
-        let our_won = game_state.won[bot_state.seat.idx()];
-        let all_won = game_state.all_won();
-        if Cards::POINTS.contains_any(all_won - our_won) {
+        if !game_state.won.can_run(bot_state.seat) {
             return DuckBot::new().play(bot_state, game_state).await;
         }
         if game_state.current_trick.is_empty() {

@@ -88,10 +88,10 @@ impl SimulateBot {
         while game.phase.is_playing() {
             let seat = game.next_actor.unwrap();
             if game.current_trick.is_empty()
-                && can_run(seat, game)
+                && game.won.can_run(seat)
                 && can_claim(hands[seat.idx()], game)
             {
-                game.won[seat.idx()] |= Cards::ALL - game.played;
+                game.won.win(seat, Cards::ALL - game.played);
                 return;
             }
             let card = HeuristicBot::with_void(self.void)
@@ -107,11 +107,6 @@ impl SimulateBot {
             game.apply(&GameEvent::Play { seat, card });
         }
     }
-}
-
-fn can_run(seat: Seat, game: &GameState) -> bool {
-    let lost = game.played - game.won[seat.idx()];
-    (lost & Cards::POINTS).is_empty()
 }
 
 fn do_passes(game: &mut GameState) {
