@@ -87,8 +87,10 @@ impl Games {
             }
         };
         let mut game = game.lock().await;
-        self.db
-            .run_read_only(|tx| hydrate_events(&tx, game_id, &mut game))?;
+        if game.events.is_empty() {
+            self.db
+                .run_read_only(|tx| hydrate_events(&tx, game_id, &mut game))?;
+        }
         if game.events.is_empty() {
             Err(CardsError::UnknownGame(game_id))
         } else {
