@@ -129,11 +129,13 @@ impl BotRunner {
                 delay.map(|delay| Duration::from_secs_f32(delay.sample(&mut rand::thread_rng())));
             for &seat in &Seat::VALUES {
                 if seat != self.bot_state.seat && self.game_state.claims.is_claiming(seat) {
-                    BotRunner::delay(delay, now).await;
-                    if can_claim(
+                    let accept = can_claim(
+                        seat,
                         self.claim_hands[seat.idx()] - self.game_state.played,
                         &self.game_state,
-                    ) {
+                    );
+                    BotRunner::delay(delay, now).await;
+                    if accept {
                         match games.accept_claim(self.game_id, self.user_id, seat).await {
                             Ok(true) => return Ok(()),
                             _ => {}
@@ -313,10 +315,42 @@ fn must_claim(hand: Cards, played: Cards) -> bool {
     true
 }
 
-fn can_claim(hand: Cards, state: &GameState) -> bool {
-    if !state.current_trick.is_empty() {
-        return false;
+fn can_claim(seat: Seat, hand: Cards, state: &GameState) -> bool {
+    if state.current_trick.is_empty() && state.next_actor == Some(seat) {
+        return can_leader_claim(hand, state);
     }
+    match state.next_actor {
+        Some(actor) if seat == actor => {
+            for card in state.legal_plays(hand).distinct_plays(state.played) {
+                let mut state = state.clone();
+                state.apply(&GameEvent::Play { seat, card });
+                if state.current_trick.is_empty() && state.next_actor != Some(seat) {
+                    return false;
+                }
+                if can_claim(seat, hand - card, &state) {
+                    return true;
+                }
+            }
+            false
+        }
+        Some(actor) => {
+            for card in (Cards::ALL - state.played - hand).distinct_plays(state.played) {
+                let mut state = state.clone();
+                state.apply(&GameEvent::Play { seat: actor, card });
+                if state.current_trick.is_empty() && state.next_actor != Some(seat) {
+                    return false;
+                }
+                if !can_claim(seat, hand, &state) {
+                    return false;
+                }
+            }
+            true
+        }
+        None => unreachable!(),
+    }
+}
+
+fn can_leader_claim(hand: Cards, state: &GameState) -> bool {
     let heart_losers = losers(Suit::Hearts, hand, &state);
     let other_losers = losers(Suit::Spades, hand, &state)
         + losers(Suit::Diamonds, hand, &state)
@@ -389,6 +423,9 @@ fn losers(suit: Suit, hand: Cards, state: &GameState) -> i8 {
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::{
+        ChargeState, ChargingRules, ClaimState, DoneState, GamePhase, Suits, Trick, WonState,
+    };
 
     #[test]
     fn test_losers() {
@@ -430,5 +467,27 @@ mod test {
         assert_eq!(-1, case("Q95", "4", false));
         assert_eq!(0, case("Q", "T", false));
         assert_eq!(1, case("Q", "K", false));
+    }
+
+    #[test]
+    fn test_can_claim() {
+        let state = GameState {
+            rules: ChargingRules::Classic,
+            phase: GamePhase::PassLeft,
+            done: DoneState::new(),
+            charge_count: 0,
+            charges: ChargeState::new(),
+            next_actor: Some(Seat::East),
+            played: Cards::NONE,
+            claims: ClaimState::new(),
+            won: WonState::new(),
+            led_suits: Suits::NONE,
+            current_trick: Trick::new(),
+        };
+        assert!(can_claim(
+            Seat::North,
+            "AK9S AK9H AK9D AK9C".parse().unwrap(),
+            &state
+        ));
     }
 }

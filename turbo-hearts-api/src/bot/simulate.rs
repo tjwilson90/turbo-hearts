@@ -89,7 +89,7 @@ impl SimulateBot {
             let seat = game.next_actor.unwrap();
             if game.current_trick.is_empty()
                 && game.won.can_run(seat)
-                && can_claim(hands[seat.idx()], game)
+                && can_claim(seat, hands[seat.idx()], game)
             {
                 game.won.win(seat, Cards::ALL - game.played);
                 return;
