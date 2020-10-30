@@ -194,6 +194,13 @@ impl BotRunner {
             "handle: game_id={}, user_id={}, event={:?}",
             self.game_id, self.user_id, event
         );
+        dispatch!(
+            self.bot,
+            on_event,
+            &self.bot_state,
+            &self.game_state,
+            &event
+        );
         let phase = self.game_state.phase;
         self.game_state.apply(&event);
         if phase.is_playing() && !self.game_state.phase.is_playing() {
@@ -241,14 +248,6 @@ impl BotRunner {
             }
             _ => {}
         }
-
-        dispatch!(
-            self.bot,
-            on_event,
-            &self.bot_state,
-            &self.game_state,
-            &event
-        );
 
         if self.game_state.phase.is_charging() {
             if !self.bot_state.pre_pass_hand.is_empty()
