@@ -24,7 +24,6 @@ impl Trick {
     }
 
     pub fn suit(&self) -> Suit {
-        eprintln!("{:x}", self.state);
         let shift = 60 - (self.state ^ EMPTY).leading_zeros();
         Suit::from(((self.state >> shift) & 3) as u8)
     }
@@ -66,7 +65,7 @@ impl Trick {
             }
             state >>= 8;
         }
-        match (2 * first_index - index) % 4 {
+        match index % 4 {
             0 => next.right(),
             1 => next.across(),
             2 => next.left(),

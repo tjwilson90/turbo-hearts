@@ -17,9 +17,11 @@ impl VoidState {
     pub fn on_event(&mut self, state: &GameState, event: &GameEvent) {
         match event {
             GameEvent::Play { seat, card } => {
-                let suit = state.current_trick.suit();
-                if card.suit() != suit {
-                    self.state |= 1 << (4 * seat.idx() + suit.idx());
+                if !state.current_trick.is_empty() {
+                    let suit = state.current_trick.suit();
+                    if card.suit() != suit {
+                        self.state |= 1 << (4 * seat.idx() + suit.idx());
+                    }
                 }
             }
             GameEvent::HandComplete { .. } => {
