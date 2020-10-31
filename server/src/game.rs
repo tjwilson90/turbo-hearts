@@ -120,7 +120,7 @@ impl Games {
     ) -> Result<(), CardsError> {
         let hashed_seed = HashedSeed::from(&seed);
         let result = self.db.run_with_retry(|tx| {
-            let timestamp = persist_events(
+            persist_events(
                 &tx,
                 game_id,
                 0,
@@ -135,12 +135,7 @@ impl Games {
                     },
                     hashed_seed.deal(PassDirection::Left),
                 ],
-            )?;
-            tx.execute::<&[&dyn ToSql]>(
-                "UPDATE game SET started_time = ? WHERE game_id = ?",
-                &[&timestamp, &game_id],
-            )?;
-            Ok(())
+            )
         });
         info!(
             "start_game: game_id={}, error={:?}",
@@ -853,7 +848,7 @@ pub fn persist_events(
     game_id: GameId,
     event_id: usize,
     events: &[GameEvent],
-) -> Result<i64, CardsError> {
+) -> Result<(), CardsError> {
     let mut stmt = tx.prepare_cached(
         "INSERT INTO event (game_id, event_id, timestamp, event) VALUES (?, ?, ?, ?)",
     )?;
@@ -863,7 +858,7 @@ pub fn persist_events(
         stmt.execute::<&[&dyn ToSql]>(&[&game_id, &event_id, &timestamp, &event])?;
         event_id += 1;
     }
-    Ok(timestamp)
+    Ok(())
 }
 
 fn hydrate_events(tx: &Transaction, game_id: GameId, game: &mut Game) -> Result<(), CardsError> {

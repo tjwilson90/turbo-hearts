@@ -145,6 +145,7 @@ impl Lobby {
         game_id: GameId,
     ) -> Result<([PlayerWithOptions; 4], Seed), CardsError> {
         let (players, seed) = self.db.run_with_retry(|tx| {
+            validate_game_unstarted(&tx, game_id)?;
             let mut stmt = tx.prepare_cached(
                 "SELECT user_id, strategy, rules, seat FROM game_player
                     WHERE game_id = ? ORDER BY random() LIMIT 4",
@@ -167,6 +168,10 @@ impl Lobby {
             if players.len() < 4 {
                 return Err(CardsError::NotEnoughPlayers);
             }
+            tx.execute::<&[&dyn ToSql]>(
+                "UPDATE game SET started_time = ? WHERE game_id = ?",
+                &[&util::timestamp(), &game_id],
+            )?;
             for &seat in &Seat::VALUES {
                 if let Some(idx) = players.iter().position(|p| p.seat == Some(seat)) {
                     players.swap(idx, seat.idx());
