@@ -1,10 +1,9 @@
 use crate::{CardsReject, Database, Game};
 use rusqlite::{Rows, ToSql};
-use serde::{Deserialize, Serialize};
 use std::mem;
 use turbo_hearts_api::{
-    Cards, CardsError, ChargingRules, GameEvent, GameId, GameState, PassDirection, Player, Seat,
-    UserId,
+    CardsError, CompleteGame, CompleteHand, GameEvent, GameId, GameState, HandEvent, HandResponse,
+    LeaderboardRequest, LeaderboardResponse, PassDirection, Player, Seat, UserId,
 };
 use warp::{Filter, Rejection, Reply};
 
@@ -51,23 +50,6 @@ WHERE    game_id IN ids
 ORDER BY game_id,
          event_id"#;
 
-#[derive(Debug, Serialize)]
-struct CompleteGame {
-    game_id: GameId,
-    completed_time: i64,
-    players: [Player; 4],
-    hands: Vec<CompleteHand>,
-}
-
-#[derive(Debug, Serialize)]
-struct CompleteHand {
-    charges: [Cards; 4],
-    hearts_won: [u8; 4],
-    queen_winner: UserId,
-    ten_winner: UserId,
-    jack_winner: UserId,
-}
-
 pub fn router<'a>(db: infallible!(&'a Database)) -> reply!() {
     warp::path("summary")
         .and(leaderboard(db.clone()).or(hand(db)))
@@ -75,14 +57,8 @@ pub fn router<'a>(db: infallible!(&'a Database)) -> reply!() {
 }
 
 fn leaderboard<'a>(db: infallible!(&'a Database)) -> reply!() {
-    #[derive(Debug, Deserialize)]
-    struct Request {
-        game_id: Option<GameId>,
-        page_size: Option<u32>,
-    }
-
-    async fn handle(db: &Database, request: Request) -> Result<impl Reply, Rejection> {
-        let Request { game_id, page_size } = request;
+    async fn handle(db: &Database, request: LeaderboardRequest) -> Result<impl Reply, Rejection> {
+        let LeaderboardRequest { game_id, page_size } = request;
         let page_size = page_size.unwrap_or(100);
         let games = db
             .run_read_only(|tx| {
@@ -109,7 +85,7 @@ fn leaderboard<'a>(db: infallible!(&'a Database)) -> reply!() {
         .and_then(handle)
 }
 
-fn read_games(mut rows: Rows<'_>) -> Result<Vec<CompleteGame>, rusqlite::Error> {
+fn read_games(mut rows: Rows<'_>) -> Result<LeaderboardResponse, rusqlite::Error> {
     let mut games = Vec::new();
     let mut hands = Vec::with_capacity(4);
     let mut players = [Player::Human {
@@ -169,29 +145,6 @@ fn read_games(mut rows: Rows<'_>) -> Result<Vec<CompleteGame>, rusqlite::Error> 
 }
 
 fn hand<'a>(db: infallible!(&'a Database)) -> reply!() {
-    #[derive(Debug, Deserialize)]
-    struct Request {
-        game_id: GameId,
-        hand: PassDirection,
-    }
-
-    #[derive(Debug, Serialize)]
-    struct Response {
-        north: Player,
-        east: Player,
-        south: Player,
-        west: Player,
-        rules: ChargingRules,
-        events: Vec<Event>,
-    }
-
-    #[derive(Debug, Serialize)]
-    struct Event {
-        timestamp: i64,
-        event: GameEvent,
-        synthetic_events: Vec<GameEvent>,
-    }
-
     async fn handle(
         game_id: GameId,
         hand: PassDirection,
@@ -228,7 +181,7 @@ fn hand<'a>(db: infallible!(&'a Database)) -> reply!() {
                         }
                     });
                     if start {
-                        events.push(Event {
+                        events.push(HandEvent {
                             timestamp,
                             event,
                             synthetic_events,
@@ -252,7 +205,7 @@ fn hand<'a>(db: infallible!(&'a Database)) -> reply!() {
                         ..
                     } = &game.events[0]
                     {
-                        Ok(Response {
+                        Ok(HandResponse {
                             north: *north,
                             east: *east,
                             south: *south,

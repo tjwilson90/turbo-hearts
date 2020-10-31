@@ -1,11 +1,11 @@
 use crate::{auth_redirect, CardsReject, Games, Lobby};
-use serde::Deserialize;
 use tokio::{
     stream::{Stream, StreamExt},
     sync::mpsc::UnboundedReceiver,
 };
 use turbo_hearts_api::{
-    BotStrategy, ChargingRules, GameId, LobbyEvent, Player, PlayerWithOptions, Seat, UserId,
+    AddBotRequest, JoinGameRequest, LeaveGameRequest, LobbyChatRequest, LobbyEvent, NewGameRequest,
+    Player, PlayerWithOptions, RemovePlayerRequest, StartGameRequest, UserId,
 };
 use warp::{sse, sse::ServerSentEvent, Filter, Rejection, Reply};
 
@@ -63,19 +63,12 @@ fn subscribe<'a>(lobby: infallible!(&'a Lobby), user_id: rejection!(UserId)) -> 
 }
 
 fn new_game<'a>(lobby: infallible!(&'a Lobby), user_id: rejection!(UserId)) -> reply!() {
-    #[derive(Debug, Deserialize)]
-    struct Request {
-        rules: ChargingRules,
-        seat: Option<Seat>,
-        seed: Option<String>,
-    }
-
     async fn handle(
         lobby: &Lobby,
         user_id: UserId,
-        request: Request,
+        request: NewGameRequest,
     ) -> Result<impl Reply, Rejection> {
-        let Request { rules, seat, seed } = request;
+        let NewGameRequest { rules, seat, seed } = request;
         let player = PlayerWithOptions {
             player: Player::Human { user_id },
             rules,
@@ -94,19 +87,12 @@ fn new_game<'a>(lobby: infallible!(&'a Lobby), user_id: rejection!(UserId)) -> r
 }
 
 fn join_game<'a>(lobby: infallible!(&'a Lobby), user_id: rejection!(UserId)) -> reply!() {
-    #[derive(Debug, Deserialize)]
-    struct Request {
-        game_id: GameId,
-        rules: ChargingRules,
-        seat: Option<Seat>,
-    }
-
     async fn handle(
         lobby: &Lobby,
         user_id: UserId,
-        request: Request,
+        request: JoinGameRequest,
     ) -> Result<impl Reply, Rejection> {
-        let Request {
+        let JoinGameRequest {
             game_id,
             rules,
             seat,
@@ -136,18 +122,13 @@ fn start_game<'a>(
     games: infallible!(&'a Games),
     user_id: rejection!(UserId),
 ) -> reply!() {
-    #[derive(Debug, Deserialize)]
-    struct Request {
-        game_id: GameId,
-    }
-
     async fn handle(
         lobby: &Lobby,
         games: &Games,
         _user_id: UserId,
-        request: Request,
+        request: StartGameRequest,
     ) -> Result<impl Reply, Rejection> {
-        let Request { game_id } = request;
+        let StartGameRequest { game_id } = request;
         let (players, seed) = lobby.start_game(game_id).await.map_err(CardsReject)?;
         games
             .start_game(game_id, players, seed)
@@ -165,17 +146,12 @@ fn start_game<'a>(
 }
 
 fn leave_game<'a>(lobby: infallible!(&'a Lobby), user_id: rejection!(UserId)) -> reply!() {
-    #[derive(Debug, Deserialize)]
-    struct Request {
-        game_id: GameId,
-    }
-
     async fn handle(
         lobby: &Lobby,
         user_id: UserId,
-        request: Request,
+        request: LeaveGameRequest,
     ) -> Result<impl Reply, Rejection> {
-        let Request { game_id } = request;
+        let LeaveGameRequest { game_id } = request;
         lobby
             .leave_game(game_id, user_id)
             .await
@@ -192,19 +168,12 @@ fn leave_game<'a>(lobby: infallible!(&'a Lobby), user_id: rejection!(UserId)) ->
 }
 
 fn add_bot<'a>(lobby: infallible!(&'a Lobby), user_id: rejection!(UserId)) -> reply!() {
-    #[derive(Debug, Deserialize)]
-    struct Request {
-        game_id: GameId,
-        rules: ChargingRules,
-        strategy: BotStrategy,
-    }
-
     async fn handle(
         lobby: &Lobby,
         _user_id: UserId,
-        request: Request,
+        request: AddBotRequest,
     ) -> Result<impl Reply, Rejection> {
-        let Request {
+        let AddBotRequest {
             game_id,
             rules,
             strategy,
@@ -234,18 +203,12 @@ fn add_bot<'a>(lobby: infallible!(&'a Lobby), user_id: rejection!(UserId)) -> re
 }
 
 fn remove<'a>(lobby: infallible!(&'a Lobby), user_id: rejection!(UserId)) -> reply!() {
-    #[derive(Debug, Deserialize)]
-    struct Request {
-        game_id: GameId,
-        user_id: UserId,
-    }
-
     async fn handle(
         lobby: &Lobby,
         _user_id: UserId,
-        request: Request,
+        request: RemovePlayerRequest,
     ) -> Result<impl Reply, Rejection> {
-        let Request { game_id, user_id } = request;
+        let RemovePlayerRequest { game_id, user_id } = request;
         lobby
             .leave_game(game_id, user_id)
             .await
@@ -262,17 +225,12 @@ fn remove<'a>(lobby: infallible!(&'a Lobby), user_id: rejection!(UserId)) -> rep
 }
 
 fn chat<'a>(lobby: infallible!(&'a Lobby), user_id: rejection!(UserId)) -> reply!() {
-    #[derive(Debug, Deserialize)]
-    struct Request {
-        message: String,
-    }
-
     async fn handle(
         lobby: &Lobby,
         user_id: UserId,
-        request: Request,
+        request: LobbyChatRequest,
     ) -> Result<impl Reply, Rejection> {
-        let Request { message } = request;
+        let LobbyChatRequest { message } = request;
         lobby.chat(user_id, message).await.map_err(CardsReject)?;
         Ok(warp::reply())
     }

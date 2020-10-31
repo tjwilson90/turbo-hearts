@@ -1,6 +1,48 @@
-use crate::{GameId, Player, PlayerWithOptions, Seed, UserId};
-use serde::Serialize;
+use crate::{BotStrategy, ChargingRules, GameId, Player, PlayerWithOptions, Seat, Seed, UserId};
+use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct NewGameRequest {
+    pub rules: ChargingRules,
+    pub seat: Option<Seat>,
+    pub seed: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct JoinGameRequest {
+    pub game_id: GameId,
+    pub rules: ChargingRules,
+    pub seat: Option<Seat>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct StartGameRequest {
+    pub game_id: GameId,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct LeaveGameRequest {
+    pub game_id: GameId,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct AddBotRequest {
+    pub game_id: GameId,
+    pub rules: ChargingRules,
+    pub strategy: BotStrategy,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct RemovePlayerRequest {
+    pub game_id: GameId,
+    pub user_id: UserId,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct LobbyChatRequest {
+    pub message: String,
+}
 
 #[serde(tag = "type", rename_all = "snake_case")]
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]

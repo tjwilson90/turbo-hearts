@@ -1,10 +1,12 @@
 use crate::{auth_redirect, CardsReject, Games, Lobby};
-use serde::Deserialize;
 use tokio::{
     stream::{Stream, StreamExt},
     sync::mpsc::UnboundedReceiver,
 };
-use turbo_hearts_api::{Card, Cards, GameEvent, GameId, Seat, UserId};
+use turbo_hearts_api::{
+    AcceptClaimRequest, ChargeRequest, ClaimRequest, GameChatRequest, GameEvent, GameId,
+    PassRequest, PlayRequest, RejectClaimRequest, UserId,
+};
 use warp::{sse, sse::ServerSentEvent, Filter, Rejection, Reply};
 
 pub fn router<'a>(
@@ -72,18 +74,12 @@ fn subscribe<'a>(games: infallible!(&'a Games), user_id: rejection!(UserId)) -> 
 }
 
 fn pass_cards<'a>(games: infallible!(&'a Games), user_id: rejection!(UserId)) -> reply!() {
-    #[derive(Debug, Deserialize)]
-    struct Request {
-        game_id: GameId,
-        cards: Cards,
-    }
-
     async fn handle(
         games: &Games,
         user_id: UserId,
-        request: Request,
+        request: PassRequest,
     ) -> Result<impl Reply, Rejection> {
-        let Request { game_id, cards } = request;
+        let PassRequest { game_id, cards } = request;
         games
             .pass_cards(game_id, user_id, cards)
             .await
@@ -100,18 +96,12 @@ fn pass_cards<'a>(games: infallible!(&'a Games), user_id: rejection!(UserId)) ->
 }
 
 fn charge_cards<'a>(games: infallible!(&'a Games), user_id: rejection!(UserId)) -> reply!() {
-    #[derive(Debug, Deserialize)]
-    struct Request {
-        game_id: GameId,
-        cards: Cards,
-    }
-
     async fn handle(
         games: &Games,
         user_id: UserId,
-        request: Request,
+        request: ChargeRequest,
     ) -> Result<impl Reply, Rejection> {
-        let Request { game_id, cards } = request;
+        let ChargeRequest { game_id, cards } = request;
         games
             .charge_cards(game_id, user_id, cards)
             .await
@@ -132,19 +122,13 @@ fn play_card<'a>(
     games: infallible!(&'a Games),
     user_id: rejection!(UserId),
 ) -> reply!() {
-    #[derive(Debug, Deserialize)]
-    struct Request {
-        game_id: GameId,
-        card: Card,
-    }
-
     async fn handle(
         lobby: &Lobby,
         games: &Games,
         user_id: UserId,
-        request: Request,
+        request: PlayRequest,
     ) -> Result<impl Reply, Rejection> {
-        let Request { game_id, card } = request;
+        let PlayRequest { game_id, card } = request;
         let complete = games
             .play_card(game_id, user_id, card)
             .await
@@ -165,17 +149,12 @@ fn play_card<'a>(
 }
 
 fn claim<'a>(games: infallible!(&'a Games), user_id: rejection!(UserId)) -> reply!() {
-    #[derive(Debug, Deserialize)]
-    struct Request {
-        game_id: GameId,
-    }
-
     async fn handle(
         games: &Games,
         user_id: UserId,
-        request: Request,
+        request: ClaimRequest,
     ) -> Result<impl Reply, Rejection> {
-        let Request { game_id } = request;
+        let ClaimRequest { game_id } = request;
         games.claim(game_id, user_id).await.map_err(CardsReject)?;
         Ok(warp::reply())
     }
@@ -189,18 +168,12 @@ fn claim<'a>(games: infallible!(&'a Games), user_id: rejection!(UserId)) -> repl
 }
 
 fn accept_claim<'a>(games: infallible!(&'a Games), user_id: rejection!(UserId)) -> reply!() {
-    #[derive(Debug, Deserialize)]
-    struct Request {
-        game_id: GameId,
-        claimer: Seat,
-    }
-
     async fn handle(
         games: &Games,
         user_id: UserId,
-        request: Request,
+        request: AcceptClaimRequest,
     ) -> Result<impl Reply, Rejection> {
-        let Request { game_id, claimer } = request;
+        let AcceptClaimRequest { game_id, claimer } = request;
         games
             .accept_claim(game_id, user_id, claimer)
             .await
@@ -217,18 +190,12 @@ fn accept_claim<'a>(games: infallible!(&'a Games), user_id: rejection!(UserId)) 
 }
 
 fn reject_claim<'a>(games: infallible!(&'a Games), user_id: rejection!(UserId)) -> reply!() {
-    #[derive(Debug, Deserialize)]
-    struct Request {
-        game_id: GameId,
-        claimer: Seat,
-    }
-
     async fn handle(
         games: &Games,
         user_id: UserId,
-        request: Request,
+        request: RejectClaimRequest,
     ) -> Result<impl Reply, Rejection> {
-        let Request { game_id, claimer } = request;
+        let RejectClaimRequest { game_id, claimer } = request;
         games
             .reject_claim(game_id, user_id, claimer)
             .await
@@ -245,18 +212,12 @@ fn reject_claim<'a>(games: infallible!(&'a Games), user_id: rejection!(UserId)) 
 }
 
 fn chat<'a>(games: infallible!(&'a Games), user_id: rejection!(UserId)) -> reply!() {
-    #[derive(Debug, Deserialize)]
-    struct Request {
-        game_id: GameId,
-        message: String,
-    }
-
     async fn handle(
         games: &Games,
         user_id: UserId,
-        request: Request,
+        request: GameChatRequest,
     ) -> Result<impl Reply, Rejection> {
-        let Request { game_id, message } = request;
+        let GameChatRequest { game_id, message } = request;
         games
             .chat(game_id, user_id, message)
             .await
