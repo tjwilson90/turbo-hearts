@@ -273,6 +273,11 @@ impl HeuristicBot {
             dont_play!(ours, ours.above(winning_card));
         }
 
+        // If we're going to get to play twice, don't play our highest card immediately.
+        if trick.len() < 4 && trick.contains(suit.with_rank(Rank::Nine)) {
+            dont_play!(ours, ours.max());
+        }
+
         if suit == Suit::Spades {
             // If we can play the queen and not win the trick, do so.
             if ours.contains(Card::QueenSpades)
