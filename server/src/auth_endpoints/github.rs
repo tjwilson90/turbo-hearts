@@ -1,4 +1,4 @@
-use crate::{config::CONFIG, user::ExternalUser};
+use crate::{ExternalUser, CONFIG};
 use http::header;
 use reqwest::{Client, Url};
 use serde::{Deserialize, Serialize};

@@ -1,4 +1,4 @@
-use crate::{auth::RedirectToAuthChooser, config::CONFIG};
+use crate::{RedirectToAuthChooser, CONFIG};
 use http::{header, Response, StatusCode};
 use std::convert::Infallible;
 use turbo_hearts_api::CardsError;

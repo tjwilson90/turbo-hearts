@@ -1,4 +1,4 @@
-use crate::{sql_json, Cards, GameEvent, GameState, Rank, Seat, Suit};
+use crate::{Cards, GameEvent, GameState, Rank, Seat, Suit};
 use serde::{Deserialize, Serialize};
 
 #[repr(u8)]

@@ -1,16 +1,11 @@
 use warp::{reject, reject::Reject, Filter, Rejection};
 
-pub mod endpoints;
-mod fusion;
-mod github;
-mod google;
-
 #[derive(Debug)]
 pub struct RedirectToAuthChooser;
 
 impl Reject for RedirectToAuthChooser {}
 
-pub fn redirect_if_necessary() -> rejection!(()) {
+pub fn auth_redirect() -> rejection!(()) {
     async fn handle(auth_token: Option<String>) -> Result<(), Rejection> {
         match auth_token {
             Some(_) => Ok(()),

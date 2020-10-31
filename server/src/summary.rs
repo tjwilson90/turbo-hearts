@@ -1,4 +1,4 @@
-use crate::{db::Database, game::Game, CardsReject};
+use crate::{CardsReject, Database, Game};
 use rusqlite::{Rows, ToSql};
 use serde::{Deserialize, Serialize};
 use std::mem;

@@ -1,4 +1,4 @@
-use crate::{auth, error::CardsReject, game::Games, lobby::Lobby};
+use crate::{auth_redirect, CardsReject, Games, Lobby};
 use serde::Deserialize;
 use tokio::{
     stream::{Stream, StreamExt},
@@ -30,7 +30,7 @@ pub fn router<'a>(
 fn html() -> reply!() {
     warp::path::end()
         .and(warp::get())
-        .and(auth::redirect_if_necessary())
+        .and(auth_redirect())
         .untuple_one()
         .and(warp::fs::file("./assets/game/index.html"))
 }

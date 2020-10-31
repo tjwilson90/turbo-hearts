@@ -1,18 +1,16 @@
-use crate::{db::Database, lobby::event::LobbyEvent, util};
+use crate::{util, Database};
 use log::info;
 use rusqlite::{OptionalExtension, ToSql, Transaction, NO_PARAMS};
-use serde::Serialize;
 use std::collections::{HashMap, HashSet};
 use tokio::sync::{
     mpsc::{self, UnboundedReceiver, UnboundedSender},
     Mutex,
 };
-use turbo_hearts_api::{CardsError, GameId, Player, PlayerWithOptions, Seat, Seed, UserId};
+use turbo_hearts_api::{
+    CardsError, GameId, LobbyChat, LobbyEvent, LobbyGame, Player, PlayerWithOptions, Seat, Seed,
+    UserId,
+};
 
-pub mod endpoints;
-pub mod event;
-
-//#[derive(Clone)]
 pub struct Lobby {
     db: &'static Database,
     inner: Mutex<Inner>,
@@ -258,24 +256,6 @@ impl Inner {
             }
         }
     }
-}
-
-#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
-pub struct LobbyGame {
-    pub players: HashSet<PlayerWithOptions>,
-    pub seed: Seed,
-    pub created_time: i64,
-    pub created_by: UserId,
-    pub last_updated_time: i64,
-    pub last_updated_by: UserId,
-    pub started_time: Option<i64>,
-}
-
-#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
-pub struct LobbyChat {
-    pub timestamp: i64,
-    pub user_id: UserId,
-    pub message: String,
 }
 
 fn load_recent_chat(tx: &Transaction) -> Result<Vec<LobbyChat>, CardsError> {

@@ -1,15 +1,14 @@
-use crate::{
-    auth::{fusion, github, google},
-    config::CONFIG,
-    user::Users,
-    CardsReject,
-};
+use crate::{CardsReject, Users, CONFIG};
 use http::{header, Response, StatusCode};
 use reqwest::Client;
 use serde::Deserialize;
 use std::convert::Infallible;
 use uuid::Uuid;
 use warp::{Filter, Rejection, Reply};
+
+mod fusion;
+mod github;
+mod google;
 
 pub fn router<'a>(users: infallible!(&'a Users), http_client: infallible!(&'a Client)) -> reply!() {
     redirect(users, http_client)
