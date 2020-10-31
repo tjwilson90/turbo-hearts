@@ -1,4 +1,4 @@
-use crate::{Card, Cards, ChargingRules, PassDirection, Player, Seat, Seed, UserId};
+use crate::{sql_json, Card, Cards, ChargingRules, PassDirection, Player, Seat, Seed, UserId};
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 
@@ -213,3 +213,5 @@ impl GameEvent {
         }
     }
 }
+
+sql_json!(GameEvent);

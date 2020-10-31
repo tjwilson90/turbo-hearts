@@ -1,4 +1,4 @@
-use crate::{Cards, GameEvent, PassDirection, Seat};
+use crate::{sql_json, Cards, GameEvent, PassDirection, Seat};
 use log::info;
 use rand::{seq::SliceRandom, SeedableRng};
 use rand_chacha::ChaCha20Rng;
@@ -28,6 +28,8 @@ impl Seed {
         }
     }
 }
+
+sql_json!(Seed);
 
 #[derive(Debug)]
 pub struct HashedSeed {

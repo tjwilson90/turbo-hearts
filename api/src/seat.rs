@@ -1,3 +1,4 @@
+use crate::sql_json;
 use serde::{Deserialize, Serialize};
 use std::{
     fmt,
@@ -61,3 +62,5 @@ impl Display for Seat {
         Debug::fmt(&self, f)
     }
 }
+
+sql_json!(Seat);
