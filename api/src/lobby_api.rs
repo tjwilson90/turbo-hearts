@@ -45,7 +45,7 @@ pub struct LobbyChatRequest {
 }
 
 #[serde(tag = "type", rename_all = "snake_case")]
-#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub enum LobbyEvent {
     Ping,
     JoinLobby {
@@ -97,7 +97,7 @@ impl LobbyEvent {
     }
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct LobbyGame {
     pub players: HashSet<PlayerWithOptions>,
     pub seed: Seed,
@@ -108,7 +108,7 @@ pub struct LobbyGame {
     pub started_time: Option<i64>,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct LobbyChat {
     pub timestamp: i64,
     pub user_id: UserId,
