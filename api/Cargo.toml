@@ -8,7 +8,7 @@ edition = "2018"
 log = "*"
 r2d2 = "*"
 r2d2_sqlite = "*"
-rand = { version = "*", features = ["small_rng"] }
+rand = "*"
 rand_chacha = "*"
 rand_distr = "*"
 rusqlite = { version = "*", features = ["bundled"] }

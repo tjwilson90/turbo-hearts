@@ -10,12 +10,15 @@ env_logger = { version = "*", default-features = false, features = ["humantime"]
 http = "*"
 log = "*"
 once_cell = "*"
+rand = "*"
+rand_distr = "*"
 reqwest = { version = "*", default-features = false, features = ["json", "rustls-tls"] }
 rusqlite = { version = "*", features = ["bundled"] }
 serde = { version = "*", features = ["derive"] }
 serde_json = "*"
 tokio = { version = "*", features = ["macros", "parking_lot", "rt-threaded"] }
-turbo-hearts-api = { path = "../turbo-hearts-api" }
+turbo-hearts-api = { path = "../api" }
+turbo-hearts-bot = { path = "../bot" }
 uuid = { version = "*", features = ["serde", "v4"] }
 warp = { version = "*", default-features = false }
 

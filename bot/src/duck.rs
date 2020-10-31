@@ -1,4 +1,5 @@
-use crate::{BotState, Card, Cards, GameEvent, GameState, RandomBot};
+use crate::RandomBot;
+use turbo_hearts_api::{BotState, Card, Cards, GameEvent, GameState};
 
 pub struct DuckBot;
 

@@ -1,8 +1,9 @@
 [workspace]
 
 members = [
-    "turbo-hearts-api",
-    "turbo-hearts-server",
+    "api",
+    "bot",
+    "server",
 ]
 
 [profile.release]

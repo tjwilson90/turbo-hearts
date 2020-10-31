@@ -1,11 +1,14 @@
-use crate::lobby::{event::LobbyEvent, Lobby};
+use crate::{
+    game::{persist_events, Games},
+    lobby::{event::LobbyEvent, Lobby},
+};
 use log::LevelFilter;
 use once_cell::sync::Lazy;
 use std::{collections::HashMap, future::Future};
 use tempfile::TempDir;
 use turbo_hearts_api::{
-    persist_events, BotStrategy, Card, CardsError, ChargingRules, Database, GameEvent, GameId,
-    GamePhase, Games, PassDirection, Player, PlayerWithOptions, Seat, Seed, UserId,
+    BotStrategy, Card, CardsError, ChargingRules, Database, GameEvent, GameId, GamePhase,
+    PassDirection, Player, PlayerWithOptions, Seat, Seed, UserId,
 };
 
 macro_rules! h {
