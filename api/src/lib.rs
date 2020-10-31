@@ -1,7 +1,6 @@
 mod bot;
 mod card;
 mod cards;
-mod db;
 mod error;
 mod game;
 mod player;
@@ -17,7 +16,6 @@ pub mod util;
 pub use bot::*;
 pub use card::*;
 pub use cards::*;
-pub use db::*;
 pub use error::*;
 pub use game::*;
 pub use player::*;

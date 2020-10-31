@@ -1,9 +1,11 @@
-use crate::{config::CONFIG, error::CardsReject, game::Games, lobby::Lobby, user::Users};
+use crate::{
+    config::CONFIG, db::Database, error::CardsReject, game::Games, lobby::Lobby, user::Users,
+};
 use http::header;
 use log::error;
 use reqwest::Client;
 use tokio::{stream::StreamExt, time, time::Duration};
-use turbo_hearts_api::{CardsError, Database, UserId};
+use turbo_hearts_api::{CardsError, UserId};
 use warp::{Filter, Rejection};
 
 #[macro_use]
@@ -13,6 +15,7 @@ mod assets;
 mod auth;
 mod bot;
 mod config;
+mod db;
 mod error;
 mod game;
 mod lobby;

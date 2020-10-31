@@ -1,4 +1,5 @@
 use crate::{
+    db::Database,
     game::{persist_events, Games},
     lobby::{event::LobbyEvent, Lobby},
 };
@@ -7,8 +8,8 @@ use once_cell::sync::Lazy;
 use std::{collections::HashMap, future::Future};
 use tempfile::TempDir;
 use turbo_hearts_api::{
-    BotStrategy, Card, CardsError, ChargingRules, Database, GameEvent, GameId, GamePhase,
-    PassDirection, Player, PlayerWithOptions, Seat, Seed, UserId,
+    BotStrategy, Card, CardsError, ChargingRules, GameEvent, GameId, GamePhase, PassDirection,
+    Player, PlayerWithOptions, Seat, Seed, UserId,
 };
 
 macro_rules! h {
