@@ -1,11 +1,9 @@
-use crate::db::Database;
+use crate::Database;
 use rusqlite::{OptionalExtension, ToSql};
 use serde::Serialize;
 use std::collections::{HashMap, HashSet};
 use tokio::sync::Mutex;
 use turbo_hearts_api::{CardsError, UserId};
-
-pub mod endpoints;
 
 #[derive(Debug, Clone, Hash, Eq, PartialEq, Serialize)]
 pub struct User {

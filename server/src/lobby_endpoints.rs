@@ -1,16 +1,11 @@
-use crate::{
-    auth,
-    game::Games,
-    lobby::{event::LobbyEvent, Lobby},
-    CardsReject,
-};
+use crate::{auth_redirect, CardsReject, Games, Lobby};
 use serde::Deserialize;
 use tokio::{
     stream::{Stream, StreamExt},
     sync::mpsc::UnboundedReceiver,
 };
 use turbo_hearts_api::{
-    BotStrategy, ChargingRules, GameId, Player, PlayerWithOptions, Seat, UserId,
+    BotStrategy, ChargingRules, GameId, LobbyEvent, Player, PlayerWithOptions, Seat, UserId,
 };
 use warp::{sse, sse::ServerSentEvent, Filter, Rejection, Reply};
 
@@ -37,7 +32,7 @@ pub fn router<'a>(
 fn html() -> reply!() {
     warp::path::end()
         .and(warp::get())
-        .and(auth::redirect_if_necessary())
+        .and(auth_redirect())
         .untuple_one()
         .and(warp::fs::file("./assets/lobby/index.html"))
 }

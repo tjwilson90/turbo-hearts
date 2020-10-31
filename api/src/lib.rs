@@ -1,3 +1,6 @@
+#[macro_use]
+mod macros;
+
 mod bot;
 mod card;
 mod cards;
@@ -8,14 +11,11 @@ mod error;
 mod game_event;
 mod game_phase;
 mod game_state;
+mod lobby;
 mod player;
 mod rank;
 mod seat;
 mod seed;
-
-#[macro_use]
-mod sql_types;
-
 mod suit;
 mod suits;
 mod trick;
@@ -32,6 +32,7 @@ pub use error::*;
 pub use game_event::*;
 pub use game_phase::*;
 pub use game_state::*;
+pub use lobby::*;
 pub use player::*;
 pub use rank::*;
 pub use seat::*;

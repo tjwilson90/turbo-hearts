@@ -1,4 +1,4 @@
-use crate::{bot::BotRunner, db::Database, util, Sender};
+use crate::{util, BotRunner, Database, Sender};
 use log::info;
 use rand_distr::Gamma;
 use rusqlite::{ToSql, Transaction};
@@ -14,8 +14,6 @@ use turbo_hearts_api::{
     Card, Cards, CardsError, GameEvent, GameId, GamePhase, GameState, HashedSeed, PassDirection,
     Player, PlayerWithOptions, Seat, Seed, UserId,
 };
-
-pub mod endpoints;
 
 #[derive(Clone)]
 pub struct Games {

@@ -1,7 +1,6 @@
-use crate::lobby::{LobbyChat, LobbyGame};
+use crate::{GameId, Player, PlayerWithOptions, Seed, UserId};
 use serde::Serialize;
 use std::collections::{HashMap, HashSet};
-use turbo_hearts_api::{GameId, Player, PlayerWithOptions, Seed, UserId};
 
 #[serde(tag = "type", rename_all = "snake_case")]
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
@@ -54,4 +53,22 @@ impl LobbyEvent {
             _ => false,
         }
     }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+pub struct LobbyGame {
+    pub players: HashSet<PlayerWithOptions>,
+    pub seed: Seed,
+    pub created_time: i64,
+    pub created_by: UserId,
+    pub last_updated_time: i64,
+    pub last_updated_by: UserId,
+    pub started_time: Option<i64>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+pub struct LobbyChat {
+    pub timestamp: i64,
+    pub user_id: UserId,
+    pub message: String,
 }

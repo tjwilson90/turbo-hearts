@@ -1,6 +1,3 @@
-use crate::{
-    config::CONFIG, db::Database, error::CardsReject, game::Games, lobby::Lobby, user::Users,
-};
 use http::header;
 use log::error;
 use reqwest::Client;
@@ -11,22 +8,35 @@ use warp::{Filter, Rejection};
 #[macro_use]
 mod macros;
 
-mod assets;
+mod asset_endpoints;
 mod auth;
+mod auth_endpoints;
 mod bot;
 mod config;
 mod db;
 mod error;
 mod game;
+mod game_endpoints;
 mod lobby;
+mod lobby_endpoints;
 mod sender;
 mod summary;
-#[cfg(test)]
-mod test;
 mod user;
+mod user_endpoints;
 mod util;
 
+#[cfg(test)]
+mod test;
+
+pub use auth::*;
+pub use bot::*;
+pub use config::*;
+pub use db::*;
+pub use error::*;
+pub use game::*;
+pub use lobby::*;
 pub use sender::*;
+pub use user::*;
 
 fn user_id<'a>(users: infallible!(&'a Users)) -> rejection!(UserId) {
     async fn handle(users: &Users, auth_token: String) -> Result<UserId, Rejection> {
@@ -86,11 +96,11 @@ async fn main() -> Result<(), CardsError> {
     let http_client = warp::any().map(move || http_client);
     let user_id = user_id(users);
 
-    let app = assets::router()
-        .or(game::endpoints::router(lobby, games, user_id.clone()))
-        .or(lobby::endpoints::router(lobby, games, user_id))
-        .or(auth::endpoints::router(users, http_client))
-        .or(user::endpoints::router(users))
+    let app = asset_endpoints::router()
+        .or(game_endpoints::router(lobby, games, user_id.clone()))
+        .or(lobby_endpoints::router(lobby, games, user_id))
+        .or(auth_endpoints::router(users, http_client))
+        .or(user_endpoints::router(users))
         .or(summary::router(db))
         .with(
             warp::cors()

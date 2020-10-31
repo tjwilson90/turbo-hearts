@@ -1,7 +1,4 @@
-use crate::{
-    user::{User, Users},
-    CardsReject,
-};
+use crate::{CardsReject, User, Users};
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use turbo_hearts_api::UserId;

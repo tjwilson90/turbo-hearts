@@ -1,4 +1,4 @@
-use crate::game::Games;
+use crate::Games;
 use log::debug;
 use rand::distributions::Distribution;
 use rand_distr::Gamma;
