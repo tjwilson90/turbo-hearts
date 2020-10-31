@@ -128,7 +128,7 @@ fn read_games(mut rows: Rows<'_>) -> Result<LeaderboardResponse, rusqlite::Error
                 jack_winner: players[state.won.jack_winner().unwrap().idx()].user_id(),
             });
             if hands.len() == 4 {
-                let mut complete_hands = Vec::new();
+                let mut complete_hands = Vec::with_capacity(4);
                 mem::swap(&mut hands, &mut complete_hands);
                 games.push(CompleteGame {
                     game_id,
