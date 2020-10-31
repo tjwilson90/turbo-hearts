@@ -4,9 +4,29 @@
 
 ## Getting Started
 
+- Production Server - https://play.anti.run/lobby
+- Local Dev Server - http://localhost:7380/lobby
+
+#### Lobby Frontend
+
+```shell script
+cd packages/lobby
+yarn install
+yarn start
+```
+
+#### Game Frontend
+
+```shell script
+cd packages/game
+yarn install
+yarn start
+```
+
+#### Backend
+
 1) Install rust - https://www.rust-lang.org/tools/install
 2) Run the server - `cargo run`
-3) Run the client - http://localhost:7380/lobby
 
 ## Configuration
 
@@ -14,14 +34,15 @@ The backend loads a `config.json` file from its working directory for configurat
 configuration suitable for local development is checked into the repo. Changes to the default
 configuration are necessary to deploy the backend on a public server.
 
-The `client_id` and `client_secret` parameters are OAuth 2.0
-[client credentials](https://console.developers.google.com/) for google. Player identities are
-determined using [OpenID Connect](https://developers.google.com/identity/protocols/OpenIDConnect)
-through google.
+The `db_path` is the path to the sqlite database relative to where the server is started. A
+database will be created automatically if none exists.
 
 The `external_uri` parameter is url to the backend (or to the proxy if deployed behind a proxy).
 This needs to match one of the authorized redirect URIs for your client credentials, minus the
 trailing `/redirect` path. 
+
+The `fusion`, `github`, and `google` sections contain `client_id` and `client_secret` parameters
+for OAuth 2.0 [client credentials](https://console.developers.google.com/).
 
 The `port` is the port the backend should serve from.
 
@@ -448,8 +469,7 @@ Players in the game will receive a redacted event containing only their cards.
 
 #### StartPassing
 
-A `start_passing` event is sent when the passing phase of a hand begins. This event is sent for
-convenience; the information it imparts can be inferred from other events.
+A `start_passing` event is sent when the passing phase of a hand begins.
 
 ```json
 {
@@ -460,8 +480,7 @@ convenience; the information it imparts can be inferred from other events.
 #### PassStatus
 
 A `pass_status` event is sent when passing begins and after each pass is sent indicating which
-players are done passing. This event is sent for convenience; the information it imparts can be
-inferred from other events.
+players are done passing.
 
 ```json
 {
@@ -503,8 +522,7 @@ without the actual cards passed.
 
 #### StartCharging
 
-A `start_charging` event is sent when a charging phase of a hand begins. This event is sent for
-convenience; the information it imparts can be inferred from other events.
+A `start_charging` event is sent when a charging phase of a hand begins.
 
 ```json
 {
@@ -516,8 +534,7 @@ convenience; the information it imparts can be inferred from other events.
 
 A `charge_status` event is sent when charging begins and after each charge is made. It indicates
 who is the next player to charge (only for non-free charging rules) and each player who still needs
-to make a charge eventually to finish charging. This event is sent for convenience; the information
-it imparts can be inferred from other events.
+to make a charge eventually to finish charging.
 
 ```json
 {
@@ -547,8 +564,9 @@ other than the charger will receive a `blind_charge` event instead.
 #### BlindCharge
 
 When a blind variant of the charging rules has been chosen and a charge is made (including an empty
-charge), a `blind_charge` event will be sent to other players in the game (the charger will receive
-a `charge` event) indicating who made the charge and how many cards they charged.
+charge), a `blind_charge` event will be sent to other players in the game (the charger and any
+spectators will receive a `charge` event) indicating who made the charge and how many cards they
+charged.
 
 ```json
 {
@@ -590,8 +608,7 @@ played.
 
 A `play_status` event is sent whenever it is someone's turn to play a card. The event indicates who
 is next to play and what cards in their hand are legal to play. Players in the game other than the
-next player will receive a redacted event without the legal plays. This event is sent for
-convenience; the information it imparts can be inferred from other events.
+next player will receive a redacted event without the legal plays.
 
 ```json
 {
@@ -604,7 +621,6 @@ convenience; the information it imparts can be inferred from other events.
 #### Start Trick
 
 When a new trick starts, a `start_trick` event will be sent indicating which player makes the lead.
-This event is sent for convenience; the information is imparts can be inferred from other events.
 
 ```json
 {
@@ -616,8 +632,7 @@ This event is sent for convenience; the information is imparts can be inferred f
 #### End Trick
 
 When a trick is completed, an `end_trick` event will be sent indicating which player makes won the
-trick. This event is sent for convenience; the information it imparts can be inferred from other
-events.
+trick.
 
 ```json
 {
@@ -668,8 +683,7 @@ rejected and who rejected the claim.
 #### HandComplete
 
 A `hand_complete` event is sent after the last trick in a hand ends and includes the scores for all
-players in the hand. This event is sent for convenience; the information it imparts can be inferred
-from other events.
+players in the hand.
 
 ```json
 {
@@ -741,6 +755,9 @@ Request:
 Claim that you will win all the remaining tricks. By claiming, the contents of your hand is
 revealed to all players. If all other players accept your claim, the hand will end, otherwise play
 will continue.
+
+Claims proceed in parallel with normal gameplay. Other players may ignore the claim request and
+continue playing normally.
 
 Request:
 ```json
