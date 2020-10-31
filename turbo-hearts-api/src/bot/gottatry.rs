@@ -24,7 +24,7 @@ impl GottaTryBot {
     }
 
     pub async fn charge(&mut self, bot_state: &BotState, game_state: &GameState) -> Cards {
-        (bot_state.post_pass_hand & Cards::CHARGEABLE) - game_state.charges.charges(bot_state.seat)
+        (bot_state.post_pass_hand & Cards::CHARGEABLE) - game_state.charges.all_charges()
     }
 
     pub async fn play(&mut self, bot_state: &BotState, game_state: &GameState) -> Card {

@@ -604,11 +604,12 @@ impl Game {
                     let leader = self.owner(Card::TwoClubs);
                     self.state.next_actor = Some(leader);
                     if self.state.rules.blind() {
+                        let charges = self.state.charges.all_charges();
                         let reveal = GameEvent::RevealCharges {
-                            north: self.state.charges.charges(Seat::North),
-                            east: self.state.charges.charges(Seat::East),
-                            south: self.state.charges.charges(Seat::South),
-                            west: self.state.charges.charges(Seat::West),
+                            north: self.post_pass_hand[0] & charges,
+                            east: self.post_pass_hand[1] & charges,
+                            south: self.post_pass_hand[2] & charges,
+                            west: self.post_pass_hand[3] & charges,
                         };
                         broadcast(self, &reveal);
                         self.state.apply(&reveal);
@@ -707,9 +708,9 @@ impl Game {
         if !Cards::CHARGEABLE.contains_all(cards) {
             return Err(CardsError::Unchargeable(cards - Cards::CHARGEABLE));
         }
-        if self.state.charges.charges(seat).contains_any(cards) {
+        if self.state.charges.all_charges().contains_any(cards) {
             return Err(CardsError::AlreadyCharged(
-                self.state.charges.charges(seat) & cards,
+                self.state.charges.all_charges() & cards,
             ));
         }
         if !self.state.can_charge(seat) {
@@ -764,7 +765,7 @@ impl Game {
                     return Err(CardsError::MustFollowSuit);
                 }
                 if !self.state.led_suits.contains(suit) && plays.len() > 1 {
-                    plays -= self.state.charges.charges(seat);
+                    plays -= self.state.charges.all_charges();
                     if !plays.contains(card) {
                         return Err(CardsError::NoChargeOnFirstTrickOfSuit);
                     }
@@ -778,7 +779,7 @@ impl Game {
                     return Err(CardsError::HeartsNotBroken);
                 }
             }
-            let unled_charges = self.state.charges.charges(seat) - self.state.led_suits.cards();
+            let unled_charges = self.state.charges.all_charges() - self.state.led_suits.cards();
             if !unled_charges.contains_all(plays) {
                 plays -= unled_charges;
                 if !plays.contains(card) {
