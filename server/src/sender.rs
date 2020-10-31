@@ -1,6 +1,6 @@
-use crate::GameEvent;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use tokio::sync::mpsc::UnboundedSender;
+use turbo_hearts_api::GameEvent;
 
 #[derive(Debug)]
 pub struct Sender {
