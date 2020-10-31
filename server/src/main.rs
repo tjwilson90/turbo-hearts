@@ -19,10 +19,14 @@ mod db;
 mod error;
 mod game;
 mod lobby;
+mod sender;
 mod summary;
 #[cfg(test)]
 mod test;
 mod user;
+mod util;
+
+pub use sender::*;
 
 fn user_id<'a>(users: infallible!(&'a Users)) -> rejection!(UserId) {
     async fn handle(users: &Users, auth_token: String) -> Result<UserId, Rejection> {
