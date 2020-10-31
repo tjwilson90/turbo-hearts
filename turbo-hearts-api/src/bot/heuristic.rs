@@ -44,11 +44,8 @@ impl HeuristicBot {
         }
     }
 
-    pub fn with_void(void: VoidState) -> Self {
-        Self {
-            void,
-            rng: SmallRng::from_rng(rand::thread_rng()).unwrap(),
-        }
+    pub fn from(void: VoidState, rng: SmallRng) -> Self {
+        Self { void, rng }
     }
 
     pub async fn pass(&mut self, bot_state: &BotState, _: &GameState) -> Cards {
