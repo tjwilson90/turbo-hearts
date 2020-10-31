@@ -89,7 +89,7 @@ impl HeuristicBot {
 
     pub async fn charge(&mut self, bot_state: &BotState, game_state: &GameState) -> Cards {
         let hand = bot_state.post_pass_hand;
-        let chargeable = hand - game_state.charges.charges(bot_state.seat);
+        let chargeable = hand - game_state.charges.all_charges();
         let mut charge = Cards::NONE;
         if chargeable.contains(Card::QueenSpades) {
             let spades = hand & Cards::SPADES;
