@@ -1,18 +1,20 @@
 use super::can_claim;
 use crate::{BotState, Card, Cards, GameEvent, GameState, HeuristicBot, Seat, Suit, VoidState};
 use log::debug;
-use rand::{seq::SliceRandom, Rng};
+use rand::{rngs::SmallRng, seq::SliceRandom, Rng, SeedableRng};
 use std::{collections::HashMap, fmt::Display, hash::Hash, time::Instant};
 use tokio::task;
 
 pub struct SimulateBot {
     void: VoidState,
+    rng: SmallRng,
 }
 
 impl SimulateBot {
     pub fn new() -> Self {
         Self {
             void: VoidState::new(),
+            rng: SmallRng::from_rng(rand::thread_rng()).unwrap(),
         }
     }
 
@@ -21,16 +23,16 @@ impl SimulateBot {
     }
 
     pub async fn charge(&mut self, bot_state: &BotState, game_state: &GameState) -> Cards {
-        let mut bot = HeuristicBot::with_void(self.void);
+        let mut bot = HeuristicBot::from(self.void, self.rng.clone());
         let chargeable =
             (bot_state.post_pass_hand - game_state.charges.all_charges()) & Cards::CHARGEABLE;
         let mut money_counts = HashMap::new();
         let now = Instant::now();
-        let deadline = 4000 + rand::thread_rng().gen_range(0, 1000);
+        let deadline = 4000 + self.rng.gen_range(0, 1000);
         while now.elapsed().as_millis() < deadline {
             let now = Instant::now();
             while now.elapsed().as_millis() < 10 {
-                let hands = make_hands(bot_state, game_state, self.void);
+                let hands = self.make_hands(bot_state, game_state);
                 for cards in chargeable.powerset() {
                     let mut worst_money = i16::max_value();
                     for _ in 0..20 {
@@ -64,13 +66,13 @@ impl SimulateBot {
         if cards.contains(Card::TwoClubs) {
             return Card::TwoClubs;
         }
-        let mut bot = HeuristicBot::with_void(self.void);
+        let mut bot = HeuristicBot::from(self.void, self.rng.clone());
         let mut money_counts = HashMap::new();
         let now = Instant::now();
         while now.elapsed().as_millis() < 3500 {
             let now = Instant::now();
             while now.elapsed().as_millis() < 10 {
-                let hands = make_hands(bot_state, game_state, self.void);
+                let hands = self.make_hands(bot_state, game_state);
                 for card in cards {
                     let mut worst_money = i16::max_value();
                     let mut game = game_state.clone();
@@ -93,6 +95,43 @@ impl SimulateBot {
 
     pub fn on_event(&mut self, _: &BotState, game_state: &GameState, event: &GameEvent) {
         self.void.on_event(game_state, event);
+    }
+
+    fn make_hands(&mut self, bot_state: &BotState, game_state: &GameState) -> [Cards; 4] {
+        let mut hands = [Cards::NONE; 4];
+        hands[bot_state.seat.idx()] = bot_state.post_pass_hand;
+        let receiver = game_state.phase.pass_receiver(bot_state.seat);
+        if receiver != bot_state.seat {
+            hands[receiver.idx()] |= bot_state.pre_pass_hand - bot_state.post_pass_hand;
+        }
+        for &seat in &Seat::VALUES {
+            hands[seat.idx()] |= game_state.charges.charges(seat);
+            hands[seat.idx()] -= game_state.played;
+        }
+        let unplayed = Cards::ALL - game_state.played;
+        let mut sizes = [unplayed.len() / 4; 4];
+        let additions = unplayed.len() % 4;
+        if additions >= 1 {
+            sizes[bot_state.seat.idx()] += 1;
+        }
+        if additions >= 2 {
+            sizes[bot_state.seat.left().idx()] += 1;
+        }
+        if additions >= 3 {
+            sizes[bot_state.seat.across().idx()] += 1;
+        }
+        let unassigned = Cards::ALL - hands[0] - hands[1] - hands[2] - hands[3] - game_state.played;
+        let mut cards = unassigned.into_iter().collect::<Vec<_>>();
+        cards.shuffle(&mut self.rng);
+        let mut state = State {
+            hands,
+            sizes,
+            void: self.void,
+            cards,
+            unassigned,
+        };
+        state.assign();
+        state.hands
     }
 }
 
@@ -192,43 +231,6 @@ where
         }
     }
     best.unwrap()
-}
-
-fn make_hands(bot_state: &BotState, game_state: &GameState, void: VoidState) -> [Cards; 4] {
-    let mut hands = [Cards::NONE; 4];
-    hands[bot_state.seat.idx()] = bot_state.post_pass_hand;
-    let receiver = game_state.phase.pass_receiver(bot_state.seat);
-    if receiver != bot_state.seat {
-        hands[receiver.idx()] |= bot_state.pre_pass_hand - bot_state.post_pass_hand;
-    }
-    for &seat in &Seat::VALUES {
-        hands[seat.idx()] |= game_state.charges.charges(seat);
-        hands[seat.idx()] -= game_state.played;
-    }
-    let unplayed = Cards::ALL - game_state.played;
-    let mut sizes = [unplayed.len() / 4; 4];
-    let additions = unplayed.len() % 4;
-    if additions >= 1 {
-        sizes[bot_state.seat.idx()] += 1;
-    }
-    if additions >= 2 {
-        sizes[bot_state.seat.left().idx()] += 1;
-    }
-    if additions >= 3 {
-        sizes[bot_state.seat.across().idx()] += 1;
-    }
-    let unassigned = Cards::ALL - hands[0] - hands[1] - hands[2] - hands[3] - game_state.played;
-    let mut cards = unassigned.into_iter().collect::<Vec<_>>();
-    cards.shuffle(&mut rand::thread_rng());
-    let mut state = State {
-        hands,
-        sizes,
-        void,
-        cards,
-        unassigned,
-    };
-    state.assign();
-    state.hands
 }
 
 #[derive(Debug)]
