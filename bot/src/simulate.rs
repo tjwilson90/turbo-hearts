@@ -31,7 +31,7 @@ impl SimulateBot {
         let deadline = 4000 + self.rng.gen_range(0, 1000);
         while now.elapsed().as_millis() < deadline {
             let now = Instant::now();
-            while now.elapsed().as_millis() < 10 {
+            while now.elapsed().as_millis() < 3 {
                 let hands = self.make_hands(bot_state, game_state);
                 for cards in chargeable.powerset() {
                     let mut worst_money = i16::max_value();
@@ -71,7 +71,7 @@ impl SimulateBot {
         let now = Instant::now();
         while now.elapsed().as_millis() < 3500 {
             let now = Instant::now();
-            while now.elapsed().as_millis() < 10 {
+            while now.elapsed().as_millis() < 3 {
                 let hands = self.make_hands(bot_state, game_state);
                 for card in cards {
                     let mut worst_money = i16::max_value();
