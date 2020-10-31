@@ -1650,6 +1650,8 @@ dependencies = [
  "http",
  "log",
  "once_cell",
+ "rand",
+ "rand_distr",
  "reqwest",
  "rusqlite",
  "serde",
@@ -1657,6 +1659,7 @@ dependencies = [
  "tempfile",
  "tokio",
  "turbo-hearts-api",
+ "turbo-hearts-bot",
  "uuid",
  "warp",
 ]
@@ -1681,6 +1684,16 @@ dependencies = [
  "thiserror",
  "tokio",
  "uuid",
+]
+
+[[package]]
+name = "turbo-hearts-bot"
+version = "0.1.0"
+dependencies = [
+ "log",
+ "rand",
+ "tokio",
+ "turbo-hearts-api",
 ]
 
 [[package]]

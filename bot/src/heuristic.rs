@@ -1,5 +1,6 @@
-use crate::{BotState, Card, Cards, GameEvent, GameState, Rank, Suit, VoidState};
+use crate::VoidState;
 use rand::{rngs::SmallRng, Rng, SeedableRng};
+use turbo_hearts_api::{BotState, Card, Cards, GameEvent, GameState, Rank, Suit};
 
 macro_rules! check {
     ($hand:ident, $cards:expr, $len:literal) => {

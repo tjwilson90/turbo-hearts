@@ -1,5 +1,5 @@
-use crate::{BotState, Card, Cards, GameEvent, GameState};
 use rand::{seq::SliceRandom, Rng};
+use turbo_hearts_api::{BotState, Card, Cards, GameEvent, GameState};
 
 pub struct RandomBot {
     charged: bool,

@@ -1,0 +1,11 @@
+[package]
+name = "turbo-hearts-bot"
+version = "0.1.0"
+authors = ["Tim Wilson <twilson@palantir.com>"]
+edition = "2018"
+
+[dependencies]
+log = "*"
+rand = { version = "*", features = ["small_rng"] }
+tokio = { version = "*", features = ["parking_lot", "rt-threaded"] }
+turbo-hearts-api = { path = "../api" }

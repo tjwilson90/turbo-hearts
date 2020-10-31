@@ -1,9 +1,9 @@
-use crate::{config::CONFIG, error::CardsReject, lobby::Lobby, user::Users};
+use crate::{config::CONFIG, error::CardsReject, game::Games, lobby::Lobby, user::Users};
 use http::header;
 use log::error;
 use reqwest::Client;
 use tokio::{stream::StreamExt, time, time::Duration};
-use turbo_hearts_api::{CardsError, Database, Games, UserId};
+use turbo_hearts_api::{CardsError, Database, UserId};
 use warp::{Filter, Rejection};
 
 #[macro_use]
@@ -11,6 +11,7 @@ mod macros;
 
 mod assets;
 mod auth;
+mod bot;
 mod config;
 mod error;
 mod game;
@@ -79,7 +80,7 @@ async fn main() -> Result<(), CardsError> {
     let user_id = user_id(users);
 
     let app = assets::router()
-        .or(game::router(lobby, games, user_id.clone()))
+        .or(game::endpoints::router(lobby, games, user_id.clone()))
         .or(lobby::endpoints::router(lobby, games, user_id))
         .or(auth::endpoints::router(users, http_client))
         .or(user::endpoints::router(users))

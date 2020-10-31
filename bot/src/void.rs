@@ -1,4 +1,4 @@
-use crate::{Card, Cards, GameEvent, GameState, Seat, Suit};
+use turbo_hearts_api::{Card, Cards, GameEvent, GameState, Seat, Suit};
 
 #[derive(Clone, Copy, Debug)]
 pub struct VoidState {

@@ -1,10 +1,10 @@
-use crate::{auth, CardsReject, Lobby};
+use crate::{auth, error::CardsReject, game::Games, lobby::Lobby};
 use serde::Deserialize;
 use tokio::{
     stream::{Stream, StreamExt},
     sync::mpsc::UnboundedReceiver,
 };
-use turbo_hearts_api::{Card, Cards, GameEvent, GameId, Games, Seat, UserId};
+use turbo_hearts_api::{Card, Cards, GameEvent, GameId, Seat, UserId};
 use warp::{sse, sse::ServerSentEvent, Filter, Rejection, Reply};
 
 pub fn router<'a>(

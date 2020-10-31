@@ -1,9 +1,9 @@
-use super::can_claim;
-use crate::{BotState, Card, Cards, GameEvent, GameState, HeuristicBot, Seat, Suit, VoidState};
+use crate::{HeuristicBot, VoidState};
 use log::debug;
 use rand::{rngs::SmallRng, seq::SliceRandom, Rng, SeedableRng};
 use std::{collections::HashMap, fmt::Display, hash::Hash, time::Instant};
 use tokio::task;
+use turbo_hearts_api::{can_claim, BotState, Card, Cards, GameEvent, GameState, Seat, Suit};
 
 pub struct SimulateBot {
     void: VoidState,

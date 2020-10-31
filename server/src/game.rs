@@ -1,7 +1,4 @@
-use crate::{
-    util, BotRunner, Card, Cards, CardsError, Database, GameId, HashedSeed, PassDirection, Player,
-    PlayerWithOptions, Seat, Seed, UserId,
-};
+use crate::bot::BotRunner;
 use log::info;
 use rand_distr::Gamma;
 use rusqlite::{ToSql, Transaction};
@@ -13,26 +10,12 @@ use tokio::{
     sync::{mpsc, mpsc::UnboundedReceiver, Mutex},
     task,
 };
+use turbo_hearts_api::{
+    util, Card, Cards, CardsError, Database, GameEvent, GameId, GamePhase, GameState, HashedSeed,
+    PassDirection, Player, PlayerWithOptions, Seat, Seed, Sender, UserId,
+};
 
-mod charge;
-mod claim;
-mod done;
-mod event;
-mod phase;
-mod sender;
-mod state;
-mod trick;
-mod won;
-
-pub use charge::*;
-pub use claim::*;
-pub use done::*;
-pub use event::*;
-pub use phase::*;
-pub use sender::*;
-pub use state::*;
-pub use trick::*;
-pub use won::*;
+pub mod endpoints;
 
 #[derive(Clone)]
 pub struct Games {
