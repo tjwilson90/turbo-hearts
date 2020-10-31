@@ -1,4 +1,4 @@
-use crate::{Cards, GameEvent, GameState, Rank, Seat, Suit};
+use crate::{sql_json, Cards, GameEvent, GameState, Rank, Seat, Suit};
 use serde::{Deserialize, Serialize};
 
 #[repr(u8)]
@@ -11,6 +11,8 @@ pub enum BotStrategy {
     Random,
     Simulate,
 }
+
+sql_json!(BotStrategy);
 
 pub struct BotState {
     pub seat: Seat,
