@@ -1,5 +1,5 @@
 use crate::{BotState, Card, Cards, GameEvent, GameState, Rank, Suit, VoidState};
-use rand::Rng;
+use rand::{rngs::SmallRng, Rng, SeedableRng};
 
 macro_rules! check {
     ($hand:ident, $cards:expr, $len:literal) => {
@@ -15,7 +15,7 @@ macro_rules! play {
     ($cards:expr) => {
         let cards = $cards;
         if !cards.is_empty() {
-            return random(cards);
+            return cards;
         }
     };
 }
@@ -24,29 +24,38 @@ macro_rules! dont_play {
     ($hand:ident, $cards:expr) => {
         if !($hand - $cards).is_empty() {
             $hand -= $cards;
-        }
-        if $hand.len() == 1 {
-            return $hand.max();
+            if $hand.len() == 1 {
+                return $hand;
+            }
         }
     };
 }
 
 pub struct HeuristicBot {
     void: VoidState,
+    rng: SmallRng,
 }
 
 impl HeuristicBot {
     pub fn new() -> Self {
         Self {
             void: VoidState::new(),
+            rng: SmallRng::from_rng(rand::thread_rng()).unwrap(),
         }
     }
 
     pub fn with_void(void: VoidState) -> Self {
-        Self { void }
+        Self {
+            void,
+            rng: SmallRng::from_rng(rand::thread_rng()).unwrap(),
+        }
     }
 
     pub async fn pass(&mut self, bot_state: &BotState, _: &GameState) -> Cards {
+        HeuristicBot::pass_sync(bot_state)
+    }
+
+    pub fn pass_sync(bot_state: &BotState) -> Cards {
         let mut hand = bot_state.pre_pass_hand;
         if hand.contains_any(Cards::HEARTS) {
             if (hand & Cards::HEARTS).len() == 1 {
@@ -88,8 +97,12 @@ impl HeuristicBot {
     }
 
     pub async fn charge(&mut self, bot_state: &BotState, game_state: &GameState) -> Cards {
+        HeuristicBot::charge_sync(bot_state, game_state)
+    }
+
+    pub fn charge_sync(bot_state: &BotState, game_state: &GameState) -> Cards {
         let hand = bot_state.post_pass_hand;
-        let chargeable = hand - game_state.charges.charges(bot_state.seat);
+        let chargeable = hand - game_state.charges.all_charges();
         let mut charge = Cards::NONE;
         if chargeable.contains(Card::QueenSpades) {
             let spades = hand & Cards::SPADES;
@@ -137,6 +150,10 @@ impl HeuristicBot {
     }
 
     pub async fn play(&mut self, bot_state: &BotState, game_state: &GameState) -> Card {
+        self.play_sync(bot_state, game_state)
+    }
+
+    pub fn play_sync(&mut self, bot_state: &BotState, game_state: &GameState) -> Card {
         let ours = game_state.legal_plays(bot_state.post_pass_hand);
 
         // If we only have one legal play, play it
@@ -144,20 +161,22 @@ impl HeuristicBot {
             return ours.max();
         }
         let theirs = Cards::ALL - bot_state.post_pass_hand - game_state.played;
-        if game_state.current_trick.is_empty() {
+        let good_plays = if game_state.current_trick.is_empty() {
             self.lead(ours, theirs, game_state)
         } else if game_state.current_trick.suit().cards().contains_any(ours) {
             self.follow(ours, theirs, bot_state, game_state)
         } else {
             self.slough(ours, theirs, bot_state, game_state)
-        }
+        };
+        let index = self.rng.gen_range(0, good_plays.len());
+        good_plays.into_iter().nth(index).unwrap()
     }
 
     pub fn on_event(&mut self, _: &BotState, state: &GameState, event: &GameEvent) {
         self.void.on_event(state, event);
     }
 
-    fn lead(&self, mut ours: Cards, theirs: Cards, game_state: &GameState) -> Card {
+    fn lead(&self, mut ours: Cards, theirs: Cards, game_state: &GameState) -> Cards {
         let spades = ours & Cards::SPADES;
         if theirs.contains(Card::QueenSpades) && !spades.is_empty() {
             let low_spades = spades.below(Card::QueenSpades);
@@ -170,7 +189,7 @@ impl HeuristicBot {
                 || (low_spades.len() >= 3 && other_spades.len() <= 8)
                 || (low_spades.len() >= 2 && other_spades.len() <= 4)
             {
-                return random(low_spades);
+                play!(low_spades);
             }
 
             // We don't believe in fake charges (and we have few enough low
@@ -189,7 +208,7 @@ impl HeuristicBot {
             && theirs.below(Card::QueenSpades).is_empty()
             && !theirs.above(Card::QueenSpades).is_empty()
         {
-            return Card::QueenSpades;
+            return Card::QueenSpades.into();
         }
 
         // Otherwise don't lead the queen
@@ -207,7 +226,7 @@ impl HeuristicBot {
                 || (low_clubs.len() >= 3 && other_clubs.len() <= 9)
                 || (low_clubs.len() >= 2 && other_clubs.len() <= 5)
             {
-                return random(low_clubs);
+                play!(low_clubs);
             } else {
                 dont_play!(ours, high_clubs | Card::NineClubs);
             }
@@ -215,7 +234,7 @@ impl HeuristicBot {
 
         // If we can lead the jack and win it, do so.
         if ours.contains(Card::JackDiamonds) && theirs.above(Card::JackDiamonds).is_empty() {
-            return Card::JackDiamonds;
+            return Card::JackDiamonds.into();
         }
 
         // If someone else would be forced to take the ten should we lead it, do so.
@@ -223,7 +242,7 @@ impl HeuristicBot {
             && theirs.below(Card::TenClubs).is_empty()
             && !theirs.above(Card::TenClubs).is_empty()
         {
-            return Card::TenClubs;
+            return Card::TenClubs.into();
         }
 
         // Otherwise don't lead the ten.
@@ -236,7 +255,7 @@ impl HeuristicBot {
             }
         }
 
-        random(ours)
+        ours
     }
 
     fn follow(
@@ -245,7 +264,7 @@ impl HeuristicBot {
         theirs: Cards,
         bot_state: &BotState,
         game_state: &GameState,
-    ) -> Card {
+    ) -> Cards {
         let trick: Cards = game_state.current_trick.cards();
         let suit = game_state.current_trick.suit();
         let winning = game_state.current_trick.winning_seat(bot_state.seat) == bot_state.seat;
@@ -262,7 +281,7 @@ impl HeuristicBot {
                 && !winning
                 && !trick.above(Card::QueenSpades).is_empty()
             {
-                return Card::QueenSpades;
+                return Card::QueenSpades.into();
             }
 
             // Otherwise don't play the queen
@@ -280,7 +299,7 @@ impl HeuristicBot {
                 && ours.contains(Card::KingSpades)
                 && theirs.contains(Card::QueenSpades)
             {
-                return Card::KingSpades;
+                return Card::KingSpades.into();
             }
 
             // If the queen's charged and it doesn't look fake, play a high spade.
@@ -297,7 +316,7 @@ impl HeuristicBot {
 
         // If the jack's on the trick and we might win it, attempt to do so.
         if trick.contains(Card::JackDiamonds) && !ours.above(winning_card).is_empty() {
-            return ours.above(winning_card).max();
+            return ours.above(winning_card).max().into();
         }
 
         if ours.contains(Card::JackDiamonds) {
@@ -308,7 +327,7 @@ impl HeuristicBot {
                 && (theirs.above(high_diamond).is_empty()
                     || self.is_last_play_in_suit(trick, bot_state, game_state))
             {
-                return Card::JackDiamonds;
+                return Card::JackDiamonds.into();
             }
 
             // Otherwise don't play the jack.
@@ -319,7 +338,7 @@ impl HeuristicBot {
             // If we can play the ten and not win the trick, do so.
             if ours.contains(Card::TenClubs) && !winning && !trick.above(Card::TenClubs).is_empty()
             {
-                return Card::TenClubs;
+                return Card::TenClubs.into();
             }
 
             // Otherwise don't play the ten.
@@ -350,7 +369,7 @@ impl HeuristicBot {
             dont_play!(ours, ours.above(Card::TenClubs));
         }
 
-        random(ours)
+        ours
     }
 
     fn slough(
@@ -359,7 +378,7 @@ impl HeuristicBot {
         theirs: Cards,
         bot_state: &BotState,
         game_state: &GameState,
-    ) -> Card {
+    ) -> Cards {
         let trick: Cards = game_state.current_trick.cards();
         let suit = game_state.current_trick.suit();
         let winning = game_state.current_trick.winning_seat(bot_state.seat) == bot_state.seat;
@@ -369,7 +388,7 @@ impl HeuristicBot {
         if ours.contains(Card::QueenSpades) {
             if !winning {
                 // Slough it if we're not winning the trick.
-                return Card::QueenSpades;
+                return Card::QueenSpades.into();
             }
 
             // Otherwise don't slough any spades.
@@ -382,7 +401,7 @@ impl HeuristicBot {
             && (theirs.above(winning_card).is_empty()
                 || self.is_last_play_in_suit(trick, bot_state, game_state))
         {
-            return Card::JackDiamonds;
+            return Card::JackDiamonds.into();
         }
 
         // Otherwise don't slough the jack.
@@ -397,7 +416,7 @@ impl HeuristicBot {
         if ours.contains(Card::TenClubs) {
             if !winning {
                 // Slough it if we're not winning the trick.
-                return Card::TenClubs;
+                return Card::TenClubs.into();
             }
 
             // Otherwise don't slough any clubs.
@@ -424,9 +443,9 @@ impl HeuristicBot {
             .max_by_key(|&suit| danger(suit, bot_state, game_state))
             .unwrap();
         if ours.contains_any(worst_suit.cards()) {
-            (ours & worst_suit.cards()).max()
+            (ours & worst_suit.cards()).max().into()
         } else {
-            random(ours)
+            ours
         }
     }
 
@@ -492,9 +511,4 @@ fn danger(suit: Suit, bot_state: &BotState, game_state: &GameState) -> i8 {
         danger *= 2;
     }
     danger
-}
-
-fn random(cards: Cards) -> Card {
-    let index = rand::thread_rng().gen_range(0, cards.len());
-    cards.into_iter().nth(index).unwrap()
 }

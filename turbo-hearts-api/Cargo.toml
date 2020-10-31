@@ -8,7 +8,7 @@ edition = "2018"
 log = "*"
 r2d2 = "*"
 r2d2_sqlite = "*"
-rand = "*"
+rand = { version = "*", features = ["small_rng"] }
 rand_chacha = "*"
 rand_distr = "*"
 rusqlite = { version = "*", features = ["bundled"] }
@@ -16,7 +16,7 @@ serde = { version = "*", features = ["derive"] }
 serde_json = "*"
 sha2 = "*"
 thiserror = "*"
-tokio = { version = "*", features = ["blocking", "macros", "rt-threaded", "sync", "time"] }
+tokio = { version = "*", features = ["blocking", "macros", "parking_lot", "rt-threaded", "sync", "time"] }
 uuid = { version = "*", features = ["serde", "v4"] }
 
 [dev-dependencies]

@@ -14,7 +14,7 @@ reqwest = { version = "*", default-features = false, features = ["json", "rustls
 rusqlite = { version = "*", features = ["bundled"] }
 serde = { version = "*", features = ["derive"] }
 serde_json = "*"
-tokio = { version = "*", features = ["macros", "rt-threaded"] }
+tokio = { version = "*", features = ["macros", "parking_lot", "rt-threaded"] }
 turbo-hearts-api = { path = "../turbo-hearts-api" }
 uuid = { version = "*", features = ["serde", "v4"] }
 warp = { version = "*", default-features = false }

@@ -34,38 +34,35 @@ impl ChargeState {
     }
 
     pub fn is_charged(&self, card: Card) -> bool {
-        let mask = self.charges | (self.charges >> 4) | (self.charges >> 8) | (self.charges >> 12);
         match card {
-            Card::QueenSpades => mask & 8 != 0,
-            Card::AceHearts => mask & 4 != 0,
-            Card::JackDiamonds => mask & 2 != 0,
-            Card::TenClubs => mask & 1 != 0,
+            Card::QueenSpades => self.charges & 0x8888 != 0,
+            Card::AceHearts => self.charges & 0x4444 != 0,
+            Card::JackDiamonds => self.charges & 0x2222 != 0,
+            Card::TenClubs => self.charges & 0x1111 != 0,
             _ => false,
         }
     }
 
     pub fn charges(&self, seat: Seat) -> Cards {
-        let mask = self.charges >> (4 * seat.idx());
-        self.charges_from_mask(mask)
+        self.charges_from_mask(self.charges & (0xf << (4 * seat.idx())))
     }
 
     pub fn all_charges(&self) -> Cards {
-        let mask = self.charges | (self.charges >> 4) | (self.charges >> 8) | (self.charges >> 12);
-        self.charges_from_mask(mask)
+        self.charges_from_mask(self.charges)
     }
 
     fn charges_from_mask(&self, mask: u16) -> Cards {
         let mut charges = Cards::NONE;
-        if mask & 8 != 0 {
+        if mask & 0x8888 != 0 {
             charges |= Card::QueenSpades;
         }
-        if mask & 4 != 0 {
+        if mask & 0x4444 != 0 {
             charges |= Card::AceHearts;
         }
-        if mask & 2 != 0 {
+        if mask & 0x2222 != 0 {
             charges |= Card::JackDiamonds;
         }
-        if mask & 1 != 0 {
+        if mask & 0x1111 != 0 {
             charges |= Card::TenClubs;
         }
         charges

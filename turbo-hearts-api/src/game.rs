@@ -22,6 +22,7 @@ mod phase;
 mod sender;
 mod state;
 mod trick;
+mod won;
 
 pub use charge::*;
 pub use claim::*;
@@ -31,6 +32,7 @@ pub use phase::*;
 pub use sender::*;
 pub use state::*;
 pub use trick::*;
+pub use won::*;
 
 #[derive(Clone)]
 pub struct Games {
@@ -85,8 +87,10 @@ impl Games {
             }
         };
         let mut game = game.lock().await;
-        self.db
-            .run_read_only(|tx| hydrate_events(&tx, game_id, &mut game))?;
+        if game.events.is_empty() {
+            self.db
+                .run_read_only(|tx| hydrate_events(&tx, game_id, &mut game))?;
+        }
         if game.events.is_empty() {
             Err(CardsError::UnknownGame(game_id))
         } else {
@@ -468,6 +472,7 @@ pub struct Game {
     pub bots: Vec<(Seat, Sender)>,
     pub pre_pass_hand: [Cards; 4],
     pub post_pass_hand: [Cards; 4],
+    pub players: [UserId; 4],
     pub state: GameState,
     pub seed: HashedSeed,
 }
@@ -480,6 +485,7 @@ impl Game {
             bots: Vec::new(),
             pre_pass_hand: [Cards::NONE; 4],
             post_pass_hand: [Cards::NONE; 4],
+            players: [UserId::null(); 4],
             state: GameState::new(),
             seed: HashedSeed::new(),
         }
@@ -496,7 +502,7 @@ impl Game {
 
     fn broadcast(&mut self, event: &GameEvent) {
         let rules = self.state.rules;
-        let players = self.state.players;
+        let players = self.players;
         let mut disconnects = HashSet::new();
         self.subscribers.retain(|(user_id, tx)| {
             let seat = seat(players, *user_id);
@@ -521,7 +527,7 @@ impl Game {
     }
 
     fn seat(&self, user_id: UserId) -> Option<Seat> {
-        seat(self.state.players, user_id)
+        seat(self.players, user_id)
     }
 
     fn play_status_event(&self, leader: Seat) -> GameEvent {
@@ -541,7 +547,18 @@ impl Game {
         self.state.apply(&event);
         self.events.push(event.clone());
         match &event {
-            GameEvent::Sit { seed, .. } => {
+            GameEvent::Sit {
+                north,
+                east,
+                south,
+                west,
+                seed,
+                ..
+            } => {
+                self.players[0] = north.user_id();
+                self.players[1] = east.user_id();
+                self.players[2] = south.user_id();
+                self.players[3] = west.user_id();
                 self.seed = seed.into();
             }
             GameEvent::Deal {
@@ -587,11 +604,12 @@ impl Game {
                     let leader = self.owner(Card::TwoClubs);
                     self.state.next_actor = Some(leader);
                     if self.state.rules.blind() {
+                        let charges = self.state.charges.all_charges();
                         let reveal = GameEvent::RevealCharges {
-                            north: self.state.charges.charges(Seat::North),
-                            east: self.state.charges.charges(Seat::East),
-                            south: self.state.charges.charges(Seat::South),
-                            west: self.state.charges.charges(Seat::West),
+                            north: self.post_pass_hand[0] & charges,
+                            east: self.post_pass_hand[1] & charges,
+                            south: self.post_pass_hand[2] & charges,
+                            west: self.post_pass_hand[3] & charges,
                         };
                         broadcast(self, &reveal);
                         self.state.apply(&reveal);
@@ -690,14 +708,14 @@ impl Game {
         if !Cards::CHARGEABLE.contains_all(cards) {
             return Err(CardsError::Unchargeable(cards - Cards::CHARGEABLE));
         }
-        if self.state.charges.charges(seat).contains_any(cards) {
+        if self.state.charges.all_charges().contains_any(cards) {
             return Err(CardsError::AlreadyCharged(
-                self.state.charges.charges(seat) & cards,
+                self.state.charges.all_charges() & cards,
             ));
         }
         if !self.state.can_charge(seat) {
             return Err(CardsError::NotYourTurn(
-                self.state.players[self.state.next_actor.unwrap().idx()],
+                self.players[self.state.next_actor.unwrap().idx()],
                 "charge",
             ));
         }
@@ -717,7 +735,7 @@ impl Game {
         }
         if seat != self.state.next_actor.unwrap() {
             return Err(CardsError::NotYourTurn(
-                self.state.players[self.state.next_actor.unwrap().idx()],
+                self.players[self.state.next_actor.unwrap().idx()],
                 "play",
             ));
         }
@@ -747,7 +765,7 @@ impl Game {
                     return Err(CardsError::MustFollowSuit);
                 }
                 if !self.state.led_suits.contains(suit) && plays.len() > 1 {
-                    plays -= self.state.charges.charges(seat);
+                    plays -= self.state.charges.all_charges();
                     if !plays.contains(card) {
                         return Err(CardsError::NoChargeOnFirstTrickOfSuit);
                     }
@@ -761,7 +779,7 @@ impl Game {
                     return Err(CardsError::HeartsNotBroken);
                 }
             }
-            let unled_charges = self.state.charges.charges(seat) - self.state.led_suits.cards();
+            let unled_charges = self.state.charges.all_charges() - self.state.led_suits.cards();
             if !unled_charges.contains_all(plays) {
                 plays -= unled_charges;
                 if !plays.contains(card) {
@@ -780,7 +798,7 @@ impl Game {
             return Err(CardsError::IllegalAction("claim", self.state.phase));
         }
         if self.state.claims.is_claiming(seat) {
-            return Err(CardsError::AlreadyClaiming(self.state.players[seat.idx()]));
+            return Err(CardsError::AlreadyClaiming(self.players[seat.idx()]));
         }
         Ok(())
     }
@@ -798,12 +816,12 @@ impl Game {
             return Err(CardsError::IllegalAction("accept claim", self.state.phase));
         }
         if !self.state.claims.is_claiming(claimer) {
-            return Err(CardsError::NotClaiming(self.state.players[claimer.idx()]));
+            return Err(CardsError::NotClaiming(self.players[claimer.idx()]));
         }
         if self.state.claims.has_accepted(claimer, acceptor) {
             return Err(CardsError::AlreadyAcceptedClaim(
-                self.state.players[acceptor.idx()],
-                self.state.players[claimer.idx()],
+                self.players[acceptor.idx()],
+                self.players[claimer.idx()],
             ));
         }
         Ok(())
@@ -817,7 +835,7 @@ impl Game {
             return Err(CardsError::IllegalAction("reject claim", self.state.phase));
         }
         if !self.state.claims.is_claiming(claimer) {
-            return Err(CardsError::NotClaiming(self.state.players[claimer.idx()]));
+            return Err(CardsError::NotClaiming(self.players[claimer.idx()]));
         }
         Ok(())
     }
