@@ -1,10 +1,10 @@
-use crate::{game::Game, CardsReject};
+use crate::{db::Database, game::Game, CardsReject};
 use rusqlite::{Rows, ToSql};
 use serde::{Deserialize, Serialize};
 use std::mem;
 use turbo_hearts_api::{
-    Cards, CardsError, ChargingRules, Database, GameEvent, GameId, GameState, PassDirection,
-    Player, Seat, UserId,
+    Cards, CardsError, ChargingRules, GameEvent, GameId, GameState, PassDirection, Player, Seat,
+    UserId,
 };
 use warp::{Filter, Rejection, Reply};
 

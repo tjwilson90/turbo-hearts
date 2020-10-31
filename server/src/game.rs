@@ -1,4 +1,4 @@
-use crate::bot::BotRunner;
+use crate::{bot::BotRunner, db::Database};
 use log::info;
 use rand_distr::Gamma;
 use rusqlite::{ToSql, Transaction};
@@ -11,7 +11,7 @@ use tokio::{
     task,
 };
 use turbo_hearts_api::{
-    util, Card, Cards, CardsError, Database, GameEvent, GameId, GamePhase, GameState, HashedSeed,
+    util, Card, Cards, CardsError, GameEvent, GameId, GamePhase, GameState, HashedSeed,
     PassDirection, Player, PlayerWithOptions, Seat, Seed, Sender, UserId,
 };
 

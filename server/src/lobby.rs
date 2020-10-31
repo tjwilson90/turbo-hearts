@@ -1,4 +1,4 @@
-use crate::lobby::event::LobbyEvent;
+use crate::{db::Database, lobby::event::LobbyEvent};
 use log::info;
 use rusqlite::{OptionalExtension, ToSql, Transaction, NO_PARAMS};
 use serde::Serialize;
@@ -7,9 +7,7 @@ use tokio::sync::{
     mpsc::{self, UnboundedReceiver, UnboundedSender},
     Mutex,
 };
-use turbo_hearts_api::{
-    util, CardsError, Database, GameId, Player, PlayerWithOptions, Seat, Seed, UserId,
-};
+use turbo_hearts_api::{util, CardsError, GameId, Player, PlayerWithOptions, Seat, Seed, UserId};
 
 pub mod endpoints;
 pub mod event;
