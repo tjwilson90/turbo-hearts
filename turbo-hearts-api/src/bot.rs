@@ -143,9 +143,8 @@ impl BotRunner {
                     } else {
                         let _ = games.reject_claim(self.game_id, self.user_id, seat).await;
                     }
-                } else {
-                    self.claim_hands[seat.idx()] = Cards::NONE;
                 }
+                self.claim_hands[seat.idx()] = Cards::NONE;
             }
             match action {
                 Some(Action::Pass) => {
@@ -346,7 +345,7 @@ fn can_claim(seat: Seat, hand: Cards, state: &GameState) -> bool {
             }
             true
         }
-        None => unreachable!(),
+        None => false,
     }
 }
 
