@@ -27,11 +27,3 @@ pub use seed::*;
 pub use suit::*;
 pub use suits::*;
 pub use types::*;
-
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn it_works() {
-        assert_eq!(2 + 2, 4);
-    }
-}

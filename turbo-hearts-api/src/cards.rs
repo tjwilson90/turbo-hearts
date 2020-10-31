@@ -65,6 +65,9 @@ impl Cards {
     pub const NONE: Cards = Cards {
         bits: 0x0000_0000_0000_0000,
     };
+    pub const NINES: Cards = Cards {
+        bits: 0x0080_0080_0080_0080,
+    };
     pub const CHARGEABLE: Cards = Cards {
         bits: 0x0400_1000_0200_0100,
     };
@@ -145,6 +148,20 @@ impl Cards {
             cards: self,
             set: (1 << k) - 1,
         }
+    }
+
+    pub fn distinct_plays(self, played: Cards) -> Cards {
+        let always_distinct = self & (Cards::NINES | Cards::CHARGEABLE);
+        let mut magic = (self - always_distinct).bits;
+        let equivalent_blocks = magic | played.bits;
+        for _ in 0..11 {
+            magic = (magic | (magic >> 1)) & equivalent_blocks;
+        }
+        magic += ((!magic) << 1) | 0x0001_0001_0001_0001;
+        always_distinct
+            | Cards {
+                bits: self.bits & (magic >> 1),
+            }
     }
 }
 
@@ -426,6 +443,12 @@ impl Iterator for Choose {
 mod test {
     use super::*;
 
+    macro_rules! c {
+        ($($cards:tt)*) => {
+            stringify!($($cards)*).parse::<Cards>().unwrap()
+        };
+    }
+
     #[test]
     fn test_display() {
         assert_eq!(
@@ -470,22 +493,12 @@ mod test {
 
     #[test]
     fn test_above() {
-        assert_eq!(
-            Cards::from_str("AQJH").unwrap(),
-            Cards::from_str("5S AQJT9H 3C")
-                .unwrap()
-                .above(Card::TenHearts)
-        )
+        assert_eq!(c!(AQJH), c!(5S AQJT9H 3C).above(Card::TenHearts))
     }
 
     #[test]
     fn test_below() {
-        assert_eq!(
-            Cards::from_str("97H").unwrap(),
-            Cards::from_str("5S AQJT97H 3C")
-                .unwrap()
-                .below(Card::TenHearts)
-        )
+        assert_eq!(c!(97H), c!(5S AQJT97H 3C).below(Card::TenHearts))
     }
 
     #[test]
@@ -505,41 +518,55 @@ mod test {
 
     #[test]
     fn test_powerset_two() {
-        let mut pset = Cards::from_str("QS TC").unwrap().powerset();
-        assert_eq!(pset.next(), Some(Cards::from_str("QS TC").unwrap()));
-        assert_eq!(pset.next(), Some(Cards::from_str("TC").unwrap()));
-        assert_eq!(pset.next(), Some(Cards::from_str("QS").unwrap()));
+        let mut pset = c!(QS TC).powerset();
+        assert_eq!(pset.next(), Some(c!(QS TC)));
+        assert_eq!(pset.next(), Some(c!(TC)));
+        assert_eq!(pset.next(), Some(c!(QS)));
         assert_eq!(pset.next(), Some(Cards::NONE));
         assert_eq!(pset.next(), None);
     }
 
     #[test]
     fn test_powerset_three() {
-        let mut pset = Cards::from_str("QS AH TC").unwrap().powerset();
-        assert_eq!(pset.next(), Some(Cards::from_str("QS AH TC").unwrap()));
-        assert_eq!(pset.next(), Some(Cards::from_str("AH TC").unwrap()));
-        assert_eq!(pset.next(), Some(Cards::from_str("QS TC").unwrap()));
-        assert_eq!(pset.next(), Some(Cards::from_str("TC").unwrap()));
-        assert_eq!(pset.next(), Some(Cards::from_str("QS AH").unwrap()));
-        assert_eq!(pset.next(), Some(Cards::from_str("AH").unwrap()));
-        assert_eq!(pset.next(), Some(Cards::from_str("QS").unwrap()));
+        let mut pset = c!(QS AH TC).powerset();
+        assert_eq!(pset.next(), Some(c!(QS AH TC)));
+        assert_eq!(pset.next(), Some(c!(AH TC)));
+        assert_eq!(pset.next(), Some(c!(QS TC)));
+        assert_eq!(pset.next(), Some(c!(TC)));
+        assert_eq!(pset.next(), Some(c!(QS AH)));
+        assert_eq!(pset.next(), Some(c!(AH)));
+        assert_eq!(pset.next(), Some(c!(QS)));
         assert_eq!(pset.next(), Some(Cards::NONE));
         assert_eq!(pset.next(), None);
     }
 
     #[test]
     fn test_choose() {
-        let mut choose = Cards::from_str("AKQJTS").unwrap().choose(3);
-        assert_eq!(choose.next(), Some(Cards::from_str("AKQS").unwrap()));
-        assert_eq!(choose.next(), Some(Cards::from_str("AKJS").unwrap()));
-        assert_eq!(choose.next(), Some(Cards::from_str("AQJS").unwrap()));
-        assert_eq!(choose.next(), Some(Cards::from_str("KQJS").unwrap()));
-        assert_eq!(choose.next(), Some(Cards::from_str("AKTS").unwrap()));
-        assert_eq!(choose.next(), Some(Cards::from_str("AQTS").unwrap()));
-        assert_eq!(choose.next(), Some(Cards::from_str("KQTS").unwrap()));
-        assert_eq!(choose.next(), Some(Cards::from_str("AJTS").unwrap()));
-        assert_eq!(choose.next(), Some(Cards::from_str("KJTS").unwrap()));
-        assert_eq!(choose.next(), Some(Cards::from_str("QJTS").unwrap()));
+        let mut choose = c!(AKQJTS).choose(3);
+        assert_eq!(choose.next(), Some(c!(AKQS)));
+        assert_eq!(choose.next(), Some(c!(AKJS)));
+        assert_eq!(choose.next(), Some(c!(AQJS)));
+        assert_eq!(choose.next(), Some(c!(KQJS)));
+        assert_eq!(choose.next(), Some(c!(AKTS)));
+        assert_eq!(choose.next(), Some(c!(AQTS)));
+        assert_eq!(choose.next(), Some(c!(KQTS)));
+        assert_eq!(choose.next(), Some(c!(AJTS)));
+        assert_eq!(choose.next(), Some(c!(KJTS)));
+        assert_eq!(choose.next(), Some(c!(QJTS)));
         assert_eq!(choose.next(), None);
+    }
+
+    #[test]
+    fn test_distinct_plays() {
+        assert_eq!(c!(24C).distinct_plays(c!(5C)), c!(24C));
+        assert_eq!(c!(24C).distinct_plays(c!(3C)), c!(4C));
+        assert_eq!(c!(2H AD).distinct_plays(c!(3H KD)), c!(2H AD));
+        assert_eq!(c!(T9S).distinct_plays(c!(3H KD)), c!(T9S));
+        assert_eq!(c!(JT9S).distinct_plays(c!(3H KD)), c!(J9S));
+        assert_eq!(c!(J9S).distinct_plays(c!(TS)), c!(J9S));
+        assert_eq!(c!(QJT9S).distinct_plays(c!(3S)), c!(QJ9S));
+        assert_eq!(c!(KJ7532S).distinct_plays(c!(A6S)), c!(KJ73S));
+        assert_eq!(c!(QJT987C).distinct_plays(c!(A6S)), c!(QT98C));
+        assert_eq!(c!(KQJT987D).distinct_plays(c!(A6S)), c!(KJT98D));
     }
 }

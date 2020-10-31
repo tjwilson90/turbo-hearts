@@ -22,8 +22,8 @@ impl RandomBot {
         if self.charged {
             return Cards::NONE;
         }
-        let cards = (bot_state.post_pass_hand & Cards::CHARGEABLE)
-            - game_state.charges.charges(bot_state.seat);
+        let cards =
+            (bot_state.post_pass_hand & Cards::CHARGEABLE) - game_state.charges.all_charges();
         cards
             .into_iter()
             .filter(|_| rand::thread_rng().gen())
