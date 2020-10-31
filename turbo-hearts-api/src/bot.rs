@@ -128,7 +128,13 @@ impl BotRunner {
             let delay =
                 delay.map(|delay| Duration::from_secs_f32(delay.sample(&mut rand::thread_rng())));
             for &seat in &Seat::VALUES {
-                if seat != self.bot_state.seat && self.game_state.claims.is_claiming(seat) {
+                if seat != self.bot_state.seat
+                    && self.game_state.claims.is_claiming(seat)
+                    && !self
+                        .game_state
+                        .claims
+                        .has_accepted(seat, self.bot_state.seat)
+                {
                     let accept = can_claim(
                         seat,
                         self.claim_hands[seat.idx()] - self.game_state.played,

@@ -1,4 +1,4 @@
-use crate::{Card, GameEvent, GameState, Seat, Suit};
+use crate::{Card, Cards, GameEvent, GameState, Seat, Suit};
 
 #[derive(Clone, Copy, Debug)]
 pub struct VoidState {
@@ -25,27 +25,29 @@ impl VoidState {
                 if !trick.is_empty() && trick.suit() != card.suit() {
                     // didn't follow suit
                     self.mark_void(*seat, trick.suit());
-                } else if !state.led_suits.contains(card.suit()) {
-                    if trick.is_empty() && card.suit() == Suit::Hearts {
-                        // force break hearts
-                        self.mark_void(*seat, Suit::Clubs);
-                        self.mark_void(*seat, Suit::Diamonds);
-                        self.mark_void(*seat, Suit::Spades);
-                    } else if state.charges.is_charged(*card) {
-                        // forced to play charged card
-                        self.mark_void(*seat, card.suit());
-                        if trick.is_empty() {
-                            if *card == Card::QueenSpades {
-                                // forced to lead charged queen
-                                self.mark_void(*seat, Suit::Clubs);
-                                self.mark_void(*seat, Suit::Diamonds);
-                            }
-                            if *card == Card::JackDiamonds {
-                                // forced to lead charged jack
-                                self.mark_void(*seat, Suit::Clubs);
-                                if !state.charges.charges(*seat).contains(Card::QueenSpades) {
-                                    self.mark_void(*seat, Suit::Spades);
-                                }
+                } else if trick.is_empty()
+                    && card.suit() == Suit::Hearts
+                    && !state.played.contains_any(Cards::HEARTS)
+                {
+                    // force break hearts
+                    self.mark_void(*seat, Suit::Clubs);
+                    self.mark_void(*seat, Suit::Diamonds);
+                    self.mark_void(*seat, Suit::Spades);
+                } else if !state.led_suits.contains(card.suit()) && state.charges.is_charged(*card)
+                {
+                    // forced to play charged card
+                    self.mark_void(*seat, card.suit());
+                    if trick.is_empty() {
+                        if *card == Card::QueenSpades {
+                            // forced to lead charged queen
+                            self.mark_void(*seat, Suit::Clubs);
+                            self.mark_void(*seat, Suit::Diamonds);
+                        }
+                        if *card == Card::JackDiamonds {
+                            // forced to lead charged jack
+                            self.mark_void(*seat, Suit::Clubs);
+                            if !state.charges.charges(*seat).contains(Card::QueenSpades) {
+                                self.mark_void(*seat, Suit::Spades);
                             }
                         }
                     }
