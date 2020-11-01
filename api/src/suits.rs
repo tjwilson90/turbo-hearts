@@ -10,11 +10,7 @@ impl Suits {
     pub const NONE: Suits = Suits { bits: 0x0 };
 
     pub fn is_empty(self) -> bool {
-        self.len() == 0
-    }
-
-    pub fn len(self) -> usize {
-        self.bits.count_ones() as usize
+        self == Self::NONE
     }
 
     pub fn contains(self, other: Suit) -> bool {
