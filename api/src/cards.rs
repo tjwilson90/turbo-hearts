@@ -150,6 +150,13 @@ impl Cards {
         }
     }
 
+    pub fn shuffled(self) -> impl Iterator<Item = Card> {
+        ShuffledIter {
+            bits: self.bits,
+            shift: 0,
+        }
+    }
+
     pub fn distinct_plays(self, played: Cards) -> Cards {
         let always_distinct = self & (Cards::NINES | Cards::CHARGEABLE);
         let mut magic = (self - always_distinct).bits;
@@ -439,6 +446,34 @@ impl Iterator for Choose {
     }
 }
 
+struct ShuffledIter {
+    bits: u64,
+    shift: u32,
+}
+
+impl Iterator for ShuffledIter {
+    type Item = Card;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.bits == 0 {
+            None
+        } else {
+            self.bits = self.bits.rotate_left(17);
+            self.shift += 17;
+            let index = self.bits.trailing_zeros();
+            self.bits ^= 1 << index;
+            Some(Card::from((index.wrapping_sub(self.shift) % 64) as u8))
+        }
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let size = self.bits.count_ones() as usize;
+        (size, Some(size))
+    }
+}
+
+impl ExactSizeIterator for ShuffledIter {}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -554,6 +589,24 @@ mod test {
         assert_eq!(choose.next(), Some(c!(KJTS)));
         assert_eq!(choose.next(), Some(c!(QJTS)));
         assert_eq!(choose.next(), None);
+    }
+
+    #[test]
+    fn test_shuffled() {
+        let mut shuffled = c!(AJ5S K84H AT95D 42C).shuffled();
+        assert_eq!(shuffled.next(), Some(Card::FiveSpades));
+        assert_eq!(shuffled.next(), Some(Card::FourHearts));
+        assert_eq!(shuffled.next(), Some(Card::FiveDiamonds));
+        assert_eq!(shuffled.next(), Some(Card::AceSpades));
+        assert_eq!(shuffled.next(), Some(Card::KingHearts));
+        assert_eq!(shuffled.next(), Some(Card::AceDiamonds));
+        assert_eq!(shuffled.next(), Some(Card::NineDiamonds));
+        assert_eq!(shuffled.next(), Some(Card::JackSpades));
+        assert_eq!(shuffled.next(), Some(Card::TwoClubs));
+        assert_eq!(shuffled.next(), Some(Card::TenDiamonds));
+        assert_eq!(shuffled.next(), Some(Card::EightHearts));
+        assert_eq!(shuffled.next(), Some(Card::FourClubs));
+        assert_eq!(shuffled.next(), None);
     }
 
     #[test]

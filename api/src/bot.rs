@@ -26,7 +26,11 @@ pub fn can_claim(seat: Seat, hand: Cards, state: &GameState) -> bool {
     }
     match state.next_actor {
         Some(actor) if seat == actor => {
-            for card in state.legal_plays(hand).distinct_plays(state.played) {
+            for card in state
+                .legal_plays(hand)
+                .distinct_plays(state.played)
+                .shuffled()
+            {
                 let mut state = state.clone();
                 state.apply(&GameEvent::Play { seat, card });
                 if state.current_trick.is_empty() && state.next_actor != Some(seat) {
@@ -39,7 +43,10 @@ pub fn can_claim(seat: Seat, hand: Cards, state: &GameState) -> bool {
             false
         }
         Some(actor) => {
-            for card in (Cards::ALL - state.played - hand).distinct_plays(state.played) {
+            for card in (Cards::ALL - state.played - hand)
+                .distinct_plays(state.played)
+                .shuffled()
+            {
                 let mut state = state.clone();
                 state.apply(&GameEvent::Play { seat: actor, card });
                 if state.current_trick.is_empty() && state.next_actor != Some(seat) {
@@ -60,11 +67,11 @@ fn can_leader_claim(hand: Cards, state: &GameState) -> bool {
     let other_losers = losers(Suit::Spades, hand, &state)
         + losers(Suit::Diamonds, hand, &state)
         + losers(Suit::Clubs, hand, &state);
-    return if state.played.contains_any(Cards::HEARTS) {
+    if state.played.contains_any(Cards::HEARTS) {
         heart_losers + other_losers <= 0
     } else {
         other_losers <= 0 && heart_losers + other_losers <= 0
-    };
+    }
 }
 
 fn losers(suit: Suit, hand: Cards, state: &GameState) -> i8 {
