@@ -24,17 +24,17 @@ pub fn can_claim(seat: Seat, hand: Cards, state: &GameState) -> bool {
     if state.current_trick.is_empty() && state.next_actor == Some(seat) {
         return can_leader_claim(hand, state);
     }
+    let mut played = state.played;
+    if !state.current_trick.is_empty() {
+        played -= (state.current_trick.cards() & state.current_trick.suit().cards()).max();
+    }
     match state.next_actor {
         Some(actor) if seat == actor => {
-            for card in state
-                .legal_plays(hand)
-                .distinct_plays(state.played)
-                .shuffled()
-            {
+            for card in state.legal_plays(hand).distinct_plays(played).shuffled() {
                 let mut state = state.clone();
                 state.apply(&GameEvent::Play { seat, card });
                 if state.current_trick.is_empty() && state.next_actor != Some(seat) {
-                    return false;
+                    continue;
                 }
                 if can_claim(seat, hand - card, &state) {
                     return true;
@@ -44,7 +44,7 @@ pub fn can_claim(seat: Seat, hand: Cards, state: &GameState) -> bool {
         }
         Some(actor) => {
             for card in (Cards::ALL - state.played - hand)
-                .distinct_plays(state.played)
+                .distinct_plays(played)
                 .shuffled()
             {
                 let mut state = state.clone();
