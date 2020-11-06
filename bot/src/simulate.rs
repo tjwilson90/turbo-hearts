@@ -1,10 +1,11 @@
-use crate::{HeuristicBot, VoidState};
+use crate::{BruteForce, HeuristicBot, VoidState};
 use log::debug;
 use rand::{rngs::SmallRng, seq::SliceRandom, Rng, SeedableRng};
 use std::{collections::HashMap, fmt::Display, hash::Hash, time::Instant};
 use tokio::task;
 use turbo_hearts_api::{can_claim, BotState, Card, Cards, GameEvent, GameState, Seat, Suit};
 
+#[derive(Clone)]
 pub struct SimulateBot {
     void: VoidState,
     rng: SmallRng,
@@ -30,30 +31,26 @@ impl SimulateBot {
         let now = Instant::now();
         let deadline = 4000 + self.rng.gen_range(0, 1000);
         while now.elapsed().as_millis() < deadline {
-            let now = Instant::now();
-            while now.elapsed().as_millis() < 3 {
+            for _ in 0..100 {
                 let hands = self.make_hands(bot_state, game_state);
                 for cards in chargeable.powerset() {
-                    let mut worst_money = i16::max_value();
-                    for _ in 0..20 {
-                        let mut game = game_state.clone();
-                        game.apply(&GameEvent::Charge {
-                            seat: bot_state.seat,
-                            cards,
-                        });
-                        do_charges(&mut game, hands);
-                        do_passes(&mut game);
-                        do_charges(&mut game, hands);
-                        for &seat in &Seat::VALUES {
-                            if hands[seat.idx()].contains(Card::TwoClubs) {
-                                game.next_actor = Some(seat);
-                                break;
-                            }
+                    let mut game = game_state.clone();
+                    game.apply(&GameEvent::Charge {
+                        seat: bot_state.seat,
+                        cards,
+                    });
+                    do_charges(&mut game, hands);
+                    do_passes(&mut game);
+                    do_charges(&mut game, hands);
+                    for &seat in &Seat::VALUES {
+                        if hands[seat.idx()].contains(Card::TwoClubs) {
+                            game.next_actor = Some(seat);
+                            break;
                         }
-                        do_plays(&mut game, hands, &mut bot);
-                        worst_money = worst_money.min(money(&bot_state, &game));
                     }
-                    *money_counts.entry((cards, worst_money)).or_default() += 1;
+                    do_plays(&mut game, hands, &mut bot);
+                    let money = money(&bot_state, &game);
+                    *money_counts.entry((cards, money)).or_default() += 1;
                 }
             }
             task::yield_now().await;
@@ -66,30 +63,43 @@ impl SimulateBot {
         if cards.contains(Card::TwoClubs) {
             return Card::TwoClubs;
         }
-        let mut bot = HeuristicBot::from(self.void, self.rng.clone());
-        let mut money_counts = HashMap::new();
-        let now = Instant::now();
-        while now.elapsed().as_millis() < 3500 {
+        let mut copy = self.clone();
+        let bot_state = bot_state.clone();
+        let game_state = game_state.clone();
+        let money_counts = tokio::task::spawn_blocking(move || {
+            let mut money_counts = HashMap::new();
             let now = Instant::now();
-            while now.elapsed().as_millis() < 3 {
-                let hands = self.make_hands(bot_state, game_state);
+            let mut iter = 0;
+            while now.elapsed().as_millis() < 3500 {
+                let hands = copy.make_hands(&bot_state, &game_state);
                 for card in cards {
-                    let mut worst_money = i16::max_value();
                     let mut game = game_state.clone();
                     game.apply(&GameEvent::Play {
                         seat: bot_state.seat,
                         card,
                     });
-                    for _ in 0..50 {
-                        let mut game = game.clone();
-                        do_plays(&mut game, hands, &mut bot);
-                        worst_money = worst_money.min(money(&bot_state, &game));
-                    }
-                    *money_counts.entry((card, worst_money)).or_default() += 1;
+                    if game.played.len() > 28 && iter > 0 {
+                        let mut brute_force = BruteForce::new(hands);
+                        let (_, money) = brute_force.solve(game);
+                        *money_counts
+                            .entry((card, money[bot_state.seat.idx()]))
+                            .or_default() += 1;
+                    } else {
+                        for _ in 0..50 {
+                            let mut game = game.clone();
+                            let mut bot = HeuristicBot::from(copy.void, copy.rng.clone());
+                            do_plays(&mut game, hands, &mut bot);
+                            let money = money(&bot_state, &game);
+                            *money_counts.entry((card, money)).or_default() += 1;
+                        }
+                    };
                 }
+                iter += 1;
             }
-            task::yield_now().await;
-        }
+            money_counts
+        })
+        .await
+        .unwrap();
         compute_best(cards, money_counts)
     }
 
@@ -219,7 +229,11 @@ where
     for choice in choices {
         let (total, cnt) = means[&choice];
         let mean = total as f32 / cnt as f32;
-        let stddev = (vars[&choice] / (cnt as f32 - 1.0)).sqrt();
+        let stddev = if cnt == 1 {
+            0.0
+        } else {
+            (vars[&choice] / (cnt as f32 - 1.0)).sqrt()
+        };
         debug!(
             "{}: cnt={}, mean={:.2}, stddev={:.2}",
             choice, cnt, mean, stddev
@@ -277,5 +291,57 @@ impl State {
         self.cards.push(card);
         self.unassigned |= card;
         false
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use turbo_hearts_api::{
+        ChargeState, ChargingRules, ClaimState, DoneState, GamePhase, Suits, Trick, WonState,
+    };
+
+    #[test]
+    fn test_make_hands() {
+        let mut simulate = SimulateBot::new();
+        simulate.void.mark_void(Seat::East, Suit::Spades);
+        simulate.void.mark_void(Seat::North, Suit::Diamonds);
+        simulate.void.mark_void(Seat::East, Suit::Clubs);
+        simulate.void.mark_void(Seat::South, Suit::Clubs);
+        simulate.void.mark_void(Seat::North, Suit::Spades);
+        simulate.void.mark_void(Seat::South, Suit::Spades);
+        let bot_state = BotState {
+            seat: Seat::North,
+            pre_pass_hand: "J7S AK984H 3D AQ985C".parse().unwrap(),
+            post_pass_hand: "J7S Q9864H AKQ985C".parse().unwrap(),
+        };
+        let game_state = GameState {
+            rules: ChargingRules::Classic,
+            phase: GamePhase::PassLeft,
+            done: DoneState::new(),
+            charge_count: 2,
+            charges: {
+                let mut charges = ChargeState::new();
+                charges.charge(Seat::East, Card::AceHearts | Card::JackDiamonds);
+                charges
+            },
+            next_actor: Some(Seat::North),
+            played:
+                "2JA3C J95473TS AH 4KJTH 457D 9H 6JKD 8H 4T9C AD QS 78C QD 65C 2D 8S AS QH TD 7H KS"
+                    .parse()
+                    .unwrap(),
+            claims: ClaimState::new(),
+            won: WonState::new(),
+            led_suits: Suits::NONE,
+            current_trick: {
+                let mut trick = Trick::new();
+                trick.push(Card::KingSpades);
+                trick
+            },
+        };
+        for _ in 0..100 {
+            let hands = simulate.make_hands(&bot_state, &game_state);
+            eprintln!("{:?}", hands);
+        }
     }
 }

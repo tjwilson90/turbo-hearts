@@ -9,7 +9,7 @@ use std::{
 const SUITS: [char; 4] = ['C', 'D', 'H', 'S'];
 
 #[repr(u8)]
-#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd)]
+#[derive(Copy, Clone, Eq, Ord, PartialEq, PartialOrd)]
 pub enum Suit {
     Clubs,
     Diamonds,
