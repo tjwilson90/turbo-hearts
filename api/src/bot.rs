@@ -14,6 +14,7 @@ pub enum BotStrategy {
 
 sql_json!(BotStrategy);
 
+#[derive(Clone)]
 pub struct BotState {
     pub seat: Seat,
     pub pre_pass_hand: Cards,

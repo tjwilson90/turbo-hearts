@@ -1,7 +1,7 @@
 use crate::{Cards, Suit};
 use std::ops::{BitOr, BitOrAssign};
 
-#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct Suits {
     bits: u8,
 }

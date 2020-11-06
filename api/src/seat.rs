@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::{
     fmt,
     fmt::{Debug, Display},
+    mem,
 };
 
 #[repr(u8)]
@@ -24,35 +25,23 @@ impl Seat {
         f(Seat::North) && f(Seat::East) && f(Seat::South) && f(Seat::West)
     }
 
-    pub fn idx(&self) -> usize {
-        *self as usize
+    pub fn idx(self) -> usize {
+        self as usize
     }
 
-    pub fn left(&self) -> Self {
-        match self {
-            Seat::North => Seat::East,
-            Seat::East => Seat::South,
-            Seat::South => Seat::West,
-            Seat::West => Seat::North,
-        }
+    pub fn left(self) -> Self {
+        let index = (self as u8 + 1) % 4;
+        unsafe { mem::transmute(index) }
     }
 
-    pub fn right(&self) -> Self {
-        match self {
-            Seat::North => Seat::West,
-            Seat::East => Seat::North,
-            Seat::South => Seat::East,
-            Seat::West => Seat::South,
-        }
+    pub fn across(self) -> Self {
+        let index = (self as u8 + 2) % 4;
+        unsafe { mem::transmute(index) }
     }
 
-    pub fn across(&self) -> Self {
-        match self {
-            Seat::North => Seat::South,
-            Seat::East => Seat::West,
-            Seat::South => Seat::North,
-            Seat::West => Seat::East,
-        }
+    pub fn right(self) -> Self {
+        let index = (self as u8 + 3) % 4;
+        unsafe { mem::transmute(index) }
     }
 }
 
