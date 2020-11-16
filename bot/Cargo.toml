@@ -9,3 +9,6 @@ log = "*"
 rand = { version = "*", features = ["small_rng"] }
 tokio = { version = "*", features = ["blocking", "macros", "parking_lot", "rt-threaded", "sync"] }
 turbo-hearts-api = { path = "../api" }
+
+[dev-dependencies]
+env_logger = { version = "*", default-features = false, features = ["humantime"] }

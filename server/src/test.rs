@@ -4,7 +4,7 @@ use once_cell::sync::Lazy;
 use std::{collections::HashMap, future::Future};
 use tempfile::TempDir;
 use turbo_hearts_api::{
-    BotStrategy, Card, Cards, CardsError, ChargingRules, GameEvent, GameId, GamePhase, LobbyEvent,
+    BotStrategy, Card, CardsError, ChargingRules, GameEvent, GameId, GamePhase, LobbyEvent,
     PassDirection, Player, PlayerWithOptions, Seat, Seed, UserId,
 };
 
@@ -537,120 +537,4 @@ async fn test_bot_game() -> Result<(), CardsError> {
         runner.run(test).await?;
     }
     Ok(())
-}
-
-#[ignore]
-#[tokio::test(threaded_scheduler)]
-async fn test_simulation() -> Result<(), CardsError> {
-    fn player() -> PlayerWithOptions {
-        PlayerWithOptions {
-            player: Player::Bot {
-                user_id: UserId::new(),
-                strategy: BotStrategy::Simulate,
-            },
-            rules: ChargingRules::Classic,
-            seat: None,
-        }
-    }
-
-    async fn test(_: &Database, _: &Lobby, games: &Games) -> Result<(), CardsError> {
-        let game_id = GameId::new();
-        games.start_game(
-            game_id,
-            [player(), player(), player(), player()],
-            Seed::random(),
-        )?;
-        let mut rx = games.subscribe(game_id, UserId::new(), None).await?;
-        let mut hands = [Cards::NONE; 4];
-        while let Some((event, _)) = rx.recv().await {
-            use GameEvent::*;
-            match event {
-                Deal {
-                    north,
-                    east,
-                    south,
-                    west,
-                    ..
-                } => {
-                    hands = [north, east, south, west];
-                    eprintln!("North {}", north);
-                    eprintln!("East  {}", east);
-                    eprintln!("South {}", south);
-                    eprintln!("West  {}", west);
-                }
-                SendPass { from, cards } => {
-                    hands[from.idx()] -= cards;
-                    eprintln!("{} passes {}", from, cards);
-                }
-                RecvPass { to, cards } => {
-                    hands[to.idx()] |= cards;
-                    eprintln!("{} receives {}", to, cards);
-                }
-                StartCharging => {
-                    eprintln!("North {}", hands[0]);
-                    eprintln!("East  {}", hands[1]);
-                    eprintln!("South {}", hands[2]);
-                    eprintln!("West  {}", hands[3]);
-                }
-                Charge { seat, cards } => {
-                    if cards.is_empty() {
-                        eprintln!("{} charges nothing", seat);
-                    } else {
-                        eprintln!("{} charges {}", seat, cards);
-                    }
-                }
-                Play { seat, card } => {
-                    eprintln!("{} plays {} from {}", seat, card, hands[seat.idx()]);
-                    hands[seat.idx()] -= card;
-                }
-                EndTrick { winner } => {
-                    eprintln!("{} wins the trick", winner);
-                }
-                Claim { seat, .. } => {
-                    eprintln!("{} claims the remaining tricks", seat);
-                }
-                AcceptClaim { claimer, acceptor } => {
-                    eprintln!("{} accepts {}'s claim", acceptor, claimer);
-                }
-                RejectClaim { claimer, rejector } => {
-                    eprintln!("{} rejects {}'s claim", rejector, claimer);
-                }
-                HandComplete {
-                    north_score,
-                    east_score,
-                    south_score,
-                    west_score,
-                } => {
-                    let total = north_score + east_score + south_score + west_score;
-                    eprintln!(
-                        "North score = {}, money = {}",
-                        north_score,
-                        total - 4 * north_score
-                    );
-                    eprintln!(
-                        "East  score = {}, money = {}",
-                        east_score,
-                        total - 4 * east_score
-                    );
-                    eprintln!(
-                        "South score = {}, money = {}",
-                        south_score,
-                        total - 4 * south_score
-                    );
-                    eprintln!(
-                        "West  score = {}, money = {}",
-                        west_score,
-                        total - 4 * west_score
-                    );
-                }
-                GameComplete { .. } => {
-                    break;
-                }
-                _ => {}
-            }
-        }
-        Ok(())
-    }
-
-    TestRunner::new().run(test).await
 }

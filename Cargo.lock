@@ -1689,6 +1689,7 @@ dependencies = [
 name = "turbo-hearts-bot"
 version = "0.1.0"
 dependencies = [
+ "env_logger",
  "log",
  "rand",
  "tokio",

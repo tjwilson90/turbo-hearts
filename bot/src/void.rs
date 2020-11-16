@@ -10,7 +10,7 @@ impl VoidState {
         Self { state: 0 }
     }
 
-    fn mark_void(&mut self, seat: Seat, suit: Suit) {
+    pub fn mark_void(&mut self, seat: Seat, suit: Suit) {
         self.state |= 1 << (4 * seat.idx() + suit.idx())
     }
 

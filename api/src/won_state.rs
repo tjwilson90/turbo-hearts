@@ -1,6 +1,6 @@
 use crate::{Card, Cards, Seat};
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct WonState {
     state: u32,
 }
@@ -31,6 +31,16 @@ impl WonState {
 
     pub fn can_run(&self, seat: Seat) -> bool {
         self.state & (0x1f_1f_1f_1f ^ (0x1f << (8 * seat.idx()))) == 0
+    }
+
+    pub fn finished_runner(&self) -> Option<Seat> {
+        match self.state & 0x1d_1d_1d_1d {
+            0x00_00_00_1d => Some(Seat::North),
+            0x00_00_1d_00 => Some(Seat::East),
+            0x00_1d_00_00 => Some(Seat::South),
+            0x1d_00_00_00 => Some(Seat::West),
+            _ => None,
+        }
     }
 
     pub fn hearts(&self, seat: Seat) -> u8 {
