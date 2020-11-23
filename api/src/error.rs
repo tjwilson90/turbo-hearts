@@ -22,8 +22,8 @@ pub enum CardsError {
     IllegalAction(&'static str, GamePhase),
     #[error("{0} is not a legal pass, passes must have 3 cards")]
     IllegalPassSize(Cards),
-    #[error("The {1} hand in game {0} hasn't completed yet")]
-    IncompleteHand(GameId, PassDirection),
+    #[error("Game {0} hasn't completed yet")]
+    IncompleteGame(GameId),
     #[error("{0} is not a member of game {1}")]
     InvalidPlayer(UserId, GameId),
     #[error("charged cards cannot be played on the first trick of their suit")]
