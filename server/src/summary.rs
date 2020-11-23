@@ -2,12 +2,21 @@ use crate::{CardsReject, Database, Game};
 use rusqlite::{Rows, ToSql};
 use std::mem;
 use turbo_hearts_api::{
-    CardsError, CompleteGame, CompleteHand, GameEvent, GameId, GameState, HandEvent, HandResponse,
-    LeaderboardRequest, LeaderboardResponse, PassDirection, Player, Seat, UserId,
+    CardsError, ChargingRules, GameEvent, GameEventsRequest, GameId, GameState, GameSummaryEvent,
+    GameSummaryResponse, LeaderboardGame, LeaderboardHand, LeaderboardRequest, LeaderboardResponse,
+    Player, Seat, UserId,
 };
 use warp::{Filter, Rejection, Reply};
 
-const INITIAL_SCORES: &'static str = r#"
+const SELECT_GAME_EVENTS: &'static str = r#"
+SELECT   game_id,
+         timestamp,
+         event
+FROM     event
+WHERE    game_id = ?
+ORDER BY event_id"#;
+
+const SELECT_FIRST_PAGE_OF_GAME_EVENTS: &'static str = r#"
 WITH ids AS
 (
          SELECT   e.game_id
@@ -26,7 +35,7 @@ WHERE    game_id IN ids
 ORDER BY game_id,
          event_id"#;
 
-const PAGED_SCORES: &'static str = r#"
+const SELECT_NEXT_PAGE_OF_GAME_EVENTS: &'static str = r#"
 WITH ids AS
 (
          SELECT   e.game_id
@@ -52,7 +61,7 @@ ORDER BY game_id,
 
 pub fn router<'a>(db: infallible!(&'a Database)) -> reply!() {
     warp::path("summary")
-        .and(leaderboard(db.clone()).or(hand(db)))
+        .and(leaderboard(db.clone()).or(game(db.clone())).or(games(db)))
         .boxed()
 }
 
@@ -64,14 +73,14 @@ fn leaderboard<'a>(db: infallible!(&'a Database)) -> reply!() {
             .run_read_only(|tx| {
                 Ok(match game_id {
                     None => {
-                        let mut stmt = tx.prepare_cached(INITIAL_SCORES)?;
+                        let mut stmt = tx.prepare_cached(SELECT_FIRST_PAGE_OF_GAME_EVENTS)?;
                         let rows = stmt.query(&[page_size])?;
-                        read_games(rows)?
+                        read_leaderboard(rows)?
                     }
                     Some(game_id) => {
-                        let mut stmt = tx.prepare_cached(PAGED_SCORES)?;
+                        let mut stmt = tx.prepare_cached(SELECT_NEXT_PAGE_OF_GAME_EVENTS)?;
                         let rows = stmt.query::<&[&dyn ToSql]>(&[&game_id, &page_size])?;
-                        read_games(rows)?
+                        read_leaderboard(rows)?
                     }
                 })
             })
@@ -85,7 +94,7 @@ fn leaderboard<'a>(db: infallible!(&'a Database)) -> reply!() {
         .and_then(handle)
 }
 
-fn read_games(mut rows: Rows<'_>) -> Result<LeaderboardResponse, rusqlite::Error> {
+fn read_leaderboard(mut rows: Rows<'_>) -> Result<LeaderboardResponse, rusqlite::Error> {
     let mut games = Vec::new();
     let mut hands = Vec::with_capacity(4);
     let mut players = [Player::Human {
@@ -110,7 +119,7 @@ fn read_games(mut rows: Rows<'_>) -> Result<LeaderboardResponse, rusqlite::Error
         }
         let is_playing = state.phase.is_playing();
         if was_playing && !is_playing {
-            hands.push(CompleteHand {
+            hands.push(LeaderboardHand {
                 charges: [
                     state.charges.charges(Seat::North),
                     state.charges.charges(Seat::East),
@@ -130,7 +139,7 @@ fn read_games(mut rows: Rows<'_>) -> Result<LeaderboardResponse, rusqlite::Error
             if hands.len() == 4 {
                 let mut complete_hands = Vec::with_capacity(4);
                 mem::swap(&mut hands, &mut complete_hands);
-                games.push(CompleteGame {
+                games.push(LeaderboardGame {
                     game_id,
                     completed_time: timestamp,
                     players,
@@ -144,85 +153,109 @@ fn read_games(mut rows: Rows<'_>) -> Result<LeaderboardResponse, rusqlite::Error
     Ok(games)
 }
 
-fn hand<'a>(db: infallible!(&'a Database)) -> reply!() {
-    async fn handle(
-        game_id: GameId,
-        hand: PassDirection,
-        db: &Database,
-    ) -> Result<impl Reply, Rejection> {
+fn game<'a>(db: infallible!(&'a Database)) -> reply!() {
+    async fn handle(game_id: GameId, db: &Database) -> Result<impl Reply, Rejection> {
         let reply = db
             .run_read_only(|tx| {
-                let mut stmt = tx.prepare_cached(
-                    "SELECT timestamp, event FROM event WHERE game_id = ? ORDER BY event_id",
-                )?;
-                let mut rows = stmt.query(&[game_id])?;
-                let mut game = Game::new();
-                let mut start = false;
-                let mut end = false;
-                let mut events = Vec::new();
-                while let Some(row) = rows.next()? {
-                    let timestamp = row.get(0)?;
-                    let event = row.get(1)?;
-                    if !start {
-                        start = match event {
-                            GameEvent::Deal { pass, .. } if pass == hand => true,
-                            _ => false,
-                        }
-                    }
-                    let mut synthetic_events = Vec::new();
-                    game.apply(&event, |_, e| {
-                        if start && !end {
-                            if e != &event {
-                                synthetic_events.push(e.clone());
-                            }
-                            if let GameEvent::HandComplete { .. } = e {
-                                end = true;
-                            }
-                        }
-                    });
-                    if start {
-                        events.push(HandEvent {
-                            timestamp,
-                            event,
-                            synthetic_events,
-                        });
-                    }
-                    if end {
-                        break;
-                    }
-                }
-                if !start {
-                    Err(CardsError::UnknownHand(game_id, hand))
-                } else if !end {
-                    Err(CardsError::IncompleteHand(game_id, hand))
+                let mut stmt = tx.prepare_cached(SELECT_GAME_EVENTS)?;
+                let rows = stmt.query(&[game_id])?;
+                let mut games = read_games(rows)?;
+                if let Some(game) = games.pop() {
+                    Ok(game)
                 } else {
-                    if let GameEvent::Sit {
-                        north,
-                        east,
-                        south,
-                        west,
-                        rules,
-                        ..
-                    } = &game.events[0]
-                    {
-                        Ok(HandResponse {
-                            north: *north,
-                            east: *east,
-                            south: *south,
-                            west: *west,
-                            rules: *rules,
-                            events,
-                        })
-                    } else {
-                        panic!("first event must be a sit event");
-                    }
+                    Err(CardsError::IncompleteGame(game_id))
                 }
             })
             .map_err(CardsReject)?;
         Ok(warp::reply::json(&reply))
     }
 
-    warp::path!("hand" / GameId / PassDirection)
+    warp::path!("game" / GameId).and(db).and_then(handle)
+}
+
+fn games<'a>(db: infallible!(&'a Database)) -> reply!() {
+    async fn handle(db: &Database, request: GameEventsRequest) -> Result<impl Reply, Rejection> {
+        let GameEventsRequest { game_id, page_size } = request;
+        let page_size = page_size.unwrap_or(100);
+        let games = db
+            .run_read_only(|tx| {
+                Ok(match game_id {
+                    None => {
+                        let mut stmt = tx.prepare_cached(SELECT_FIRST_PAGE_OF_GAME_EVENTS)?;
+                        let rows = stmt.query(&[page_size])?;
+                        read_games(rows)?
+                    }
+                    Some(game_id) => {
+                        let mut stmt = tx.prepare_cached(SELECT_NEXT_PAGE_OF_GAME_EVENTS)?;
+                        let rows = stmt.query::<&[&dyn ToSql]>(&[&game_id, &page_size])?;
+                        read_games(rows)?
+                    }
+                })
+            })
+            .map_err(CardsReject)?;
+        Ok(warp::reply::json(&games))
+    }
+
+    warp::path!("games")
         .and(db)
+        .and(warp::query())
         .and_then(handle)
+}
+
+fn read_games(mut rows: Rows<'_>) -> Result<Vec<GameSummaryResponse>, CardsError> {
+    let mut games = Vec::new();
+    let mut hands = Vec::new();
+    let mut game = Game::new();
+    let mut events = Vec::new();
+    let mut players = [Player::Human {
+        user_id: UserId::null(),
+    }; 4];
+    let mut rules = ChargingRules::Classic;
+    while let Some(row) = rows.next()? {
+        let game_id = row.get(0)?;
+        let timestamp = row.get(1)?;
+        let event = row.get(2)?;
+        if let GameEvent::Sit {
+            north,
+            east,
+            south,
+            west,
+            rules: charging_rules,
+            ..
+        } = &event
+        {
+            hands = Vec::with_capacity(4);
+            game = Game::new();
+            players = [*north, *east, *south, *west];
+            rules = *charging_rules;
+        }
+        let mut synthetic_events = Vec::new();
+        let was_playing = game.state.phase.is_playing();
+        game.apply(&event, |_, e| {
+            if e != &event {
+                synthetic_events.push(e.clone());
+            }
+        });
+        events.push(GameSummaryEvent {
+            timestamp,
+            event,
+            synthetic_events,
+        });
+        let is_playing = game.state.phase.is_playing();
+        if was_playing && !is_playing {
+            hands.push(events);
+            events = Vec::new();
+            if hands.len() == 4 {
+                games.push(GameSummaryResponse {
+                    game_id,
+                    players,
+                    rules,
+                    hands,
+                });
+                hands = Vec::new();
+                game = Game::new();
+            }
+        }
+    }
+    Ok(games)
 }
