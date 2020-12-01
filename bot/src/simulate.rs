@@ -1,6 +1,6 @@
 use crate::{BruteForce, HeuristicBot, VoidState};
 use log::debug;
-use rand::{rngs::SmallRng, seq::SliceRandom, Rng, SeedableRng};
+use rand::{seq::SliceRandom, Rng};
 use std::{collections::HashMap, fmt::Display, hash::Hash, time::Instant};
 use tokio::task;
 use turbo_hearts_api::{can_claim, BotState, Card, Cards, GameEvent, GameState, Seat, Suit};
@@ -8,15 +8,17 @@ use turbo_hearts_api::{can_claim, BotState, Card, Cards, GameEvent, GameState, S
 #[derive(Clone)]
 pub struct SimulateBot {
     void: VoidState,
-    rng: SmallRng,
 }
 
 impl SimulateBot {
     pub fn new() -> Self {
         Self {
             void: VoidState::new(),
-            rng: SmallRng::from_rng(rand::thread_rng()).unwrap(),
         }
+    }
+
+    pub fn heuristic_bot(&mut self) -> HeuristicBot {
+        HeuristicBot::from(self.void.clone())
     }
 
     pub async fn pass(&mut self, bot_state: &BotState, _: &GameState) -> Cards {
@@ -24,12 +26,11 @@ impl SimulateBot {
     }
 
     pub async fn charge(&mut self, bot_state: &BotState, game_state: &GameState) -> Cards {
-        let mut bot = HeuristicBot::from(self.void, self.rng.clone());
         let chargeable =
             (bot_state.post_pass_hand - game_state.charges.all_charges()) & Cards::CHARGEABLE;
         let mut money_counts = HashMap::new();
         let now = Instant::now();
-        let deadline = 4000 + self.rng.gen_range(0, 1000);
+        let deadline = 4000 + rand::thread_rng().gen_range(0, 1000);
         while now.elapsed().as_millis() < deadline {
             for _ in 0..100 {
                 let hands = self.make_hands(bot_state, game_state);
@@ -48,7 +49,7 @@ impl SimulateBot {
                             break;
                         }
                     }
-                    do_plays(&mut game, hands, &mut bot);
+                    do_plays(&mut game, hands, &mut self.heuristic_bot());
                     let money = money(&bot_state, &game);
                     *money_counts.entry((cards, money)).or_default() += 1;
                 }
@@ -87,8 +88,7 @@ impl SimulateBot {
                     } else {
                         for _ in 0..50 {
                             let mut game = game.clone();
-                            let mut bot = HeuristicBot::from(copy.void, copy.rng.clone());
-                            do_plays(&mut game, hands, &mut bot);
+                            do_plays(&mut game, hands, &mut copy.heuristic_bot());
                             let money = money(&bot_state, &game);
                             *money_counts.entry((card, money)).or_default() += 1;
                         }
@@ -132,11 +132,11 @@ impl SimulateBot {
         }
         let unassigned = Cards::ALL - hands[0] - hands[1] - hands[2] - hands[3] - game_state.played;
         let mut cards = unassigned.into_iter().collect::<Vec<_>>();
-        cards.shuffle(&mut self.rng);
+        cards.shuffle(&mut rand::thread_rng());
         let mut state = State {
             hands,
             sizes,
-            void: self.void,
+            void: self.void.clone(),
             cards,
             unassigned,
         };
@@ -297,6 +297,7 @@ impl State {
 #[cfg(test)]
 mod test {
     use super::*;
+    use log::LevelFilter;
     use turbo_hearts_api::{
         ChargeState, ChargingRules, ClaimState, DoneState, GamePhase, Suits, Trick, WonState,
     };
@@ -343,5 +344,56 @@ mod test {
             let hands = simulate.make_hands(&bot_state, &game_state);
             eprintln!("{:?}", hands);
         }
+    }
+
+    #[tokio::test(threaded_scheduler)]
+    async fn test_weird_behavior() {
+        let _ = env_logger::builder()
+            .filter_level(LevelFilter::Debug)
+            .is_test(true)
+            .try_init();
+        let bot_state = BotState {
+            seat: Seat::West,
+            pre_pass_hand: "J82S K863H AQ8742D".parse().unwrap(),
+            post_pass_hand: "KQJ82S T3H AQ8742D".parse().unwrap(),
+        };
+        let game_state = GameState {
+            rules: ChargingRules::Classic,
+            phase: GamePhase::PlayLeft,
+            done: DoneState::new(),
+            charge_count: 1,
+            charges: {
+                let mut charges = ChargeState::new();
+                charges.charge(Seat::East, Card::TenClubs.into());
+                charges
+            },
+            next_actor: Some(Seat::West),
+            played: "2KJC 8D 42AS AH 6543H 39576JKD".parse().unwrap(),
+            claims: ClaimState::new(),
+            won: {
+                let mut state = WonState::new();
+                state.win(Seat::North, "A6543H".parse().unwrap());
+                state
+            },
+            led_suits: Suits::NONE | Suit::Clubs | Suit::Spades | Suit::Hearts | Suit::Diamonds,
+            current_trick: {
+                let mut trick = Trick::new();
+                trick.push(Card::ThreeDiamonds);
+                trick.push(Card::NineDiamonds);
+                trick.push(Card::FiveDiamonds);
+                trick.push(Card::SevenDiamonds);
+                trick.push(Card::SixDiamonds);
+                trick.push(Card::JackDiamonds);
+                trick.push(Card::KingDiamonds);
+                trick
+            },
+        };
+        let mut simulate = SimulateBot::new();
+        simulate.void.mark_void(Seat::West, Suit::Clubs);
+        simulate.void.mark_void(Seat::South, Suit::Spades);
+        // assert_eq!(
+        //     Card::AceDiamonds,
+        //     simulate.play(&bot_state, &game_state).await
+        // );
     }
 }

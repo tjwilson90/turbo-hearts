@@ -1,6 +1,6 @@
 use turbo_hearts_api::{Card, Cards, GameEvent, GameState, Seat, Suit};
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Debug)]
 pub struct VoidState {
     state: u16,
 }

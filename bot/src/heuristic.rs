@@ -1,5 +1,5 @@
 use crate::VoidState;
-use rand::{rngs::SmallRng, Rng, SeedableRng};
+use rand::Rng;
 use turbo_hearts_api::{BotState, Card, Cards, GameEvent, GameState, Rank, Suit};
 
 macro_rules! check {
@@ -34,19 +34,17 @@ macro_rules! dont_play {
 
 pub struct HeuristicBot {
     void: VoidState,
-    rng: SmallRng,
 }
 
 impl HeuristicBot {
     pub fn new() -> Self {
         Self {
             void: VoidState::new(),
-            rng: SmallRng::from_rng(rand::thread_rng()).unwrap(),
         }
     }
 
-    pub fn from(void: VoidState, rng: SmallRng) -> Self {
-        Self { void, rng }
+    pub fn from(void: VoidState) -> Self {
+        Self { void }
     }
 
     pub async fn pass(&mut self, bot_state: &BotState, _: &GameState) -> Cards {
@@ -166,7 +164,7 @@ impl HeuristicBot {
         } else {
             self.slough(ours, theirs, bot_state, game_state)
         };
-        let index = self.rng.gen_range(0, good_plays.len());
+        let index = rand::thread_rng().gen_range(0, good_plays.len());
         good_plays.into_iter().nth(index).unwrap()
     }
 
@@ -410,8 +408,10 @@ impl HeuristicBot {
         // Otherwise don't slough the jack.
         dont_play!(ours, Card::JackDiamonds);
 
-        // Slough high spades if the queen is out.
-        if theirs.contains(Card::QueenSpades) {
+        // Slough high spades if the queen is out and we don't have sufficient protection.
+        if theirs.contains(Card::QueenSpades)
+            && theirs.below(Card::QueenSpades).len() >= ours.below(Card::QueenSpades).len()
+        {
             play!(ours.above(Card::QueenSpades));
         }
 
@@ -426,8 +426,10 @@ impl HeuristicBot {
             dont_play!(ours, Cards::CLUBS);
         }
 
-        // Slough high clubs if the ten is out.
-        if theirs.contains(Card::TenClubs) {
+        // Slough high clubs if the ten is out and we don't have sufficient protection.
+        if theirs.contains(Card::TenClubs)
+            && theirs.below(Card::TenClubs).len() >= ours.below(Card::TenClubs).len()
+        {
             play!(ours.above(Card::TenClubs));
         }
 
@@ -445,10 +447,15 @@ impl HeuristicBot {
             .cloned()
             .max_by_key(|&suit| danger(suit, bot_state, game_state))
             .unwrap();
-        if ours.contains_any(worst_suit.cards()) {
-            (ours & worst_suit.cards()).max().into()
-        } else {
+        let worst_cards = ours & worst_suit.cards();
+        if worst_cards.is_empty() {
             ours
+        } else if worst_cards.len() == 1 {
+            worst_cards
+        } else if worst_cards.len() <= 3 && theirs.contains(Card::QueenSpades) {
+            worst_cards.max().into()
+        } else {
+            (worst_cards - worst_cards.max()).max().into()
         }
     }
 
@@ -496,17 +503,20 @@ fn danger(suit: Suit, bot_state: &BotState, game_state: &GameState) -> i8 {
         theirs -= theirs.max();
         theirs -= theirs.max();
     }
-    if ours.is_empty()
-        || ours.max() < theirs.min()
-        || ours.below(theirs.min()).len() >= theirs.len()
-    {
+    if ours.is_empty() || ours.max() < theirs.min() {
         // We can duck everything.
         return i8::MIN;
     }
     let mut danger = 0;
-    for card in ours {
-        // Cards are more dangerous if they can easily be
-        // ducked, and less dangerous if they can duck.
+
+    // High cards that we're never forced to play because of our long suit are not dangerous.
+    let skip = if theirs.contains(suit.with_rank(Rank::Nine)) {
+        ours.len().saturating_sub(theirs.len() + 1)
+    } else {
+        ours.len().saturating_sub(theirs.len())
+    };
+    for card in ours.into_iter().skip(skip) {
+        // Cards are more dangerous if they can be ducked, and less dangerous if they can duck.
         danger += theirs.below(card).len() as i8 - theirs.above(card).len() as i8;
     }
     if suit == Suit::Hearts {
