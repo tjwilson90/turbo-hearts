@@ -1,6 +1,15 @@
 use crate::{Card, Cards, Seat};
+use serde::export::Formatter;
+use std::{fmt, fmt::Debug};
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+pub enum RunState {
+    All,
+    Seat(Seat),
+    None,
+}
+
+#[derive(Clone, Copy, Eq, Hash, PartialEq)]
 pub struct WonState {
     state: u32,
 }
@@ -33,14 +42,16 @@ impl WonState {
         self.state & (0x1f_1f_1f_1f ^ (0x1f << (8 * seat.idx()))) == 0
     }
 
-    pub fn finished_runner(&self) -> Option<Seat> {
-        match self.state & 0x1d_1d_1d_1d {
-            0x00_00_00_1d => Some(Seat::North),
-            0x00_00_1d_00 => Some(Seat::East),
-            0x00_1d_00_00 => Some(Seat::South),
-            0x1d_00_00_00 => Some(Seat::West),
-            _ => None,
+    pub fn runner(&self) -> RunState {
+        let masked = self.state & 0x1f_1f_1f_1f;
+        if masked == 0 {
+            return RunState::All;
         }
+        let index = masked.trailing_zeros() / 8;
+        if index != (31 - masked.leading_zeros()) / 8 {
+            return RunState::None;
+        }
+        RunState::Seat(Seat::VALUES[index as usize])
     }
 
     pub fn hearts(&self, seat: Seat) -> u8 {
@@ -104,5 +115,27 @@ impl WonState {
         } else {
             ten * (jack + hearts + queen)
         }
+    }
+}
+
+impl fmt::Debug for WonState {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), fmt::Error> {
+        for &seat in &Seat::VALUES {
+            if seat != Seat::North {
+                write!(f, ", ")?;
+            }
+            write!(f, "{} [{} H", seat, self.hearts(seat))?;
+            if self.queen(seat) {
+                write!(f, ", QS")?;
+            }
+            if self.jack(seat) {
+                write!(f, ", JD")?;
+            }
+            if self.ten(seat) {
+                write!(f, ", TC")?;
+            }
+            write!(f, "]")?;
+        }
+        Ok(())
     }
 }

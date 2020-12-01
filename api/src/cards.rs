@@ -125,15 +125,11 @@ impl Cards {
     }
 
     pub fn above(self, card: Card) -> Self {
-        Cards {
-            bits: (self & card.suit().cards()).bits & !(2 * Cards::from(card).bits - 1),
-        }
+        self & card.above()
     }
 
     pub fn below(self, card: Card) -> Self {
-        Cards {
-            bits: (self & card.suit().cards()).bits & (Cards::from(card).bits - 1),
-        }
+        self & card.below()
     }
 
     pub fn powerset(self) -> impl Iterator<Item = Cards> {
