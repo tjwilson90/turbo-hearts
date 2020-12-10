@@ -41,8 +41,8 @@ def parse_record(lead, record):
 def load_dataset(train_or_validate, lead):
     filenames = glob.glob("/Users/twilson/code/turbo-hearts/data/" \
             + train_or_validate + "/" \
-            + ('lead' if lead else 'follow') + "/*.tfrec")
-    dataset = tf.data.TFRecordDataset(filenames)
+            + ('lead' if lead else 'follow') + "/*.tfrec.gz")
+    dataset = tf.data.TFRecordDataset(filenames, compression_type='GZIP')
     dataset = dataset.map(lambda record: parse_record(lead, record))
     dataset = dataset.batch(128)
     return dataset
