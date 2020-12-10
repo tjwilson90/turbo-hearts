@@ -7,6 +7,7 @@ edition = "2018"
 [dependencies]
 ctrlc = "*"
 env_logger = { version = "*", default-features = false, features = ["humantime"] }
+flate2 = "*"
 log = "*"
 rand = { version = "*" }
 rand_distr = "*"

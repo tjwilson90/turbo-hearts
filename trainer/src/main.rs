@@ -1,3 +1,4 @@
+use flate2::{write::GzEncoder, Compression};
 use rand::{seq::SliceRandom, Rng};
 use std::{
     error::Error,
@@ -52,10 +53,16 @@ fn main() -> Result<(), Box<dyn Error>> {
 }
 
 struct Writer {
-    train_lead: ExampleWriter<BufWriter<File>>,
-    train_follow: ExampleWriter<BufWriter<File>>,
-    validate_lead: ExampleWriter<BufWriter<File>>,
-    validate_follow: ExampleWriter<BufWriter<File>>,
+    train_lead: ExampleWriter<GzEncoder<BufWriter<File>>>,
+    train_follow: ExampleWriter<GzEncoder<BufWriter<File>>>,
+    validate_lead: ExampleWriter<GzEncoder<BufWriter<File>>>,
+    validate_follow: ExampleWriter<GzEncoder<BufWriter<File>>>,
+}
+
+fn writer(path: String) -> Result<ExampleWriter<GzEncoder<BufWriter<File>>>, Box<dyn Error>> {
+    let writer = BufWriter::new(File::create(path)?);
+    let encoder = GzEncoder::new(writer, Compression::default());
+    Ok(RecordWriterInit::from_writer(encoder)?)
 }
 
 impl Writer {
@@ -69,19 +76,10 @@ impl Writer {
             .unwrap()
             .as_millis() as i64;
         Ok(Self {
-            train_lead: RecordWriterInit::create(format!("data/train/lead/{}.tfrec", timestamp))?,
-            train_follow: RecordWriterInit::create(format!(
-                "data/train/follow/{}.tfrec",
-                timestamp
-            ))?,
-            validate_lead: RecordWriterInit::create(format!(
-                "data/validate/lead/{}.tfrec",
-                timestamp
-            ))?,
-            validate_follow: RecordWriterInit::create(format!(
-                "data/validate/follow/{}.tfrec",
-                timestamp
-            ))?,
+            train_lead: writer(format!("data/train/lead/{}.tfrec", timestamp))?,
+            train_follow: writer(format!("data/train/follow/{}.tfrec", timestamp))?,
+            validate_lead: writer(format!("data/validate/lead/{}.tfrec", timestamp))?,
+            validate_follow: writer(format!("data/validate/follow/{}.tfrec", timestamp))?,
         })
     }
 
