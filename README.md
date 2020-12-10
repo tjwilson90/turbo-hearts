@@ -26,7 +26,7 @@ yarn start
 #### Backend
 
 1) Install rust - https://www.rust-lang.org/tools/install
-2) Run the server - `cargo run`
+2) Run the server - `cargo run --bin turbo-hearts`
 
 ## Configuration
 

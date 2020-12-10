@@ -10,41 +10,40 @@ impl ClaimState {
         Self { accepts: 0 }
     }
 
-    pub fn will_successfully_claim(&self, claimer: Seat, acceptor: Seat) -> bool {
-        let mut accepts = self.accepts >> (4 * claimer.idx());
-        accepts |= 1 << acceptor.idx();
-        accepts & 0xf == 0xf
-    }
-
-    pub fn successfully_claimed(&self, claimer: Seat) -> bool {
+    pub fn successfully_claimed(self, claimer: Seat) -> bool {
         let accepts = self.accepts >> (4 * claimer.idx());
         accepts & 0xf == 0xf
     }
 
-    pub fn is_claiming(&self, seat: Seat) -> bool {
+    pub fn is_claiming(self, seat: Seat) -> bool {
         let accepts = self.accepts >> (4 * seat.idx());
         accepts & 0xf != 0
     }
 
-    pub fn has_accepted(&self, claimer: Seat, acceptor: Seat) -> bool {
+    pub fn has_accepted(self, claimer: Seat, acceptor: Seat) -> bool {
         let idx = 4 * claimer.idx() + acceptor.idx();
         self.accepts & (1 << idx) != 0
     }
 
-    pub fn claim(&mut self, seat: Seat) {
-        let idx = 5 * seat.idx();
-        self.accepts |= 1 << idx;
+    #[must_use]
+    pub fn claim(self, seat: Seat) -> Self {
+        self.accept(seat, seat)
     }
 
-    pub fn accept(&mut self, claimer: Seat, acceptor: Seat) -> bool {
+    #[must_use]
+    pub fn accept(self, claimer: Seat, acceptor: Seat) -> Self {
         let idx = 4 * claimer.idx() + acceptor.idx();
-        self.accepts |= 1 << idx;
-        self.successfully_claimed(claimer)
+        Self {
+            accepts: self.accepts | (1 << idx),
+        }
     }
 
-    pub fn reject(&mut self, claimer: Seat) {
+    #[must_use]
+    pub fn reject(self, claimer: Seat) -> Self {
         let mask = 0xf << (4 * claimer.idx());
-        self.accepts &= !mask;
+        Self {
+            accepts: self.accepts & !mask,
+        }
     }
 }
 
@@ -59,7 +58,6 @@ mod test {
             assert!(!state.successfully_claimed(s1));
             assert!(!state.is_claiming(s1));
             for &s2 in &Seat::VALUES {
-                assert!(!state.will_successfully_claim(s1, s2));
                 assert!(!state.has_accepted(s1, s2));
             }
         }
@@ -67,8 +65,7 @@ mod test {
 
     #[test]
     fn claim() {
-        let mut state = ClaimState::new();
-        state.claim(Seat::East);
+        let state = ClaimState::new().claim(Seat::East);
         for &s1 in &Seat::VALUES {
             assert!(!state.successfully_claimed(s1));
             if s1 == Seat::East {
@@ -77,7 +74,6 @@ mod test {
                 assert!(!state.is_claiming(s1));
             }
             for &s2 in &Seat::VALUES {
-                assert!(!state.will_successfully_claim(s1, s2));
                 if s1 == Seat::East && s2 == Seat::East {
                     assert!(state.has_accepted(s1, s2));
                 } else {
@@ -89,9 +85,9 @@ mod test {
 
     #[test]
     fn accept_claim_once() {
-        let mut state = ClaimState::new();
-        state.claim(Seat::East);
-        state.accept(Seat::East, Seat::North);
+        let state = ClaimState::new()
+            .claim(Seat::East)
+            .accept(Seat::East, Seat::North);
         for &s1 in &Seat::VALUES {
             assert!(!state.successfully_claimed(s1));
             if s1 == Seat::East {
@@ -100,7 +96,6 @@ mod test {
                 assert!(!state.is_claiming(s1));
             }
             for &s2 in &Seat::VALUES {
-                assert!(!state.will_successfully_claim(s1, s2));
                 if s1 == Seat::East && (s2 == Seat::East || s2 == Seat::North) {
                     assert!(state.has_accepted(s1, s2));
                 } else {
@@ -112,10 +107,10 @@ mod test {
 
     #[test]
     fn accept_claim_twice() {
-        let mut state = ClaimState::new();
-        state.claim(Seat::East);
-        state.accept(Seat::East, Seat::North);
-        state.accept(Seat::East, Seat::South);
+        let state = ClaimState::new()
+            .claim(Seat::East)
+            .accept(Seat::East, Seat::North)
+            .accept(Seat::East, Seat::South);
         for &s1 in &Seat::VALUES {
             assert!(!state.successfully_claimed(s1));
             if s1 == Seat::East {
@@ -124,11 +119,6 @@ mod test {
                 assert!(!state.is_claiming(s1));
             }
             for &s2 in &Seat::VALUES {
-                if s1 == Seat::East && s2 == Seat::West {
-                    assert!(state.will_successfully_claim(s1, s2));
-                } else {
-                    assert!(!state.will_successfully_claim(s1, s2));
-                }
                 if s1 == Seat::East && s2 != Seat::West {
                     assert!(state.has_accepted(s1, s2));
                 } else {
@@ -140,11 +130,11 @@ mod test {
 
     #[test]
     fn accept_claim_all() {
-        let mut state = ClaimState::new();
-        state.claim(Seat::East);
-        state.accept(Seat::East, Seat::North);
-        state.accept(Seat::East, Seat::South);
-        state.accept(Seat::East, Seat::West);
+        let state = ClaimState::new()
+            .claim(Seat::East)
+            .accept(Seat::East, Seat::North)
+            .accept(Seat::East, Seat::South)
+            .accept(Seat::East, Seat::West);
         for &s1 in &Seat::VALUES {
             if s1 == Seat::East {
                 assert!(state.successfully_claimed(s1));
@@ -158,11 +148,6 @@ mod test {
             }
             for &s2 in &Seat::VALUES {
                 if s1 == Seat::East {
-                    assert!(state.will_successfully_claim(s1, s2));
-                } else {
-                    assert!(!state.will_successfully_claim(s1, s2));
-                }
-                if s1 == Seat::East {
                     assert!(state.has_accepted(s1, s2));
                 } else {
                     assert!(!state.has_accepted(s1, s2));
@@ -173,15 +158,14 @@ mod test {
 
     #[test]
     fn reject_claim() {
-        let mut state = ClaimState::new();
-        state.claim(Seat::East);
-        state.accept(Seat::East, Seat::North);
-        state.reject(Seat::East);
+        let state = ClaimState::new()
+            .claim(Seat::East)
+            .accept(Seat::East, Seat::North)
+            .reject(Seat::East);
         for &s1 in &Seat::VALUES {
             assert!(!state.successfully_claimed(s1));
             assert!(!state.is_claiming(s1));
             for &s2 in &Seat::VALUES {
-                assert!(!state.will_successfully_claim(s1, s2));
                 assert!(!state.has_accepted(s1, s2));
             }
         }

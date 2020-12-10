@@ -1,5 +1,5 @@
 use crate::TranspositionTable;
-use turbo_hearts_api::{Card, Cards, GameEvent, GameState, Seat, WonState};
+use turbo_hearts_api::{Card, Cards, GameEvent, GameState, WonState};
 
 pub struct BruteForce {
     hands: [Cards; 4],
@@ -14,22 +14,14 @@ impl BruteForce {
         }
     }
 
-    pub fn solve(&mut self, state: GameState) -> (Card, [i16; 4]) {
-        self.solve_rec(state, Seat::North)
-    }
-
-    fn solve_rec(&mut self, state: GameState, prev_seat: Seat) -> (Card, [i16; 4]) {
+    pub fn solve(&mut self, state: &mut GameState) -> (Card, WonState) {
         if state.played.len() >= 48 {
-            let mut state = state;
             while state.played != Cards::ALL {
                 let seat = state.next_actor.unwrap();
                 let card = (self.hands[seat.idx()] - state.played).max();
                 state.apply(&GameEvent::Play { seat, card });
             }
-            return (
-                Card::TwoClubs,
-                money(state.won, state.charges.all_charges()),
-            );
+            return (Card::TwoClubs, state.won);
         }
         let seat = state.next_actor.unwrap();
         let key = if state.current_trick.is_empty() {
@@ -44,45 +36,23 @@ impl BruteForce {
             None
         };
         let plays = state.legal_plays(self.hands[seat.idx()]);
-        let played = if state.current_trick.is_empty() {
-            state.played
-        } else {
-            state.played - (state.current_trick.cards() & state.current_trick.suit().cards()).max()
-        };
-        let plays = plays.distinct_plays(played);
         let mut best_play = Card::TwoClubs;
-        let mut best_scores = [-2000; 4];
-        for card in plays.shuffled() {
+        let mut best_won = WonState::new();
+        let mut best_money = -1000;
+        for card in plays.distinct_plays(state.played, state.current_trick) {
             let mut state = state.clone();
             state.apply(&GameEvent::Play { seat, card });
-            let prev = if seat == state.next_actor.unwrap() {
-                prev_seat
-            } else {
-                seat
-            };
-            let (_, opt_scores) = self.solve_rec(state, prev);
-            if opt_scores[seat.idx()] > best_scores[seat.idx()] {
-                best_scores = opt_scores;
+            let (_, opt_won) = self.solve(&mut state);
+            let opt_money = opt_won.scores(state.charges.all_charges()).money(seat);
+            if opt_money > best_money {
                 best_play = card;
+                best_won = opt_won;
+                best_money = opt_money;
             }
         }
         if let Some(key) = key {
-            self.table.cache(key, best_play, best_scores);
+            self.table.cache(key, best_play, best_won);
         }
-        (best_play, best_scores)
+        (best_play, best_won)
     }
-}
-
-fn money(won: WonState, charges: Cards) -> [i16; 4] {
-    let north = won.score(Seat::North, charges);
-    let east = won.score(Seat::East, charges);
-    let south = won.score(Seat::South, charges);
-    let west = won.score(Seat::West, charges);
-    let total = north + east + south + west;
-    [
-        total - 4 * north,
-        total - 4 * east,
-        total - 4 * south,
-        total - 4 * west,
-    ]
 }

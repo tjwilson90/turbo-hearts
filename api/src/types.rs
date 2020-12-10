@@ -3,6 +3,7 @@ use std::{
     convert::Infallible,
     fmt,
     fmt::{Debug, Display, Formatter},
+    mem,
     str::FromStr,
 };
 use uuid::Uuid;
@@ -83,6 +84,13 @@ pub enum PassDirection {
     Right,
     Across,
     Keeper,
+}
+
+impl From<u8> for PassDirection {
+    fn from(n: u8) -> Self {
+        debug_assert!(n < 4, "n={}", n);
+        unsafe { mem::transmute(n) }
+    }
 }
 
 impl Display for PassDirection {

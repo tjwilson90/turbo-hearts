@@ -1,9 +1,9 @@
-use rand::{prelude::SliceRandom, rngs::SmallRng, Rng, SeedableRng};
+use rand::{prelude::SliceRandom, Rng};
 use std::time::Instant;
 use turbo_hearts_api::{can_claim, Cards, GameState, Seat};
 
 fn main() {
-    let mut rng = SmallRng::from_entropy();
+    let mut rng = rand::thread_rng();
     let mut max = 0;
     let deck = Cards::ALL.into_iter().collect::<Vec<_>>();
     let state = GameState {

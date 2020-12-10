@@ -1,4 +1,4 @@
-use crate::{Card, Rank, Suit};
+use crate::{Card, Rank, Suit, Trick};
 use serde::{
     de::{SeqAccess, Visitor},
     export::{fmt::Error, Formatter},
@@ -125,15 +125,11 @@ impl Cards {
     }
 
     pub fn above(self, card: Card) -> Self {
-        Cards {
-            bits: (self & card.suit().cards()).bits & !(2 * Cards::from(card).bits - 1),
-        }
+        self & card.above()
     }
 
     pub fn below(self, card: Card) -> Self {
-        Cards {
-            bits: (self & card.suit().cards()).bits & (Cards::from(card).bits - 1),
-        }
+        self & card.below()
     }
 
     pub fn powerset(self) -> impl Iterator<Item = Cards> {
@@ -157,7 +153,10 @@ impl Cards {
         }
     }
 
-    pub fn distinct_plays(self, played: Cards) -> Cards {
+    pub fn distinct_plays(self, mut played: Cards, trick: Trick) -> Cards {
+        if !trick.is_empty() {
+            played -= (trick.cards() & trick.suit().cards()).max();
+        }
         let always_distinct = self & (Cards::NINES | Cards::CHARGEABLE);
         let mut magic = (self - always_distinct).bits;
         let equivalent_blocks = magic | played.bits;
@@ -611,15 +610,16 @@ mod test {
 
     #[test]
     fn test_distinct_plays() {
-        assert_eq!(c!(24C).distinct_plays(c!(5C)), c!(24C));
-        assert_eq!(c!(24C).distinct_plays(c!(3C)), c!(4C));
-        assert_eq!(c!(2H AD).distinct_plays(c!(3H KD)), c!(2H AD));
-        assert_eq!(c!(T9S).distinct_plays(c!(3H KD)), c!(T9S));
-        assert_eq!(c!(JT9S).distinct_plays(c!(3H KD)), c!(J9S));
-        assert_eq!(c!(J9S).distinct_plays(c!(TS)), c!(J9S));
-        assert_eq!(c!(QJT9S).distinct_plays(c!(3S)), c!(QJ9S));
-        assert_eq!(c!(KJ7532S).distinct_plays(c!(A6S)), c!(KJ73S));
-        assert_eq!(c!(QJT987C).distinct_plays(c!(A6S)), c!(QT98C));
-        assert_eq!(c!(KQJT987D).distinct_plays(c!(A6S)), c!(KJT98D));
+        let trick = Trick::new();
+        assert_eq!(c!(24C).distinct_plays(c!(5C), trick), c!(24C));
+        assert_eq!(c!(24C).distinct_plays(c!(3C), trick), c!(4C));
+        assert_eq!(c!(2H AD).distinct_plays(c!(3H KD), trick), c!(2H AD));
+        assert_eq!(c!(T9S).distinct_plays(c!(3H KD), trick), c!(T9S));
+        assert_eq!(c!(JT9S).distinct_plays(c!(3H KD), trick), c!(J9S));
+        assert_eq!(c!(J9S).distinct_plays(c!(TS), trick), c!(J9S));
+        assert_eq!(c!(QJT9S).distinct_plays(c!(3S), trick), c!(QJ9S));
+        assert_eq!(c!(KJ7532S).distinct_plays(c!(A6S), trick), c!(KJ73S));
+        assert_eq!(c!(QJT987C).distinct_plays(c!(A6S), trick), c!(QT98C));
+        assert_eq!(c!(KQJT987D).distinct_plays(c!(A6S), trick), c!(KJT98D));
     }
 }

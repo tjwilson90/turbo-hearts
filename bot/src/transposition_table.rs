@@ -3,7 +3,7 @@ use turbo_hearts_api::{Card, Cards, Rank, Seat, Suit, Suits, WonState};
 
 pub struct TranspositionTable {
     suits: SuitTranspositions,
-    table: HashMap<TranspositionKey, (Card, [i16; 4])>,
+    table: HashMap<TranspositionKey, (Card, WonState)>,
 }
 
 impl TranspositionTable {
@@ -20,7 +20,7 @@ impl TranspositionTable {
         leads: Suits,
         won: WonState,
         played: Cards,
-    ) -> (TranspositionKey, Option<(Card, [i16; 4])>) {
+    ) -> (TranspositionKey, Option<(Card, WonState)>) {
         let key = TranspositionKey {
             leader,
             leads,
@@ -35,8 +35,8 @@ impl TranspositionTable {
         (key, self.table.get(&key).cloned())
     }
 
-    pub fn cache(&mut self, key: TranspositionKey, play: Card, scores: [i16; 4]) {
-        self.table.insert(key, (play, scores));
+    pub fn cache(&mut self, key: TranspositionKey, play: Card, won: WonState) {
+        self.table.insert(key, (play, won));
     }
 }
 

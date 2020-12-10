@@ -1,7 +1,11 @@
 use crate::{Cards, Suit};
-use std::ops::{BitOr, BitOrAssign};
+use std::{
+    fmt,
+    fmt::Formatter,
+    ops::{BitOr, BitOrAssign},
+};
 
-#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Copy, Eq, Hash, PartialEq)]
 pub struct Suits {
     bits: u8,
 }
@@ -70,5 +74,16 @@ impl BitOrAssign<Suits> for Suits {
 impl BitOrAssign<Suit> for Suits {
     fn bitor_assign(&mut self, rhs: Suit) {
         *self |= Self::from(rhs)
+    }
+}
+
+impl fmt::Debug for Suits {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), fmt::Error> {
+        for &suit in &Suit::VALUES {
+            if self.contains(suit) {
+                write!(f, "{}", suit.char())?;
+            }
+        }
+        Ok(())
     }
 }

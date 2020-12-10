@@ -95,6 +95,7 @@ class GameListItemInternal extends React.PureComponent<GameListItem.Props> {
                     <option value="gotta_try" className="button">Gotta Try</option>
                     <option value="heuristic" className="button">Heuristic</option>
                     <option value="simulate" className="button">Simulate</option>
+                    <option value="neural_net" className="button">Neural Net</option>
                 </select>
                 {this.props.game.players.length >= 4 && (
                     <div className="button" onClick={this.props.startGame}>

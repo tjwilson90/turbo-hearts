@@ -12,7 +12,7 @@ log = "*"
 once_cell = "*"
 r2d2 = "*"
 r2d2_sqlite = "*"
-rand = { version = "*", features = ["small_rng"] }
+rand = "*"
 rand_distr = "*"
 reqwest = { version = "*", default-features = false, features = ["json", "rustls-tls"] }
 rusqlite = { version = "*", features = ["bundled"] }
