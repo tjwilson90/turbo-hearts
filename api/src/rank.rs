@@ -33,6 +33,10 @@ impl Rank {
         RANKS[self as usize]
     }
 
+    pub fn idx(self) -> usize {
+        self as usize
+    }
+
     pub fn with_suit(self, suit: Suit) -> Card {
         Card::new(self, suit)
     }

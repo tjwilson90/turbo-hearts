@@ -88,6 +88,20 @@ impl Card {
     pub fn with_suit(self, suit: Suit) -> Card {
         Card::new(self.rank(), suit)
     }
+
+    pub fn above(self) -> Cards {
+        let rank_mask = (!((2 << self.rank().idx()) - 1)) & 0x1fff;
+        Cards {
+            bits: rank_mask << (16 * self.suit().idx()),
+        }
+    }
+
+    pub fn below(self) -> Cards {
+        let rank_mask = (1 << self.rank().idx()) - 1;
+        Cards {
+            bits: rank_mask << (16 * self.suit().idx()),
+        }
+    }
 }
 
 impl From<u8> for Card {
@@ -163,5 +177,19 @@ mod test {
         assert_eq!(Card::AceHearts.suit(), Suit::Hearts);
         assert_eq!(Card::TwoSpades.suit(), Suit::Spades);
         assert_eq!(Card::AceSpades.suit(), Suit::Spades);
+    }
+
+    #[test]
+    fn test_above() {
+        assert_eq!(Card::TenSpades.above(), "AKQJS".parse().unwrap());
+        assert_eq!(Card::AceHearts.above(), "".parse().unwrap());
+        assert_eq!(Card::TwoDiamonds.above(), "AKQJT9876543D".parse().unwrap());
+    }
+
+    #[test]
+    fn test_below() {
+        assert_eq!(Card::TenSpades.below(), "98765432S".parse().unwrap());
+        assert_eq!(Card::AceHearts.below(), "KQJT98765432H".parse().unwrap());
+        assert_eq!(Card::TwoDiamonds.below(), "".parse().unwrap());
     }
 }

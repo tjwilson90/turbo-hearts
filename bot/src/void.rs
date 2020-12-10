@@ -1,6 +1,7 @@
+use std::{fmt, fmt::Formatter};
 use turbo_hearts_api::{Card, Cards, GameEvent, GameState, Seat, Suit};
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone)]
 pub struct VoidState {
     state: u16,
 }
@@ -58,5 +59,23 @@ impl VoidState {
             }
             _ => {}
         }
+    }
+}
+
+impl fmt::Debug for VoidState {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), fmt::Error> {
+        for &seat in &Seat::VALUES {
+            if seat != Seat::North {
+                write!(f, ", ")?;
+            }
+            write!(f, "{} [", seat)?;
+            for &suit in &Suit::VALUES {
+                if self.is_void(seat, suit) {
+                    write!(f, "{}", suit.char())?;
+                }
+            }
+            write!(f, "]")?;
+        }
+        Ok(())
     }
 }

@@ -354,7 +354,11 @@ impl Games {
                         claimer,
                         acceptor: seat,
                     }];
-                    let ends_hand = game.state.claims.will_successfully_claim(claimer, seat);
+                    let ends_hand = game
+                        .state
+                        .claims
+                        .accept(claimer, seat)
+                        .successfully_claimed(claimer);
                     if ends_hand {
                         game.add_deal_event(&mut events);
                     }
@@ -624,13 +628,14 @@ impl Game {
     where
         F: FnMut(&mut Game, &GameEvent),
     {
+        let scores = self.state.scores();
         broadcast(
             self,
             &GameEvent::HandComplete {
-                north_score: self.state.score(Seat::North),
-                east_score: self.state.score(Seat::East),
-                south_score: self.state.score(Seat::South),
-                west_score: self.state.score(Seat::West),
+                north_score: scores.score(Seat::North),
+                east_score: scores.score(Seat::East),
+                south_score: scores.score(Seat::South),
+                west_score: scores.score(Seat::West),
             },
         );
         if self.state.phase.is_complete() {
