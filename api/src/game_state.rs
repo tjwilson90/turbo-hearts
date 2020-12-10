@@ -1,6 +1,6 @@
 use crate::{
-    Card, Cards, ChargeState, ChargingRules, ClaimState, DoneState, GameEvent, GamePhase, Seat,
-    Suits, Trick, WonState,
+    Card, Cards, ChargeState, ChargingRules, ClaimState, DoneState, GameEvent, GamePhase, Scores,
+    Seat, Suits, Trick, WonState,
 };
 
 #[derive(Clone, Debug)]
@@ -54,8 +54,8 @@ impl GameState {
         }
     }
 
-    pub fn score(&self, seat: Seat) -> i16 {
-        self.won.score(seat, self.charges.all_charges())
+    pub fn scores(&self) -> Scores {
+        self.won.scores(self.charges.all_charges())
     }
 
     pub fn can_charge(&self, seat: Seat) -> bool {
@@ -72,22 +72,22 @@ impl GameState {
             }
             GameEvent::Deal { .. } => {
                 self.charge_count = 0;
-                self.charges.clear();
+                self.charges = ChargeState::new();
                 self.next_actor = self.phase.first_charger(self.rules);
                 self.played = Cards::NONE;
                 self.claims = ClaimState::new();
                 self.won = WonState::new();
                 self.led_suits = Suits::NONE;
-                self.current_trick.clear();
+                self.current_trick = Trick::new();
             }
             GameEvent::SendPass { from, .. } => {
-                self.done.send_pass(*from);
+                self.done = self.done.send_pass(*from);
             }
             GameEvent::RecvPass { to, .. } => {
-                self.done.recv_pass(*to);
+                self.done = self.done.recv_pass(*to);
                 if self.done.all_recv_pass() {
                     self.phase = self.phase.next(self.charge_count != 0);
-                    self.done.reset();
+                    self.done = DoneState::new();
                     self.next_actor = self.phase.first_charger(self.rules);
                 }
             }
@@ -97,7 +97,7 @@ impl GameState {
             }
             GameEvent::Charge { seat, cards } => {
                 self.charge_count += cards.len() as u8;
-                self.charges.charge(*seat, *cards);
+                self.charges = self.charges.charge(*seat, *cards);
                 self.charge(*seat, cards.len());
             }
             GameEvent::RevealCharges {
@@ -106,44 +106,47 @@ impl GameState {
                 south,
                 west,
             } => {
-                self.charges.charge(Seat::North, *north);
-                self.charges.charge(Seat::East, *east);
-                self.charges.charge(Seat::South, *south);
-                self.charges.charge(Seat::West, *west);
+                self.charges = self
+                    .charges
+                    .charge(Seat::North, *north)
+                    .charge(Seat::East, *east)
+                    .charge(Seat::South, *south)
+                    .charge(Seat::West, *west);
             }
             GameEvent::Play { seat, card } => {
                 self.played |= *card;
-                self.current_trick.push(*card);
+                self.current_trick = self.current_trick.push(*card);
                 self.next_actor = Some(seat.left());
                 if self.current_trick.is_complete() || self.played == Cards::ALL {
                     self.led_suits |= self.current_trick.suit();
                     let winning_seat = self.current_trick.winning_seat(seat.left());
-                    self.won.win(winning_seat, self.current_trick.cards());
-                    self.current_trick.clear();
+                    self.won = self.won.win(winning_seat, self.current_trick.cards());
+                    self.current_trick = Trick::new();
                     self.next_actor = Some(winning_seat);
                     if self.played == Cards::ALL {
                         self.phase = self.phase.next(self.charge_count != 0);
-                        self.done.reset();
+                        self.done = DoneState::new();
                     }
                 }
             }
             GameEvent::Claim { seat, .. } => {
-                self.claims.claim(*seat);
+                self.claims = self.claims.claim(*seat);
             }
             GameEvent::AcceptClaim { claimer, acceptor } => {
-                if self.claims.accept(*claimer, *acceptor) {
-                    self.won.win(
+                self.claims = self.claims.accept(*claimer, *acceptor);
+                if self.claims.successfully_claimed(*claimer) {
+                    self.won = self.won.win(
                         *claimer,
                         (Cards::ALL - self.played) | self.current_trick.cards(),
                     );
-                    self.current_trick.clear();
+                    self.current_trick = Trick::new();
                     self.phase = self.phase.next(self.charge_count != 0);
-                    self.done.reset();
+                    self.done = DoneState::new();
                     self.next_actor = None;
                 }
             }
             GameEvent::RejectClaim { claimer, .. } => {
-                self.claims.reject(*claimer);
+                self.claims = self.claims.reject(*claimer);
             }
             _ => {}
         }
@@ -154,16 +157,16 @@ impl GameState {
             *charger = charger.left();
         }
         if count == 0 {
-            self.done.charge(seat);
+            self.done = self.done.charge(seat);
             if self.done.all_charge() {
                 self.phase = self.phase.next(self.charge_count != 0);
-                self.done.reset();
+                self.done = DoneState::new();
                 self.next_actor = None;
             }
         } else {
-            self.done.reset();
+            self.done = DoneState::new();
             if !self.rules.chain() {
-                self.done.charge(seat);
+                self.done = self.done.charge(seat);
             }
         }
     }

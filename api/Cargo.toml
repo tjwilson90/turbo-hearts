@@ -6,7 +6,7 @@ edition = "2018"
 
 [dependencies]
 log = "*"
-rand = { version = "*", features = ["small_rng"] }
+rand = "*"
 rand_chacha = "*"
 rusqlite = { version = "*", features = ["bundled"] }
 serde = { version = "*", features = ["derive"] }

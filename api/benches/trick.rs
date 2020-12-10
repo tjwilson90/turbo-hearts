@@ -29,11 +29,7 @@ pub fn is_empty(c: &mut Criterion) {
 pub fn suit(c: &mut Criterion) {
     c.bench_with_input(
         BenchmarkId::new("suit", ""),
-        &{
-            let mut trick = Trick::new();
-            trick.push(Card::FiveDiamonds);
-            trick
-        },
+        &Trick::new().push(Card::FiveDiamonds),
         |b, trick| {
             b.iter(|| trick.suit());
         },
@@ -44,59 +40,47 @@ pub fn is_complete(c: &mut Criterion) {
     let mut g = c.benchmark_group("is_complete");
     g.bench_with_input(
         "length 3",
-        &{
-            let mut trick = Trick::new();
-            trick.push(Card::FiveClubs);
-            trick.push(Card::JackClubs);
-            trick.push(Card::EightClubs);
-            trick
-        },
+        &Trick::new()
+            .push(Card::FiveClubs)
+            .push(Card::JackClubs)
+            .push(Card::EightClubs),
         |b, trick| {
             b.iter(|| trick.is_complete());
         },
     );
     g.bench_with_input(
         "length 4, no nine",
-        &{
-            let mut trick = Trick::new();
-            trick.push(Card::FiveClubs);
-            trick.push(Card::JackClubs);
-            trick.push(Card::EightClubs);
-            trick.push(Card::SevenSpades);
-            trick
-        },
+        &Trick::new()
+            .push(Card::FiveClubs)
+            .push(Card::JackClubs)
+            .push(Card::EightClubs)
+            .push(Card::SevenSpades),
         |b, trick| {
             b.iter(|| trick.is_complete());
         },
     );
     g.bench_with_input(
         "length 4, nine",
-        &{
-            let mut trick = Trick::new();
-            trick.push(Card::FiveClubs);
-            trick.push(Card::JackClubs);
-            trick.push(Card::NineClubs);
-            trick.push(Card::SevenSpades);
-            trick
-        },
+        &Trick::new()
+            .push(Card::FiveClubs)
+            .push(Card::JackClubs)
+            .push(Card::NineClubs)
+            .push(Card::SevenSpades),
         |b, trick| {
             b.iter(|| trick.is_complete());
         },
     );
     g.bench_with_input(
         "length 8",
-        &{
-            let mut trick = Trick::new();
-            trick.push(Card::FiveClubs);
-            trick.push(Card::JackClubs);
-            trick.push(Card::NineClubs);
-            trick.push(Card::SevenSpades);
-            trick.push(Card::AceClubs);
-            trick.push(Card::QueenSpades);
-            trick.push(Card::ThreeClubs);
-            trick.push(Card::EightSpades);
-            trick
-        },
+        &Trick::new()
+            .push(Card::FiveClubs)
+            .push(Card::JackClubs)
+            .push(Card::NineClubs)
+            .push(Card::SevenSpades)
+            .push(Card::AceClubs)
+            .push(Card::QueenSpades)
+            .push(Card::ThreeClubs)
+            .push(Card::EightSpades),
         |b, trick| {
             b.iter(|| trick.is_complete());
         },
@@ -111,7 +95,7 @@ pub fn cards(c: &mut Criterion) {
         b.iter(|| trick.cards());
     });
     for i in 0..8 {
-        trick.push(CARDS[i]);
+        trick = trick.push(CARDS[i]);
         g.bench_with_input(format!("{}", i + 1), &trick, |b, trick| {
             b.iter(|| trick.cards());
         });
@@ -123,7 +107,7 @@ pub fn winning_seat(c: &mut Criterion) {
     let mut g = c.benchmark_group("winning_seat");
     let mut trick = Trick::new();
     for i in 0..8 {
-        trick.push(Card::from(i));
+        trick = trick.push(Card::from(i));
         g.bench_with_input(format!("{}", i + 1), &trick, |b, trick| {
             b.iter(|| trick.winning_seat(Seat::North));
         });
@@ -134,11 +118,7 @@ pub fn winning_seat(c: &mut Criterion) {
 pub fn push(c: &mut Criterion) {
     c.bench_function("push", |b| {
         b.iter_batched(
-            || {
-                let mut trick = Trick::new();
-                trick.push(Card::FiveDiamonds);
-                trick
-            },
+            || Trick::new().push(Card::FiveDiamonds),
             |mut trick| trick.push(Card::ThreeSpades),
             BatchSize::SmallInput,
         )

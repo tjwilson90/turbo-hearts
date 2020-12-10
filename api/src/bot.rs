@@ -10,11 +10,12 @@ pub enum BotStrategy {
     Heuristic,
     Random,
     Simulate,
+    NeuralNet,
 }
 
 sql_json!(BotStrategy);
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct BotState {
     pub seat: Seat,
     pub pre_pass_hand: Cards,
@@ -25,13 +26,13 @@ pub fn can_claim(seat: Seat, hand: Cards, state: &GameState) -> bool {
     if state.current_trick.is_empty() && state.next_actor == Some(seat) {
         return can_leader_claim(hand, state);
     }
-    let mut played = state.played;
-    if !state.current_trick.is_empty() {
-        played -= (state.current_trick.cards() & state.current_trick.suit().cards()).max();
-    }
     match state.next_actor {
         Some(actor) if seat == actor => {
-            for card in state.legal_plays(hand).distinct_plays(played).shuffled() {
+            for card in state
+                .legal_plays(hand)
+                .distinct_plays(state.played, state.current_trick)
+                .shuffled()
+            {
                 let mut state = state.clone();
                 state.apply(&GameEvent::Play { seat, card });
                 if state.current_trick.is_empty() && state.next_actor != Some(seat) {
@@ -45,7 +46,7 @@ pub fn can_claim(seat: Seat, hand: Cards, state: &GameState) -> bool {
         }
         Some(actor) => {
             for card in (Cards::ALL - state.played - hand)
-                .distinct_plays(played)
+                .distinct_plays(state.played, state.current_trick)
                 .shuffled()
             {
                 let mut state = state.clone();
@@ -149,7 +150,7 @@ mod test {
             let mut state = GameState::new();
             state.played = Cards::SPADES - hand - remaining;
             if !can_lead_charged {
-                state.charges.charge(Seat::North, Cards::QUEEN_SPADES);
+                state.charges = state.charges.charge(Seat::North, Cards::QUEEN_SPADES);
             }
             losers(Suit::Spades, hand, &state)
         }
