@@ -76,10 +76,10 @@ impl Writer {
             .unwrap()
             .as_millis() as i64;
         Ok(Self {
-            train_lead: writer(format!("data/train/lead/{}.tfrec", timestamp))?,
-            train_follow: writer(format!("data/train/follow/{}.tfrec", timestamp))?,
-            validate_lead: writer(format!("data/validate/lead/{}.tfrec", timestamp))?,
-            validate_follow: writer(format!("data/validate/follow/{}.tfrec", timestamp))?,
+            train_lead: writer(format!("data/train/lead/{}.tfrec.gz", timestamp))?,
+            train_follow: writer(format!("data/train/follow/{}.tfrec.gz", timestamp))?,
+            validate_lead: writer(format!("data/validate/lead/{}.tfrec.gz", timestamp))?,
+            validate_follow: writer(format!("data/validate/follow/{}.tfrec.gz", timestamp))?,
         })
     }
 
