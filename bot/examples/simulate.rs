@@ -1,6 +1,6 @@
 use rand::seq::SliceRandom;
 use turbo_hearts_api::{BotState, Card, Cards, GameEvent, GameState, PassDirection, Seat};
-use turbo_hearts_bot::SimulateBot;
+use turbo_hearts_bot::{Algorithm, NeuralNetworkBot};
 
 fn bot(seat: Seat, deck: &[Card]) -> BotState {
     let hand = deck[13 * seat.idx()..13 * (seat.idx() + 1)]
@@ -19,7 +19,7 @@ async fn main() {
     env_logger::init();
     let mut deck = Cards::ALL.into_iter().collect::<Vec<_>>();
     deck.shuffle(&mut rand::thread_rng());
-    let mut sim = SimulateBot::new();
+    let mut sim = NeuralNetworkBot::new();
     let mut bots = [
         bot(Seat::North, &deck),
         bot(Seat::East, &deck),
@@ -35,7 +35,7 @@ async fn main() {
         pass: PassDirection::Left,
     });
     for bot in &mut bots {
-        let pass = sim.pass(&bot, &state).await;
+        let pass = sim.pass(&bot, &state);
         state.apply(&GameEvent::SendPass {
             from: bot.seat,
             cards: pass,
@@ -62,7 +62,7 @@ async fn main() {
     while state.phase.is_charging() {
         for bot in &bots {
             if state.phase.is_charging() && !state.done.charged(bot.seat) {
-                let cards = sim.charge(&bot, &state).await;
+                let cards = sim.charge(&bot, &state);
                 state.apply(&GameEvent::Charge {
                     seat: bot.seat,
                     cards,
@@ -84,7 +84,7 @@ async fn main() {
         }
         let seat = state.next_actor.unwrap();
         let bot = &bots[seat.idx()];
-        let card = sim.play(bot, &state).await;
+        let card = sim.play(bot, &state);
         println!(
             "{} plays {} from {}",
             bot.seat,
@@ -94,5 +94,15 @@ async fn main() {
         let event = GameEvent::Play { seat, card };
         state.apply(&event);
         sim.on_event(&bot, &state, &event);
+    }
+    println!("-------------------------------");
+    let scores = state.won.scores(state.charges.all_charges());
+    for &s in &Seat::VALUES {
+        println!(
+            "{}: score {}, money {}",
+            s,
+            scores.score(s),
+            scores.money(s)
+        );
     }
 }

@@ -1,4 +1,4 @@
-use crate::{Card, Cards, Seat};
+use crate::{Card, Cards, Scores, Seat};
 use serde::export::Formatter;
 use std::{fmt, fmt::Debug};
 
@@ -19,7 +19,8 @@ impl WonState {
         Self { state: 0 }
     }
 
-    pub fn win(&mut self, seat: Seat, cards: Cards) {
+    #[must_use]
+    pub fn win(self, seat: Seat, cards: Cards) -> Self {
         let mut update = 0;
         update += (cards & Cards::HEARTS).len() as u32;
         if cards.contains(Card::QueenSpades) {
@@ -31,18 +32,20 @@ impl WonState {
         if cards.contains(Card::TenClubs) {
             update += 64;
         }
-        self.state += update << (8 * seat.idx());
+        Self {
+            state: self.state + (update << (8 * seat.idx())),
+        }
     }
 
-    pub fn hearts_broken(&self) -> bool {
+    pub fn hearts_broken(self) -> bool {
         self.state & 0x0f_0f_0f_0f != 0
     }
 
-    pub fn can_run(&self, seat: Seat) -> bool {
+    pub fn can_run(self, seat: Seat) -> bool {
         self.state & (0x1f_1f_1f_1f ^ (0x1f << (8 * seat.idx()))) == 0
     }
 
-    pub fn runner(&self) -> RunState {
+    pub fn runner(self) -> RunState {
         let masked = self.state & 0x1f_1f_1f_1f;
         if masked == 0 {
             return RunState::All;
@@ -54,67 +57,77 @@ impl WonState {
         RunState::Seat(Seat::VALUES[index as usize])
     }
 
-    pub fn hearts(&self, seat: Seat) -> u8 {
+    pub fn hearts(self, seat: Seat) -> u8 {
         ((self.state >> (8 * seat.idx())) & 0xf) as u8
     }
 
-    pub fn queen(&self, seat: Seat) -> bool {
+    pub fn queen(self, seat: Seat) -> bool {
         self.state & (0x10 << (8 * seat.idx())) != 0
     }
 
-    pub fn queen_winner(&self) -> Option<Seat> {
+    pub fn queen_winner(self) -> Option<Seat> {
         Seat::VALUES
             .get(((self.state & 0x10_10_10_10).trailing_zeros() / 8) as usize)
             .cloned()
     }
 
-    pub fn jack(&self, seat: Seat) -> bool {
+    pub fn jack(self, seat: Seat) -> bool {
         self.state & (0x20 << (8 * seat.idx())) != 0
     }
 
-    pub fn jack_winner(&self) -> Option<Seat> {
+    pub fn jack_winner(self) -> Option<Seat> {
         Seat::VALUES
             .get(((self.state & 0x20_20_20_20).trailing_zeros() / 8) as usize)
             .cloned()
     }
 
-    pub fn ten(&self, seat: Seat) -> bool {
+    pub fn ten(self, seat: Seat) -> bool {
         self.state & (0x40 << (8 * seat.idx())) != 0
     }
 
-    pub fn ten_winner(&self) -> Option<Seat> {
+    pub fn ten_winner(self) -> Option<Seat> {
         Seat::VALUES
             .get(((self.state & 0x40_40_40_40).trailing_zeros() / 8) as usize)
             .cloned()
     }
 
-    pub fn score(&self, seat: Seat, charged: Cards) -> i16 {
-        let hearts = if charged.contains(Card::AceHearts) {
-            2 * self.hearts(seat)
+    pub fn scores(self, charged: Cards) -> Scores {
+        let heart_multiplier = if charged.contains(Card::AceHearts) {
+            2
         } else {
-            self.hearts(seat)
-        } as i16;
-
-        let queen = match (self.queen(seat), charged.contains(Card::QueenSpades)) {
-            (true, true) => 26,
-            (true, false) => 13,
-            _ => 0,
+            1
         };
-        let jack = match (self.jack(seat), charged.contains(Card::JackDiamonds)) {
-            (true, true) => -20,
-            (true, false) => -10,
-            _ => 0,
-        };
-        let ten = match (self.ten(seat), charged.contains(Card::TenClubs)) {
-            (true, true) => 4,
-            (true, false) => 2,
-            _ => 1,
-        };
-        if self.queen(seat) && self.hearts(seat) == 13 {
-            ten * (jack - hearts - queen)
-        } else {
-            ten * (jack + hearts + queen)
-        }
+        let mut scores = [
+            heart_multiplier * self.hearts(Seat::North) as i16,
+            heart_multiplier * self.hearts(Seat::East) as i16,
+            heart_multiplier * self.hearts(Seat::South) as i16,
+            heart_multiplier * self.hearts(Seat::West) as i16,
+        ];
+        self.queen_winner().map(|s| {
+            scores[s.idx()] += if charged.contains(Card::QueenSpades) {
+                26
+            } else {
+                13
+            };
+            if self.hearts(s) == 13 {
+                scores[s.idx()] *= -1;
+            }
+        });
+        self.jack_winner().map(|s| {
+            scores[s.idx()] += if charged.contains(Card::JackDiamonds) {
+                -20
+            } else {
+                -10
+            };
+        });
+        self.ten_winner().map(|s| {
+            scores[s.idx()] *= if charged.contains(Card::TenClubs) {
+                4
+            } else {
+                2
+            };
+        });
+        Scores::new(scores)
     }
 }
 
@@ -124,7 +137,7 @@ impl fmt::Debug for WonState {
             if seat != Seat::North {
                 write!(f, ", ")?;
             }
-            write!(f, "{} [{} H", seat, self.hearts(seat))?;
+            write!(f, "{} [{}H", seat, self.hearts(seat))?;
             if self.queen(seat) {
                 write!(f, ", QS")?;
             }

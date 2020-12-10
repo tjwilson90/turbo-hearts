@@ -1,6 +1,8 @@
 use crate::{Card, Cards, Seat};
+use serde::export::Formatter;
+use std::fmt;
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone)]
 pub struct ChargeState {
     charges: u16,
 }
@@ -10,13 +12,10 @@ impl ChargeState {
         Self { charges: 0 }
     }
 
-    pub fn clear(&mut self) {
-        self.charges = 0;
-    }
-
-    pub fn charge(&mut self, seat: Seat, cards: Cards) {
+    #[must_use]
+    pub fn charge(self, seat: Seat, cards: Cards) -> Self {
+        let mut mask = 0;
         if !cards.is_empty() {
-            let mut mask = 0;
             if cards.contains(Card::QueenSpades) {
                 mask += 8;
             }
@@ -29,11 +28,13 @@ impl ChargeState {
             if cards.contains(Card::TenClubs) {
                 mask += 1;
             }
-            self.charges |= mask << (4 * seat.idx());
+        }
+        Self {
+            charges: self.charges | (mask << (4 * seat.idx())),
         }
     }
 
-    pub fn is_charged(&self, card: Card) -> bool {
+    pub fn is_charged(self, card: Card) -> bool {
         match card {
             Card::QueenSpades => self.charges & 0x8888 != 0,
             Card::AceHearts => self.charges & 0x4444 != 0,
@@ -43,15 +44,15 @@ impl ChargeState {
         }
     }
 
-    pub fn charges(&self, seat: Seat) -> Cards {
+    pub fn charges(self, seat: Seat) -> Cards {
         self.charges_from_mask(self.charges & (0xf << (4 * seat.idx())))
     }
 
-    pub fn all_charges(&self) -> Cards {
+    pub fn all_charges(self) -> Cards {
         self.charges_from_mask(self.charges)
     }
 
-    fn charges_from_mask(&self, mask: u16) -> Cards {
+    fn charges_from_mask(self, mask: u16) -> Cards {
         let mut charges = Cards::NONE;
         if mask & 0x8888 != 0 {
             charges |= Card::QueenSpades;
@@ -66,6 +67,18 @@ impl ChargeState {
             charges |= Card::TenClubs;
         }
         charges
+    }
+}
+
+impl fmt::Debug for ChargeState {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), fmt::Error> {
+        for &seat in &Seat::VALUES {
+            if seat != Seat::North {
+                write!(f, ", ")?;
+            }
+            write!(f, "{} [{}]", seat, self.charges(seat))?;
+        }
+        Ok(())
     }
 }
 
@@ -87,9 +100,9 @@ mod test {
 
     #[test]
     fn charge() {
-        let mut state = ChargeState::new();
-        state.charge(Seat::North, Cards::QUEEN_SPADES);
-        state.charge(Seat::West, Card::TenClubs | Card::JackDiamonds);
+        let state = ChargeState::new()
+            .charge(Seat::North, Cards::QUEEN_SPADES)
+            .charge(Seat::West, Card::TenClubs | Card::JackDiamonds);
         assert_eq!(state.all_charges(), Cards::CHARGEABLE - Card::AceHearts);
         assert_eq!(state.charges(Seat::North), Cards::QUEEN_SPADES);
         assert_eq!(state.charges(Seat::East), Cards::NONE);

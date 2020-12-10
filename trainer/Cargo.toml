@@ -1,0 +1,16 @@
+[package]
+name = "turbo-hearts-trainer"
+version = "0.1.0"
+authors = ["Tim Wilson <twilson@palantir.com>"]
+edition = "2018"
+
+[dependencies]
+ctrlc = "*"
+env_logger = { version = "*", default-features = false, features = ["humantime"] }
+log = "*"
+rand = { version = "*" }
+rand_distr = "*"
+tfrecord = "*"
+threadpool = "*"
+turbo-hearts-api = { path = "../api" }
+turbo-hearts-bot = { path = "../bot" }

@@ -21,20 +21,20 @@ pub enum GamePhase {
 }
 
 impl GamePhase {
-    pub fn next(&self, charged: bool) -> Self {
-        assert_ne!(*self, GamePhase::Complete);
-        if *self == GamePhase::ChargeKeeper1 && charged {
+    pub fn next(self, charged: bool) -> Self {
+        assert_ne!(self, GamePhase::Complete);
+        if self == GamePhase::ChargeKeeper1 && charged {
             GamePhase::PlayKeeper
         } else {
-            unsafe { mem::transmute(*self as u8 + 1) }
+            unsafe { mem::transmute(self as u8 + 1) }
         }
     }
 
-    pub fn is_complete(&self) -> bool {
-        *self == GamePhase::Complete
+    pub fn is_complete(self) -> bool {
+        self == GamePhase::Complete
     }
 
-    pub fn is_passing(&self) -> bool {
+    pub fn is_passing(self) -> bool {
         use GamePhase::*;
         match self {
             PassLeft | PassRight | PassAcross | PassKeeper => true,
@@ -42,7 +42,7 @@ impl GamePhase {
         }
     }
 
-    pub fn is_charging(&self) -> bool {
+    pub fn is_charging(self) -> bool {
         use GamePhase::*;
         match self {
             ChargeLeft | ChargeRight | ChargeAcross | ChargeKeeper1 | ChargeKeeper2 => true,
@@ -50,7 +50,7 @@ impl GamePhase {
         }
     }
 
-    pub fn is_playing(&self) -> bool {
+    pub fn is_playing(self) -> bool {
         use GamePhase::*;
         match self {
             PlayLeft | PlayRight | PlayAcross | PlayKeeper => true,
@@ -58,7 +58,7 @@ impl GamePhase {
         }
     }
 
-    pub fn first_charger(&self, rules: ChargingRules) -> Option<Seat> {
+    pub fn first_charger(self, rules: ChargingRules) -> Option<Seat> {
         if rules.free() {
             return None;
         }
@@ -71,7 +71,7 @@ impl GamePhase {
         })
     }
 
-    pub fn pass_receiver(&self, seat: Seat) -> Seat {
+    pub fn pass_receiver(self, seat: Seat) -> Seat {
         use GamePhase::*;
         match self {
             PassLeft | ChargeLeft | PlayLeft => seat.left(),
@@ -81,7 +81,7 @@ impl GamePhase {
         }
     }
 
-    pub fn pass_sender(&self, seat: Seat) -> Seat {
+    pub fn pass_sender(self, seat: Seat) -> Seat {
         use GamePhase::*;
         match self {
             PassLeft | ChargeLeft | PlayLeft => seat.right(),
@@ -91,7 +91,7 @@ impl GamePhase {
         }
     }
 
-    pub fn direction(&self) -> PassDirection {
+    pub fn direction(self) -> PassDirection {
         use GamePhase::*;
         match self {
             PassLeft | ChargeLeft | PlayLeft => PassDirection::Left,

@@ -1,6 +1,6 @@
 use rand::seq::SliceRandom;
 use turbo_hearts_api::{BotState, Card, Cards, GameEvent, GameState, PassDirection, Seat};
-use turbo_hearts_bot::{BruteForce, HeuristicBot};
+use turbo_hearts_bot::{Algorithm, BruteForce, HeuristicBot};
 
 fn bot(seat: Seat, deck: &[Card]) -> BotState {
     let hand = deck[13 * seat.idx()..13 * (seat.idx() + 1)]
@@ -24,6 +24,7 @@ fn main() {
         bot(Seat::South, &deck),
         bot(Seat::West, &deck),
     ];
+    let mut heuristic = HeuristicBot::new();
     let mut state = GameState::new();
     state.apply(&GameEvent::Deal {
         north: bots[0].pre_pass_hand,
@@ -33,7 +34,7 @@ fn main() {
         pass: PassDirection::Left,
     });
     for bot in &mut bots {
-        let pass = HeuristicBot::pass_sync(&bot);
+        let pass = heuristic.pass(&bot, &state);
         state.apply(&GameEvent::SendPass {
             from: bot.seat,
             cards: pass,
@@ -52,7 +53,7 @@ fn main() {
     while state.phase.is_charging() {
         for bot in &bots {
             if state.can_charge(bot.seat) {
-                let cards = HeuristicBot::charge_sync(&bot, &state);
+                let cards = heuristic.charge(&bot, &state);
                 state.apply(&GameEvent::Charge {
                     seat: bot.seat,
                     cards,
@@ -67,11 +68,10 @@ fn main() {
             None
         }
     });
-    let mut heuristic = HeuristicBot::new();
     for _ in 0..28 {
         let seat = state.next_actor.unwrap();
         let bot = &bots[seat.idx()];
-        let card = heuristic.play_sync(bot, &state);
+        let card = heuristic.play(bot, &state);
         state.apply(&GameEvent::Play { seat, card });
     }
 
@@ -82,7 +82,7 @@ fn main() {
             bots[2].post_pass_hand,
             bots[3].post_pass_hand,
         ]);
-        let (card, scores) = brute_force.solve(state.clone());
+        let (card, scores) = brute_force.solve(&mut state.clone());
         println!("north {}", bots[0].post_pass_hand - state.played);
         println!("east  {}", bots[1].post_pass_hand - state.played);
         println!("south {}", bots[2].post_pass_hand - state.played);

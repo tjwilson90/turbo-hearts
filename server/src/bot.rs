@@ -12,31 +12,9 @@ use turbo_hearts_api::{
     can_claim, BotState, BotStrategy, Card, Cards, CardsError, GameEvent, GameId, GameState, Seat,
     UserId,
 };
-use turbo_hearts_bot::{Bot, DuckBot, GottaTryBot, HeuristicBot, RandomBot, SimulateBot};
-
-macro_rules! dispatch {
-    ($self:expr, $fun:ident, $($arg:expr),*) => {
-        match &mut $self {
-            Bot::Duck(bot) => bot.$fun($($arg),+),
-            Bot::GottaTry(bot) => bot.$fun($($arg),+),
-            Bot::Heuristic(bot) => bot.$fun($($arg),+),
-            Bot::Random(bot) => bot.$fun($($arg),+),
-            Bot::Simulate(bot) => bot.$fun($($arg),+),
-        }
-    };
-}
-
-macro_rules! dispatch_async {
-    ($self:expr, $fun:ident, $($arg:expr),*) => {
-        match &mut $self {
-            Bot::Duck(bot) => bot.$fun($($arg),+).await,
-            Bot::GottaTry(bot) => bot.$fun($($arg),+).await,
-            Bot::Heuristic(bot) => bot.$fun($($arg),+).await,
-            Bot::Random(bot) => bot.$fun($($arg),+).await,
-            Bot::Simulate(bot) => bot.$fun($($arg),+).await,
-        }
-    };
-}
+use turbo_hearts_bot::{
+    Algorithm, Bot, DuckBot, GottaTryBot, HeuristicBot, NeuralNetworkBot, RandomBot, SimulateBot,
+};
 
 pub struct BotRunner {
     game_id: GameId,
@@ -55,6 +33,7 @@ impl BotRunner {
             BotStrategy::Heuristic => Bot::Heuristic(HeuristicBot::new()),
             BotStrategy::Random => Bot::Random(RandomBot::new()),
             BotStrategy::Simulate => Bot::Simulate(SimulateBot::new()),
+            BotStrategy::NeuralNet => Bot::NeuralNetwork(NeuralNetworkBot::new()),
         };
         Self {
             game_id,
@@ -117,18 +96,17 @@ impl BotRunner {
             }
             match action {
                 Some(Action::Pass) => {
-                    let cards = dispatch_async!(self.bot, pass, &self.bot_state, &self.game_state);
+                    let cards = self.bot.pass(&self.bot_state, &self.game_state);
                     BotRunner::delay(delay, now).await;
                     let _ = games.pass_cards(self.game_id, self.user_id, cards).await;
                 }
                 Some(Action::Charge) => {
-                    let cards =
-                        dispatch_async!(self.bot, charge, &self.bot_state, &self.game_state);
+                    let cards = self.bot.charge(&self.bot_state, &self.game_state);
                     BotRunner::delay(delay, now).await;
                     let _ = games.charge_cards(self.game_id, self.user_id, cards).await;
                 }
                 Some(Action::Play) => {
-                    let card = dispatch_async!(self.bot, play, &self.bot_state, &self.game_state);
+                    let card = self.bot.play(&self.bot_state, &self.game_state);
                     if card != Card::TwoClubs {
                         BotRunner::delay(delay, now).await;
                     }
@@ -164,13 +142,7 @@ impl BotRunner {
             "handle: game_id={}, user_id={}, event={:?}",
             self.game_id, self.user_id, event
         );
-        dispatch!(
-            self.bot,
-            on_event,
-            &self.bot_state,
-            &self.game_state,
-            &event
-        );
+        self.bot.on_event(&self.bot_state, &self.game_state, &event);
         let phase = self.game_state.phase;
         self.game_state.apply(&event);
         if phase.is_playing() && !self.game_state.phase.is_playing() {

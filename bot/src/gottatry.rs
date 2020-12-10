@@ -1,4 +1,4 @@
-use crate::{DuckBot, RandomBot};
+use crate::{Algorithm, DuckBot, RandomBot};
 use turbo_hearts_api::{BotState, Card, Cards, GameEvent, GameState};
 
 pub struct GottaTryBot;
@@ -9,8 +9,8 @@ impl GottaTryBot {
     }
 }
 
-impl GottaTryBot {
-    pub async fn pass(&mut self, bot_state: &BotState, _: &GameState) -> Cards {
+impl Algorithm for GottaTryBot {
+    fn pass(&mut self, bot_state: &BotState, _: &GameState) -> Cards {
         let mut pass = Cards::NONE;
         let mut hand = bot_state.pre_pass_hand;
         for _ in 0..3 {
@@ -24,22 +24,22 @@ impl GottaTryBot {
         pass
     }
 
-    pub async fn charge(&mut self, bot_state: &BotState, game_state: &GameState) -> Cards {
+    fn charge(&mut self, bot_state: &BotState, game_state: &GameState) -> Cards {
         (bot_state.post_pass_hand & Cards::CHARGEABLE) - game_state.charges.all_charges()
     }
 
-    pub async fn play(&mut self, bot_state: &BotState, game_state: &GameState) -> Card {
+    fn play(&mut self, bot_state: &BotState, game_state: &GameState) -> Card {
         let cards = game_state.legal_plays(bot_state.post_pass_hand);
         if !game_state.won.can_run(bot_state.seat) {
-            return DuckBot::new().play(bot_state, game_state).await;
+            return DuckBot::new().play(bot_state, game_state);
         }
         if game_state.current_trick.is_empty() {
-            return RandomBot::new().play(bot_state, game_state).await;
+            return RandomBot::new().play(bot_state, game_state);
         }
         let trick_cards = game_state.current_trick.cards();
         if Cards::POINTS.contains_any(trick_cards) {
             if !game_state.current_trick.suit().cards().contains_any(cards) {
-                DuckBot::new().play(bot_state, game_state).await
+                DuckBot::new().play(bot_state, game_state)
             } else {
                 cards
                     .into_iter()
@@ -54,7 +54,7 @@ impl GottaTryBot {
         }
     }
 
-    pub fn on_event(&mut self, _: &BotState, _: &GameState, _: &GameEvent) {}
+    fn on_event(&mut self, _: &BotState, _: &GameState, _: &GameEvent) {}
 }
 
 fn score(card: Card, hand: Cards) -> usize {
