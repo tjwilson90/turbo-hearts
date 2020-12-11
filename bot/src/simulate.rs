@@ -1,4 +1,4 @@
-use crate::{Algorithm, BruteForce, HandMaker, HeuristicBot, VoidState};
+use crate::{Algorithm, BruteForce, HandMaker, HeuristicBot};
 use log::debug;
 use rand::Rng;
 use std::{collections::HashMap, fmt::Display, hash::Hash, time::Instant};
@@ -6,29 +6,28 @@ use turbo_hearts_api::{can_claim, BotState, Card, Cards, GameEvent, GameState, S
 
 #[derive(Clone)]
 pub struct SimulateBot {
-    void: VoidState,
+    hand_maker: HandMaker,
 }
 
 impl SimulateBot {
     pub fn new() -> Self {
         Self {
-            void: VoidState::new(),
+            hand_maker: HandMaker::new(),
         }
     }
 
     fn heuristic_bot(&mut self) -> HeuristicBot {
-        HeuristicBot::from(self.void.clone())
+        HeuristicBot::from(self.hand_maker.void())
     }
 
     fn charge_blocking(&mut self, bot_state: &BotState, game_state: &GameState) -> Cards {
         let chargeable =
             (bot_state.post_pass_hand - game_state.charges.all_charges()) & Cards::CHARGEABLE;
-        let hand_maker = HandMaker::new(&bot_state, &game_state, self.void.clone());
         let mut money_counts = HashMap::new();
         let now = Instant::now();
         let deadline = 4000 + rand::thread_rng().gen_range(0, 1000);
         while now.elapsed().as_millis() < deadline {
-            let hands = hand_maker.make();
+            let hands = self.hand_maker.make();
             for cards in chargeable.powerset() {
                 let mut bot = self.heuristic_bot();
                 let mut game = game_state.clone();
@@ -58,12 +57,11 @@ impl SimulateBot {
         if cards.contains(Card::TwoClubs) {
             return Card::TwoClubs;
         }
-        let hand_maker = HandMaker::new(&bot_state, &game_state, self.void.clone());
         let mut money_counts = HashMap::new();
         let now = Instant::now();
         let mut iter = 0;
         while now.elapsed().as_millis() < 3500 {
-            let hands = hand_maker.make();
+            let hands = self.hand_maker.make();
             for card in cards {
                 let mut game = game_state.clone();
                 game.apply(&GameEvent::Play {
@@ -108,7 +106,7 @@ impl Algorithm for SimulateBot {
     }
 
     fn on_event(&mut self, _: &BotState, game_state: &GameState, event: &GameEvent) {
-        self.void.on_event(game_state, event);
+        self.hand_maker.on_event(game_state, event);
     }
 }
 
@@ -207,49 +205,4 @@ where
         }
     }
     best.unwrap()
-}
-
-#[cfg(test)]
-mod test {
-    use super::*;
-    use turbo_hearts_api::{
-        ChargeState, ChargingRules, ClaimState, DoneState, GamePhase, Suit, Suits, Trick, WonState,
-    };
-
-    #[test]
-    fn test_make_hands() {
-        let mut simulate = SimulateBot::new();
-        simulate.void.mark_void(Seat::East, Suit::Spades);
-        simulate.void.mark_void(Seat::North, Suit::Diamonds);
-        simulate.void.mark_void(Seat::East, Suit::Clubs);
-        simulate.void.mark_void(Seat::South, Suit::Clubs);
-        simulate.void.mark_void(Seat::North, Suit::Spades);
-        simulate.void.mark_void(Seat::South, Suit::Spades);
-        let bot_state = BotState {
-            seat: Seat::North,
-            pre_pass_hand: "J7S AK984H 3D AQ985C".parse().unwrap(),
-            post_pass_hand: "J7S Q9864H AKQ985C".parse().unwrap(),
-        };
-        let game_state = GameState {
-            rules: ChargingRules::Classic,
-            phase: GamePhase::PassLeft,
-            done: DoneState::new(),
-            charge_count: 2,
-            charges: ChargeState::new().charge(Seat::East, Card::AceHearts | Card::JackDiamonds),
-            next_actor: Some(Seat::North),
-            played:
-                "2JA3C J95473TS AH 4KJTH 457D 9H 6JKD 8H 4T9C AD QS 78C QD 65C 2D 8S AS QH TD 7H KS"
-                    .parse()
-                    .unwrap(),
-            claims: ClaimState::new(),
-            won: WonState::new(),
-            led_suits: Suits::NONE,
-            current_trick: Trick::new().push(Card::KingSpades),
-        };
-        let hand_maker = HandMaker::new(&bot_state, &game_state, simulate.void.clone());
-        for _ in 0..100 {
-            let hands = hand_maker.make();
-            eprintln!("{:?}", hands);
-        }
-    }
 }

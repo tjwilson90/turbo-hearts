@@ -124,12 +124,12 @@ def fit(lead):
     )
     return model
 
-#lead_model = fit(True)
-#onnx_lead_model = onnxmltools.convert_keras(lead_model)
-#onnxmltools.utils.save_model(onnx_lead_model, 'assets/lead-model.onnx')
+lead_model = fit(True)
+onnx_lead_model = onnxmltools.convert_keras(lead_model)
+onnxmltools.utils.save_model(onnx_lead_model, 'assets/lead-model.onnx')
 
-#follow_model = fit(False)
-#onnx_follow_model = onnxmltools.convert_keras(follow_model)
-#onnxmltools.utils.save_model(onnx_follow_model, 'assets/follow-model.onnx')
+follow_model = fit(False)
+onnx_follow_model = onnxmltools.convert_keras(follow_model)
+onnxmltools.utils.save_model(onnx_follow_model, 'assets/follow-model.onnx')
 
-hypertune(True)
+#hypertune(True)
