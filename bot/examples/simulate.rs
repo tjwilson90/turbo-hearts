@@ -1,5 +1,7 @@
 use rand::seq::SliceRandom;
-use turbo_hearts_api::{BotState, Card, Cards, GameEvent, GameState, PassDirection, Seat};
+use turbo_hearts_api::{
+    BotState, Card, Cards, ChargingRules, GameEvent, GameState, PassDirection, Seat,
+};
 use turbo_hearts_bot::{Algorithm, NeuralNetworkBot};
 
 fn bot(seat: Seat, deck: &[Card]) -> BotState {
@@ -44,7 +46,11 @@ impl Game {
     fn apply(&mut self, event: &GameEvent) {
         self.state.apply(event);
         for &s in &Seat::VALUES {
-            self.bots[s.idx()].on_event(&self.bot_states[s.idx()], &self.state, event);
+            self.bots[s.idx()].on_event(
+                &self.bot_states[s.idx()],
+                &self.state,
+                &event.redact(Some(s), ChargingRules::Classic),
+            );
         }
     }
 }
