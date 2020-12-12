@@ -44,7 +44,7 @@ def load_dataset(train_or_validate, lead):
             + ('lead' if lead else 'follow') + "/*.tfrec.gz")
     dataset = tf.data.TFRecordDataset(filenames, compression_type='GZIP')
     dataset = dataset.map(lambda record: parse_record(lead, record))
-    dataset = dataset.batch(128)
+    dataset = dataset.batch(32)
     return dataset
 
 def build_model(lead, hp):
@@ -64,8 +64,8 @@ def build_model(lead, hp):
     layer = keras.layers.concatenate(inputs)
     layer = keras.layers.Dropout(0.05)(layer)
 
-    for i in range(3 if hp is None else hp.Int('num_layers', 2, 4)):
-        units = [350, 600, 400][i] if hp is None else hp.Int('units' + str(i), min_value=384, max_value=576, step=64)
+    for i in range(2 if hp is None else hp.Int('num_layers', 2, 4)):
+        units = [500, 500][i] if hp is None else hp.Int('units' + str(i), min_value=384, max_value=576, step=64)
         layer = keras.layers.Dense(units = units, activation = 'relu')(layer)
         layer = keras.layers.Dropout(0.05)(layer)
 
@@ -124,12 +124,12 @@ def fit(lead):
     )
     return model
 
-#lead_model = fit(True)
-#onnx_lead_model = onnxmltools.convert_keras(lead_model)
-#onnxmltools.utils.save_model(onnx_lead_model, 'assets/lead-model.onnx')
+lead_model = fit(True)
+onnx_lead_model = onnxmltools.convert_keras(lead_model)
+onnxmltools.utils.save_model(onnx_lead_model, 'assets/lead-model.onnx')
 
-#follow_model = fit(False)
-#onnx_follow_model = onnxmltools.convert_keras(follow_model)
-#onnxmltools.utils.save_model(onnx_follow_model, 'assets/follow-model.onnx')
+follow_model = fit(False)
+onnx_follow_model = onnxmltools.convert_keras(follow_model)
+onnxmltools.utils.save_model(onnx_follow_model, 'assets/follow-model.onnx')
 
-hypertune(True)
+#hypertune(True)

@@ -1,5 +1,5 @@
-use crate::{encoder, Algorithm, HandMaker, HeuristicBot, VoidState};
-use log::{debug, Level};
+use crate::{encoder, Algorithm, HandMaker, HeuristicBot};
+use log::debug;
 use once_cell::sync::Lazy;
 use rand::Rng;
 use std::{collections::HashMap, error::Error, sync::Arc, time::Instant};
@@ -55,7 +55,9 @@ fn load_model(lead: bool, model: &str) -> Result<TypedRunnableModel<TypedModel>,
 }
 
 pub struct NeuralNetworkBot {
-    void: VoidState,
+    hand_maker: HandMaker,
+    initial_state: GameState,
+    plays: Vec<Card>,
 }
 
 impl NeuralNetworkBot {
@@ -63,29 +65,43 @@ impl NeuralNetworkBot {
         Lazy::force(&LEAD_MODEL);
         Lazy::force(&FOLLOW_MODEL);
         Self {
-            void: VoidState::new(),
+            hand_maker: HandMaker::new(),
+            initial_state: GameState::new(),
+            plays: Vec::with_capacity(52),
         }
     }
 
-    fn play_blocking(&mut self, bot_state: &BotState, game_state: &GameState) -> Card {
+    fn total_divergence(&self, hands: [Cards; 4]) -> f32 {
+        let brute_force = ShallowBruteForce::new(hands);
+        let mut state = self.initial_state.clone();
+        let mut divergence = 1.0;
+        for &play in &self.plays {
+            let seat = state.next_actor.unwrap();
+            let plays = state
+                .legal_plays(hands[seat.idx()])
+                .distinct_plays(state.played, state.current_trick);
+            if plays.len() > 1 {
+                divergence += local_divergence(&brute_force, &state, seat, play, plays);
+            }
+            state.apply(&GameEvent::Play { seat, card: play });
+        }
+        divergence
+    }
+
+    fn play_blocking(&self, bot_state: &BotState, game_state: &GameState) -> Card {
         let legal_plays = game_state.legal_plays(bot_state.post_pass_hand);
         let distinct_plays =
             legal_plays.distinct_plays(game_state.played, game_state.current_trick);
         if distinct_plays.len() == 1 {
             return choose(bot_state, distinct_plays.max(), legal_plays, distinct_plays);
         }
-        let hand_maker = HandMaker::new(&bot_state, &game_state, self.void.clone());
         let mut money_counts = HashMap::new();
         let mut iters = 0;
-        let deadline = match (bot_state.post_pass_hand - game_state.played).len() {
-            x if x < 3 => 2500,
-            x if x < 9 => 3500,
-            _ => 4500,
-        };
         let now = Instant::now();
-        while now.elapsed().as_millis() < deadline {
+        while now.elapsed().as_millis() < 4500 {
             iters += 1;
-            let hands = hand_maker.make();
+            let hands = self.hand_maker.make();
+            let divergence = self.total_divergence(hands);
             for card in distinct_plays {
                 let mut game = game_state.clone();
                 game.apply(&GameEvent::Play {
@@ -94,19 +110,10 @@ impl NeuralNetworkBot {
                 });
                 let mut brute_force = ShallowBruteForce::new(hands);
                 let scores = brute_force.solve(distinct_plays.len(), &mut game);
-                *money_counts.entry(card).or_default() += scores.money(bot_state.seat);
+                *money_counts.entry(card).or_default() += scores.money(bot_state.seat) / divergence;
             }
         }
-        if log::log_enabled!(Level::Debug) {
-            debug!(
-                "{} iterations, {:?}",
-                iters,
-                money_counts
-                    .iter()
-                    .map(|(c, m)| (*c, *m / iters as f32))
-                    .collect::<Vec<_>>()
-            );
-        }
+        debug!("{} iterations, {:?}", iters, money_counts);
         let mut best_card = Card::TwoClubs;
         let mut best_money = f32::MIN;
         for (card, money) in money_counts.into_iter() {
@@ -133,7 +140,16 @@ impl Algorithm for NeuralNetworkBot {
     }
 
     fn on_event(&mut self, _: &BotState, game_state: &GameState, event: &GameEvent) {
-        self.void.on_event(game_state, event)
+        self.hand_maker.on_event(game_state, event);
+        match event {
+            GameEvent::StartTrick { leader } if self.plays.is_empty() => {
+                self.initial_state = game_state.clone();
+                self.initial_state.next_actor = Some(*leader);
+            }
+            GameEvent::Play { card, .. } => self.plays.push(*card),
+            GameEvent::HandComplete { .. } => self.plays.clear(),
+            _ => {}
+        }
     }
 }
 
@@ -329,4 +345,36 @@ fn choose(bot_state: &BotState, card: Card, legal_plays: Cards, distinct_plays: 
     }
     let index = rand::thread_rng().gen_range(0, cards.len());
     cards.into_iter().nth(index).unwrap()
+}
+
+fn local_divergence(
+    brute_force: &ShallowBruteForce,
+    state: &GameState,
+    seat: Seat,
+    play: Card,
+    plays: Cards,
+) -> f32 {
+    let equivalent = if plays.contains(play) {
+        play
+    } else {
+        plays.above(play).min()
+    };
+    let mut best_money = f32::MIN;
+    for card in plays - equivalent {
+        let scores = brute_force.evaluate(&mut {
+            let mut state = state.clone();
+            state.apply(&GameEvent::Play { seat, card });
+            state
+        });
+        let money = scores.money(seat);
+        if money > best_money {
+            best_money = money;
+        }
+    }
+    let scores = brute_force.evaluate(&mut {
+        let mut state = state.clone();
+        state.apply(&GameEvent::Play { seat, card: play });
+        state
+    });
+    f32::max(best_money - scores.money(seat), 0.0)
 }
