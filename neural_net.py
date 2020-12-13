@@ -24,7 +24,7 @@ lead_desc = {
     'win_hearts': tf.io.FixedLenFeature([4], tf.float32),
 }
 follow_desc = lead_desc.copy()
-follow_desc['trick'] = tf.io.FixedLenFeature([59], tf.float32)
+follow_desc['trick'] = tf.io.FixedLenFeature([62], tf.float32)
 
 def parse_record(lead, record):
     description = lead_desc if lead else follow_desc
@@ -59,7 +59,7 @@ def build_model(lead, hp):
     ]
 
     if not lead:
-        inputs.append(keras.Input(shape=[59], name='trick', dtype='float32'))
+        inputs.append(keras.Input(shape=[62], name='trick', dtype='float32'))
 
     layer = keras.layers.concatenate(inputs)
     layer = keras.layers.Dropout(0.05)(layer)

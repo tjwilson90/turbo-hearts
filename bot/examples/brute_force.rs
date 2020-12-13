@@ -1,5 +1,7 @@
 use rand::seq::SliceRandom;
-use turbo_hearts_api::{BotState, Card, Cards, GameEvent, GameState, PassDirection, Seat};
+use turbo_hearts_api::{
+    BotState, Card, Cards, GameEvent, GameState, PassDirection, Seat, WonState,
+};
 use turbo_hearts_bot::{Algorithm, BruteForce, HeuristicBot};
 
 fn bot(seat: Seat, deck: &[Card]) -> BotState {
@@ -74,23 +76,39 @@ fn main() {
         let card = heuristic.play(bot, &state);
         state.apply(&GameEvent::Play { seat, card });
     }
-
+    let mut brute_force = BruteForce::new([
+        bots[0].post_pass_hand,
+        bots[1].post_pass_hand,
+        bots[2].post_pass_hand,
+        bots[3].post_pass_hand,
+    ]);
     while state.played.len() < 48 {
-        let mut brute_force = BruteForce::new([
-            bots[0].post_pass_hand,
-            bots[1].post_pass_hand,
-            bots[2].post_pass_hand,
-            bots[3].post_pass_hand,
-        ]);
-        let (card, scores) = brute_force.solve(&mut state.clone());
+        let seat = state.next_actor.unwrap();
+        let mut best_card = Card::TwoClubs;
+        let mut best_won = WonState::new();
+        let mut best_money = i16::MIN;
+        for card in state
+            .legal_plays(bots[seat.idx()].post_pass_hand)
+            .distinct_plays(state.played, state.current_trick)
+        {
+            let mut state = state.clone();
+            state.apply(&GameEvent::Play { seat, card });
+            let won = brute_force.solve(&mut state);
+            let money = won.scores(state.charges).money(seat);
+            if money > best_money {
+                best_card = card;
+                best_won = won;
+                best_money = money;
+            }
+        }
         println!("north {}", bots[0].post_pass_hand - state.played);
         println!("east  {}", bots[1].post_pass_hand - state.played);
         println!("south {}", bots[2].post_pass_hand - state.played);
         println!("west  {}", bots[3].post_pass_hand - state.played);
-        println!("{}, {}, {:?}", state.next_actor.unwrap(), card, scores);
+        println!("{}, {}, {:?}", seat, best_card, best_won);
         state.apply(&GameEvent::Play {
-            seat: state.next_actor.unwrap(),
-            card,
+            seat,
+            card: best_card,
         });
     }
 }

@@ -55,7 +55,7 @@ impl GameState {
     }
 
     pub fn scores(&self) -> Scores {
-        self.won.scores(self.charges.all_charges())
+        self.won.scores(self.charges)
     }
 
     pub fn can_charge(&self, seat: Seat) -> bool {

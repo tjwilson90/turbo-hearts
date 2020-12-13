@@ -131,7 +131,7 @@ async fn main() {
         game.apply(&GameEvent::Play { seat, card });
     }
     println!("-------------------------------");
-    let scores = game.state.won.scores(game.state.charges.all_charges());
+    let scores = game.state.won.scores(game.state.charges);
     for &s in &Seat::VALUES {
         println!(
             "{}: score {}, money {}",

@@ -7,7 +7,7 @@ use tract_onnx::prelude::{
     tract_ndarray::Array2, tvec, Datum, Framework, InferenceFact, InferenceModel,
     InferenceModelExt, TVec, Tensor, TypedModel, TypedRunnableModel,
 };
-use turbo_hearts_api::{BotState, Card, Cards, GameEvent, GameState, Seat, WonState};
+use turbo_hearts_api::{BotState, Card, Cards, ChargeState, GameEvent, GameState, Seat, WonState};
 
 static LEAD_MODEL: Lazy<TypedRunnableModel<TypedModel>> =
     Lazy::new(|| load_model(true, "assets/lead-model.onnx").unwrap());
@@ -48,7 +48,7 @@ fn load_model(lead: bool, model: &str) -> Result<TypedRunnableModel<TypedModel>,
     if !lead {
         model.set_input_fact(
             7, // trick
-            InferenceFact::dt_shape(f32::datum_type(), tvec![1, 59]),
+            InferenceFact::dt_shape(f32::datum_type(), tvec![1, 62]),
         )?;
     }
     Ok(model.into_optimized()?.into_runnable()?)
@@ -163,7 +163,9 @@ impl ShallowBruteForce {
     }
 
     fn solve(&mut self, depth: usize, state: &mut GameState) -> ApproximateScores {
-        if (depth >= 32 && state.played.len() < 36) || state.played.len() >= 48 {
+        if state.played.len() >= 48
+            || ((depth >= 32 || state.current_trick.is_empty()) && state.played.len() < 36)
+        {
             return self.evaluate(state);
         }
         let seat = state.next_actor.unwrap();
@@ -199,7 +201,7 @@ impl ShallowBruteForce {
                 let card = (self.hands[seat.idx()] - game_state.played).max();
                 game_state.apply(&GameEvent::Play { seat, card });
             }
-            return ApproximateScores::from_won(game_state.charges.all_charges(), game_state.won);
+            return ApproximateScores::from_won(game_state.charges, game_state.won);
         }
         let seat = game_state.next_actor.unwrap();
         let mut input = TVec::with_capacity(8);
@@ -245,13 +247,13 @@ impl ShallowBruteForce {
             LEAD_MODEL.run(input).unwrap()
         } else {
             input.push(
-                Array2::from_shape_vec((1, 59), encoder::trick(seat, game_state.current_trick))
+                Array2::from_shape_vec((1, 62), encoder::trick(seat, game_state.current_trick))
                     .unwrap()
                     .into(),
             );
             FOLLOW_MODEL.run(input).unwrap()
         };
-        ApproximateScores::from_model(game_state.charges.all_charges(), seat, output)
+        ApproximateScores::from_model(&game_state, output)
     }
 }
 
@@ -264,8 +266,8 @@ impl ApproximateScores {
         Self { scores: [0.0; 4] }
     }
 
-    fn from_won(charged: Cards, won: WonState) -> Self {
-        let scores = won.scores(charged);
+    fn from_won(charges: ChargeState, won: WonState) -> Self {
+        let scores = won.scores(charges);
         Self {
             scores: [
                 scores.score(Seat::North) as f32,
@@ -276,40 +278,74 @@ impl ApproximateScores {
         }
     }
 
-    fn from_model(charged: Cards, seat: Seat, output: TVec<Arc<Tensor>>) -> Self {
-        let queen = max_seat(seat, output[0].as_slice::<f32>().unwrap());
-        let jack = max_seat(seat, output[1].as_slice::<f32>().unwrap());
-        let ten = max_seat(seat, output[2].as_slice::<f32>().unwrap());
-        let hearts = output[3].as_slice::<f32>().unwrap();
-        let hearts_max = max_seat(seat, hearts);
-        let heart_multiplier = if charged.contains(Card::AceHearts) {
+    fn from_model(state: &GameState, output: TVec<Arc<Tensor>>) -> Self {
+        let seat = state.next_actor.unwrap();
+        let north = (4 - seat.idx()) % 4;
+        let east = (5 - seat.idx()) % 4;
+        let south = (6 - seat.idx()) % 4;
+        let west = 3 - seat.idx();
+
+        let mut hearts = {
+            let hearts = output[3].as_slice::<f32>().unwrap();
+            [hearts[north], hearts[east], hearts[south], hearts[west]]
+        };
+        let mut queen = if let Some(s) = state.won.queen_winner() {
+            let mut queen = [0.0; 4];
+            queen[s.idx()] = 1.0;
+            queen
+        } else {
+            let queen = output[0].as_slice::<f32>().unwrap();
+            [queen[north], queen[east], queen[south], queen[west]]
+        };
+        for i in 0..4 {
+            if hearts[i] >= 0.97 && queen[i] >= 0.9 {
+                hearts[i] *= -1.0;
+                queen[i] *= -1.0;
+            }
+        }
+        let qf = if state.charges.is_charged(Card::QueenSpades) {
+            26.0
+        } else {
+            13.0
+        };
+        let hf = if state.charges.is_charged(Card::AceHearts) {
             26.0
         } else {
             13.0
         };
         let mut scores = [
-            heart_multiplier * hearts[(4 - seat.idx()) % 4],
-            heart_multiplier * hearts[(5 - seat.idx()) % 4],
-            heart_multiplier * hearts[(6 - seat.idx()) % 4],
-            heart_multiplier * hearts[3 - seat.idx()],
+            qf * queen[0] + hf * hearts[0],
+            qf * queen[1] + hf * hearts[1],
+            qf * queen[2] + hf * hearts[2],
+            qf * queen[3] + hf * hearts[3],
         ];
-        scores[queen.idx()] += if charged.contains(Card::QueenSpades) {
-            26.0
-        } else {
-            13.0
-        };
-        if queen == hearts_max && hearts[hearts_max.idx()] > 0.94 {
-            scores[queen.idx()] *= -1.0;
-        }
-        scores[jack.idx()] += if charged.contains(Card::JackDiamonds) {
+        let jf = if state.charges.is_charged(Card::JackDiamonds) {
             -20.0
         } else {
             -10.0
         };
-        scores[ten.idx()] *= if charged.contains(Card::TenClubs) {
-            4.0
+        if let Some(s) = state.won.jack_winner() {
+            scores[s.idx()] += jf;
         } else {
-            2.0
+            let jack = output[1].as_slice::<f32>().unwrap();
+            scores[0] += jf * jack[north];
+            scores[1] += jf * jack[east];
+            scores[2] += jf * jack[south];
+            scores[3] += jf * jack[west];
+        };
+        let tf = if state.charges.is_charged(Card::TenClubs) {
+            3.0
+        } else {
+            1.0
+        };
+        if let Some(s) = state.won.ten_winner() {
+            scores[s.idx()] *= tf * 2.0;
+        } else {
+            let ten = output[2].as_slice::<f32>().unwrap();
+            scores[0] *= 1.0 + tf * ten[north];
+            scores[1] *= 1.0 + tf * ten[east];
+            scores[2] *= 1.0 + tf * ten[south];
+            scores[3] *= 1.0 + tf * ten[west];
         };
         Self { scores }
     }
@@ -318,18 +354,6 @@ impl ApproximateScores {
         self.scores[0] + self.scores[1] + self.scores[2] + self.scores[3]
             - 4.0 * self.scores[seat.idx()]
     }
-}
-
-fn max_seat(seat: Seat, values: &[f32]) -> Seat {
-    let mut idx = 0;
-    let mut max = f32::MIN;
-    for (i, value) in values.into_iter().cloned().enumerate() {
-        if value > max {
-            max = value;
-            idx = i;
-        }
-    }
-    Seat::VALUES[(idx + seat.idx()) % 4]
 }
 
 fn choose(bot_state: &BotState, card: Card, legal_plays: Cards, distinct_plays: Cards) -> Card {

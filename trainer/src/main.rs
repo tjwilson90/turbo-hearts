@@ -236,7 +236,7 @@ impl Trainer {
     }
 
     fn report(&self, tx: &Sender<(bool, Example)>, brute_force: &mut BruteForce) {
-        let won = brute_force.solve(&mut self.game_state.clone()).1;
+        let won = brute_force.solve(&mut self.game_state.clone());
         let seat = self.game_state.next_actor.unwrap();
         let mut record = Example::with_capacity(12);
         record.insert(
