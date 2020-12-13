@@ -70,12 +70,9 @@ impl SimulateBot {
                 });
                 if game.played.len() > 28 && iter > 0 {
                     let mut brute_force = BruteForce::new(hands);
-                    let (_, won) = brute_force.solve(&mut game);
+                    let won = brute_force.solve(&mut game);
                     *money_counts
-                        .entry((
-                            card,
-                            won.scores(game.charges.all_charges()).money(bot_state.seat),
-                        ))
+                        .entry((card, won.scores(game.charges).money(bot_state.seat)))
                         .or_default() += 1;
                 } else {
                     for _ in 0..50 {

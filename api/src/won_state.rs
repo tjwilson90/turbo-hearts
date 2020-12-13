@@ -1,4 +1,4 @@
-use crate::{Card, Cards, Scores, Seat};
+use crate::{Card, Cards, ChargeState, Scores, Seat};
 use serde::export::Formatter;
 use std::{fmt, fmt::Debug};
 
@@ -91,8 +91,8 @@ impl WonState {
             .cloned()
     }
 
-    pub fn scores(self, charged: Cards) -> Scores {
-        let heart_multiplier = if charged.contains(Card::AceHearts) {
+    pub fn scores(self, charges: ChargeState) -> Scores {
+        let heart_multiplier = if charges.is_charged(Card::AceHearts) {
             2
         } else {
             1
@@ -104,7 +104,7 @@ impl WonState {
             heart_multiplier * self.hearts(Seat::West) as i16,
         ];
         self.queen_winner().map(|s| {
-            scores[s.idx()] += if charged.contains(Card::QueenSpades) {
+            scores[s.idx()] += if charges.is_charged(Card::QueenSpades) {
                 26
             } else {
                 13
@@ -114,14 +114,14 @@ impl WonState {
             }
         });
         self.jack_winner().map(|s| {
-            scores[s.idx()] += if charged.contains(Card::JackDiamonds) {
+            scores[s.idx()] += if charges.is_charged(Card::JackDiamonds) {
                 -20
             } else {
                 -10
             };
         });
         self.ten_winner().map(|s| {
-            scores[s.idx()] *= if charged.contains(Card::TenClubs) {
+            scores[s.idx()] *= if charges.is_charged(Card::TenClubs) {
                 4
             } else {
                 2

@@ -1,9 +1,9 @@
 use std::collections::HashMap;
-use turbo_hearts_api::{Card, Cards, Rank, Seat, Suit, Suits, WonState};
+use turbo_hearts_api::{Cards, Rank, Seat, Suit, Suits, WonState};
 
 pub struct TranspositionTable {
     suits: SuitTranspositions,
-    table: HashMap<TranspositionKey, (Card, WonState)>,
+    table: HashMap<TranspositionKey, WonState>,
 }
 
 impl TranspositionTable {
@@ -20,7 +20,7 @@ impl TranspositionTable {
         leads: Suits,
         won: WonState,
         played: Cards,
-    ) -> (TranspositionKey, Option<(Card, WonState)>) {
+    ) -> Result<WonState, TranspositionKey> {
         let key = TranspositionKey {
             leader,
             leads,
@@ -32,11 +32,14 @@ impl TranspositionTable {
                 self.suits.transposition(Suit::Spades, played),
             ],
         };
-        (key, self.table.get(&key).cloned())
+        match self.table.get(&key) {
+            Some(won) => Ok(*won),
+            None => Err(key),
+        }
     }
 
-    pub fn cache(&mut self, key: TranspositionKey, play: Card, won: WonState) {
-        self.table.insert(key, (play, won));
+    pub fn cache(&mut self, key: TranspositionKey, won: WonState) {
+        self.table.insert(key, won);
     }
 }
 

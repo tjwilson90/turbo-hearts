@@ -1,4 +1,4 @@
-use turbo_hearts_api::{Cards, ChargeState, Rank, Seat, Suit, Suits, Trick, WonState};
+use turbo_hearts_api::{Card, Cards, ChargeState, Rank, Seat, Suit, Suits, Trick, WonState};
 
 pub fn cards(seat: Seat, played: Cards, hands: [Cards; 4]) -> Vec<f32> {
     let mut vec = Vec::with_capacity(260);
@@ -66,9 +66,12 @@ pub fn led(led_suits: Suits) -> Vec<f32> {
 }
 
 pub fn trick(seat: Seat, trick: Trick) -> Vec<f32> {
-    let mut vec = Vec::with_capacity(59);
+    let mut vec = Vec::with_capacity(62);
     vec.push(trick.len() as f32 / 7.0);
     let cards = trick.cards();
+    vec.push(cards.contains(Card::QueenSpades) as i32 as f32);
+    vec.push(cards.contains(Card::JackDiamonds) as i32 as f32);
+    vec.push(cards.contains(Card::TenClubs) as i32 as f32);
     vec.push((cards & Cards::HEARTS).len() as f32 / 7.0);
     let winning_card = (cards & trick.suit().cards()).max();
     for card in Cards::ALL {

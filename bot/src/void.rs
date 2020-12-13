@@ -22,7 +22,7 @@ impl VoidState {
     pub fn on_event(&mut self, state: &GameState, event: &GameEvent) {
         match event {
             GameEvent::Play { seat, card } => {
-                let trick = &state.current_trick;
+                let trick = state.current_trick;
                 if !trick.is_empty() && trick.suit() != card.suit() {
                     // didn't follow suit
                     self.mark_void(*seat, trick.suit());
