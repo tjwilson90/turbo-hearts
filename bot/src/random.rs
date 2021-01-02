@@ -33,7 +33,7 @@ impl Algorithm for RandomBot {
 
     fn play(&mut self, bot_state: &BotState, game_state: &GameState) -> Card {
         let cards = game_state.legal_plays(bot_state.post_pass_hand);
-        let index = rand::thread_rng().gen_range(0, cards.len());
+        let index = rand::thread_rng().gen_range(0..cards.len());
         cards.into_iter().nth(index).unwrap()
     }
 

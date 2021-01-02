@@ -1,6 +1,6 @@
 mod brute_force;
 mod duck;
-pub mod encoder;
+mod encoder;
 mod gottatry;
 mod hand_maker;
 mod heuristic;
@@ -12,6 +12,7 @@ mod void;
 
 pub use brute_force::*;
 pub use duck::*;
+pub use encoder::*;
 pub use gottatry::*;
 pub use hand_maker::*;
 pub use heuristic::*;

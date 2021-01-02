@@ -50,5 +50,3 @@ impl Display for Seat {
         Debug::fmt(&self, f)
     }
 }
-
-sql_json!(Seat);

@@ -92,6 +92,9 @@ impl Cards {
     pub const POINTS: Cards = Cards {
         bits: Self::HEARTS.bits | Self::QUEEN_SPADES.bits | Self::JACK_DIAMONDS.bits,
     };
+    pub const SCORING: Cards = Cards {
+        bits: Self::POINTS.bits | Self::CHARGEABLE.bits,
+    };
     pub const ALL: Cards = Cards {
         bits: Self::SPADES.bits | Self::HEARTS.bits | Self::DIAMONDS.bits | Self::CLUBS.bits,
     };

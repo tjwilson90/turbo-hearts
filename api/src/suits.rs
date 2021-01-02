@@ -1,11 +1,12 @@
 use crate::{Cards, Suit};
+use serde::{Deserialize, Serialize};
 use std::{
     fmt,
     fmt::Formatter,
     ops::{BitOr, BitOrAssign},
 };
 
-#[derive(Clone, Copy, Eq, Hash, PartialEq)]
+#[derive(Clone, Copy, Deserialize, Eq, Hash, PartialEq, Serialize)]
 pub struct Suits {
     bits: u8,
 }

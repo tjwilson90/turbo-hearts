@@ -44,7 +44,6 @@ impl Game {
     }
 
     fn apply(&mut self, event: &GameEvent) {
-        self.state.apply(event);
         for &s in &Seat::VALUES {
             self.bots[s.idx()].on_event(
                 &self.bot_states[s.idx()],
@@ -52,11 +51,11 @@ impl Game {
                 &event.redact(Some(s), ChargingRules::Classic),
             );
         }
+        self.state.apply(event);
     }
 }
 
-#[tokio::main]
-async fn main() {
+fn main() {
     env_logger::init();
     let mut game = Game::new();
     game.apply(&GameEvent::Deal {

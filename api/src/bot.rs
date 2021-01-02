@@ -13,8 +13,6 @@ pub enum BotStrategy {
     NeuralNet,
 }
 
-sql_json!(BotStrategy);
-
 #[derive(Clone, Debug)]
 pub struct BotState {
     pub seat: Seat,

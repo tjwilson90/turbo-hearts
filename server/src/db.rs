@@ -1,9 +1,14 @@
 use crate::CardsError;
 use r2d2::{CustomizeConnection, Pool};
 use r2d2_sqlite::SqliteConnectionManager;
-use rusqlite::{Connection, DropBehavior, Transaction, TransactionBehavior, NO_PARAMS};
-use std::{path::Path, time::Duration};
+use rusqlite::{
+    types::{FromSqlError, ToSqlOutput, Value, ValueRef},
+    Connection, DropBehavior, Row, ToSql, Transaction, TransactionBehavior, NO_PARAMS,
+};
+use serde::{de::DeserializeOwned, Serialize};
+use std::{fmt::Debug, path::Path, str::FromStr, time::Duration};
 use tokio::task;
+use turbo_hearts_api::{BotStrategy, ChargingRules, GameEvent, GameId, Seat, Seed, UserId};
 
 static SQL: &[&'static str] = &[include_str!("../sql/schema.sql")];
 
@@ -12,7 +17,7 @@ pub struct Database {
 }
 
 impl Database {
-    pub fn new<P: AsRef<Path>>(path: P) -> Result<Self, CardsError> {
+    pub fn new<P: AsRef<Path>>(path: P) -> Result<Self, rusqlite::Error> {
         let manager = SqliteConnectionManager::file(path);
         let pool = Pool::builder()
             .connection_customizer(Box::new(Customizer))
@@ -89,4 +94,136 @@ impl CustomizeConnection<Connection, rusqlite::Error> for Customizer {
     }
 
     fn on_release(&self, _: Connection) {}
+}
+
+pub struct SqlStr<T>(T);
+
+pub trait ToSqlStr {
+    fn sql(&self) -> SqlStr<&Self>;
+}
+
+macro_rules! sql_str {
+    ($t:ty) => {
+        impl ToSqlStr for $t {
+            fn sql(&self) -> SqlStr<&$t> {
+                SqlStr(self)
+            }
+        }
+    };
+}
+
+sql_str!(GameId);
+sql_str!(UserId);
+
+impl<T> ToSql for SqlStr<T>
+where
+    T: ToString,
+{
+    fn to_sql(&self) -> Result<ToSqlOutput<'_>, rusqlite::Error> {
+        Ok(ToSqlOutput::Owned(Value::Text(self.0.to_string())))
+    }
+}
+
+pub trait GetStr {
+    fn get_str<T>(&self, idx: usize) -> Result<T, rusqlite::Error>
+    where
+        T: FromStr + ToSqlStr,
+        <T as FromStr>::Err: Debug;
+
+    fn get_opt_str<T>(&self, idx: usize) -> Result<Option<T>, rusqlite::Error>
+    where
+        T: FromStr + ToSqlStr,
+        <T as FromStr>::Err: Debug;
+}
+
+impl<'stmt> GetStr for Row<'stmt> {
+    fn get_str<T>(&self, idx: usize) -> Result<T, rusqlite::Error>
+    where
+        T: FromStr + ToSqlStr,
+        <T as FromStr>::Err: Debug,
+    {
+        let value = self.get_raw_checked(idx)?;
+        Ok(value.as_str()?.parse().unwrap())
+    }
+
+    fn get_opt_str<T>(&self, idx: usize) -> Result<Option<T>, rusqlite::Error>
+    where
+        T: FromStr + ToSqlStr,
+        <T as FromStr>::Err: Debug,
+    {
+        match self.get_raw_checked(idx)? {
+            ValueRef::Null => Ok(None),
+            ValueRef::Text(t) => {
+                let str = std::str::from_utf8(t).unwrap();
+                Ok(Some(str.parse().unwrap()))
+            }
+            _ => Err(FromSqlError::InvalidType.into()),
+        }
+    }
+}
+
+pub struct SqlJson<T>(T);
+
+pub trait ToSqlJson {
+    fn sql(&self) -> SqlJson<&Self>;
+}
+
+macro_rules! sql_json {
+    ($t:ty) => {
+        impl ToSqlJson for $t {
+            fn sql(&self) -> SqlJson<&$t> {
+                SqlJson(self)
+            }
+        }
+    };
+}
+
+sql_json!(BotStrategy);
+sql_json!(ChargingRules);
+sql_json!(GameEvent);
+sql_json!(Seat);
+sql_json!(Seed);
+
+impl<T> ToSql for SqlJson<T>
+where
+    T: Serialize,
+{
+    fn to_sql(&self) -> Result<ToSqlOutput<'_>, rusqlite::Error> {
+        let json = serde_json::to_string(&self.0).unwrap();
+        Ok(ToSqlOutput::Owned(Value::Text(json)))
+    }
+}
+
+pub trait GetJson {
+    fn get_json<T>(&self, idx: usize) -> Result<T, rusqlite::Error>
+    where
+        T: DeserializeOwned + ToSqlJson;
+
+    fn get_opt_json<T>(&self, idx: usize) -> Result<Option<T>, rusqlite::Error>
+    where
+        T: DeserializeOwned + ToSqlJson;
+}
+
+impl<'stmt> GetJson for Row<'stmt> {
+    fn get_json<T>(&self, idx: usize) -> Result<T, rusqlite::Error>
+    where
+        T: DeserializeOwned + ToSqlJson,
+    {
+        let value = self.get_raw_checked(idx)?;
+        Ok(serde_json::from_str(value.as_str()?).unwrap())
+    }
+
+    fn get_opt_json<T>(&self, idx: usize) -> Result<Option<T>, rusqlite::Error>
+    where
+        T: DeserializeOwned + ToSqlJson,
+    {
+        match self.get_raw_checked(idx)? {
+            ValueRef::Null => Ok(None),
+            ValueRef::Text(t) => {
+                let str = std::str::from_utf8(t).unwrap();
+                Ok(serde_json::from_str(str).unwrap())
+            }
+            _ => Err(FromSqlError::InvalidType.into()),
+        }
+    }
 }

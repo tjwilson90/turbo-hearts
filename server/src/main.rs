@@ -1,8 +1,9 @@
+use crate::CardsError;
 use http::header;
 use log::error;
 use reqwest::Client;
 use tokio::{stream::StreamExt, time, time::Duration};
-use turbo_hearts_api::{CardsError, UserId};
+use turbo_hearts_api::UserId;
 use warp::{Filter, Rejection};
 
 #[macro_use]
@@ -19,7 +20,7 @@ mod game;
 mod game_endpoints;
 mod lobby;
 mod lobby_endpoints;
-mod sender;
+mod subscriber;
 mod summary;
 mod user;
 mod user_endpoints;
@@ -35,12 +36,12 @@ pub use db::*;
 pub use error::*;
 pub use game::*;
 pub use lobby::*;
-pub use sender::*;
+pub use subscriber::*;
 pub use user::*;
 
 fn user_id<'a>(users: infallible!(&'a Users)) -> rejection!(UserId) {
     async fn handle(users: &Users, auth_token: String) -> Result<UserId, Rejection> {
-        Ok(users.get_user_id(auth_token).await.map_err(CardsReject)?)
+        Ok(users.get_user_id(auth_token).await?)
     }
 
     users.and(warp::cookie("AUTH_TOKEN")).and_then(handle)

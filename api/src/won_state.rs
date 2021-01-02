@@ -1,15 +1,8 @@
 use crate::{Card, Cards, ChargeState, Scores, Seat};
-use serde::export::Formatter;
-use std::{fmt, fmt::Debug};
+use serde::{Deserialize, Serialize};
+use std::fmt;
 
-#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
-pub enum RunState {
-    All,
-    Seat(Seat),
-    None,
-}
-
-#[derive(Clone, Copy, Eq, Hash, PartialEq)]
+#[derive(Clone, Copy, Deserialize, Eq, Hash, PartialEq, Serialize)]
 pub struct WonState {
     state: u32,
 }
@@ -37,24 +30,26 @@ impl WonState {
         }
     }
 
+    #[must_use]
+    pub fn claim(self, seat: Seat) -> Self {
+        let mut update = 29;
+        if self.state & 0x20_20_20_20 == 0 {
+            update += 32;
+        }
+        if self.state & 0x40_40_40_40 == 0 {
+            update += 64;
+        }
+        Self {
+            state: (self.state & 0xf0_f0_f0_f0) | (update << (8 * seat.idx())),
+        }
+    }
+
     pub fn hearts_broken(self) -> bool {
         self.state & 0x0f_0f_0f_0f != 0
     }
 
     pub fn can_run(self, seat: Seat) -> bool {
         self.state & (0x1f_1f_1f_1f ^ (0x1f << (8 * seat.idx()))) == 0
-    }
-
-    pub fn runner(self) -> RunState {
-        let masked = self.state & 0x1f_1f_1f_1f;
-        if masked == 0 {
-            return RunState::All;
-        }
-        let index = masked.trailing_zeros() / 8;
-        if index != (31 - masked.leading_zeros()) / 8 {
-            return RunState::None;
-        }
-        RunState::Seat(Seat::VALUES[index as usize])
     }
 
     pub fn hearts(self, seat: Seat) -> u8 {
@@ -132,7 +127,7 @@ impl WonState {
 }
 
 impl fmt::Debug for WonState {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), fmt::Error> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
         for &seat in &Seat::VALUES {
             if seat != Seat::North {
                 write!(f, ", ")?;
@@ -150,5 +145,24 @@ impl fmt::Debug for WonState {
             write!(f, "]")?;
         }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_claim() {
+        let claim = WonState::new()
+            .win(Seat::North, "AD 364H".parse().unwrap())
+            .win(Seat::East, "T876C".parse().unwrap())
+            .claim(Seat::North);
+        assert_eq!(
+            claim,
+            WonState::new()
+                .win(Seat::North, "QS AKQJT98765432H JD".parse().unwrap())
+                .win(Seat::East, "TC".parse().unwrap())
+        )
     }
 }

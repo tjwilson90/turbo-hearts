@@ -1,6 +1,3 @@
-#[macro_use]
-mod macros;
-
 mod bot;
 mod card;
 mod cards;
@@ -8,6 +5,7 @@ mod charge_state;
 mod claim_state;
 mod done_state;
 mod error;
+mod game;
 mod game_api;
 mod game_event;
 mod game_phase;
@@ -32,6 +30,7 @@ pub use charge_state::*;
 pub use claim_state::*;
 pub use done_state::*;
 pub use error::*;
+pub use game::*;
 pub use game_api::*;
 pub use game_event::*;
 pub use game_phase::*;

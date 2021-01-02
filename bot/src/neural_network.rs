@@ -1,54 +1,70 @@
-use crate::{encoder, Algorithm, HandMaker, HeuristicBot};
+use crate::{Algorithm, Encoder, HandMaker, HeuristicBot};
 use log::debug;
 use once_cell::sync::Lazy;
 use rand::Rng;
 use std::{collections::HashMap, error::Error, sync::Arc, time::Instant};
-use tract_onnx::prelude::{
-    tract_ndarray::Array2, tvec, Datum, Framework, InferenceFact, InferenceModel,
-    InferenceModelExt, TVec, Tensor, TypedModel, TypedRunnableModel,
+use tract_onnx::{
+    prelude::{
+        tract_ndarray::Array2, tvec, Datum, Framework, InferenceFact, InferenceModel,
+        InferenceModelExt, TVec, Tensor, TypedModel, TypedRunnableModel,
+    },
+    tract_hir::tract_core::downcast_rs::__std::cmp::Ordering,
 };
-use turbo_hearts_api::{BotState, Card, Cards, ChargeState, GameEvent, GameState, Seat, WonState};
+use turbo_hearts_api::{
+    can_claim, BotState, Card, Cards, ChargeState, GameEvent, GameState, Rank, Seat, Suit, WonState,
+};
 
-static LEAD_MODEL: Lazy<TypedRunnableModel<TypedModel>> =
-    Lazy::new(|| load_model(true, "assets/lead-model.onnx").unwrap());
+static LEAD_POLICY: Lazy<TypedRunnableModel<TypedModel>> =
+    Lazy::new(|| load_model(true, true).unwrap());
 
-static FOLLOW_MODEL: Lazy<TypedRunnableModel<TypedModel>> =
-    Lazy::new(|| load_model(false, "assets/follow-model.onnx").unwrap());
+static LEAD_VALUE: Lazy<TypedRunnableModel<TypedModel>> =
+    Lazy::new(|| load_model(true, false).unwrap());
 
-fn load_model(lead: bool, model: &str) -> Result<TypedRunnableModel<TypedModel>, Box<dyn Error>> {
-    let mut model: InferenceModel = tract_onnx::onnx().model_for_path(model)?;
+static FOLLOW_POLICY: Lazy<TypedRunnableModel<TypedModel>> =
+    Lazy::new(|| load_model(false, true).unwrap());
+
+static FOLLOW_VALUE: Lazy<TypedRunnableModel<TypedModel>> =
+    Lazy::new(|| load_model(false, false).unwrap());
+
+fn load_model(lead: bool, policy: bool) -> Result<TypedRunnableModel<TypedModel>, Box<dyn Error>> {
+    let path = format!(
+        "assets/{}-{}.onnx",
+        if lead { "lead" } else { "follow" },
+        if policy { "policy" } else { "value" }
+    );
+    let mut model: InferenceModel = tract_onnx::onnx().model_for_path(&path)?;
     model.set_input_fact(
-        0, // cards
-        InferenceFact::dt_shape(f32::datum_type(), tvec![1, 260]),
+        0,
+        InferenceFact::dt_shape(f32::datum_type(), tvec![1, Encoder::CARDS_LEN]),
     )?;
     model.set_input_fact(
-        1, // won_queen
-        InferenceFact::dt_shape(f32::datum_type(), tvec![1, 4]),
+        1,
+        InferenceFact::dt_shape(f32::datum_type(), tvec![1, Encoder::QUEEN_LEN]),
     )?;
     model.set_input_fact(
-        2, // won_jack
-        InferenceFact::dt_shape(f32::datum_type(), tvec![1, 4]),
+        2,
+        InferenceFact::dt_shape(f32::datum_type(), tvec![1, Encoder::JACK_LEN]),
     )?;
     model.set_input_fact(
-        3, // won_ten
-        InferenceFact::dt_shape(f32::datum_type(), tvec![1, 4]),
+        3,
+        InferenceFact::dt_shape(f32::datum_type(), tvec![1, Encoder::TEN_LEN]),
     )?;
     model.set_input_fact(
-        4, // won_hearts
-        InferenceFact::dt_shape(f32::datum_type(), tvec![1, 4]),
+        4,
+        InferenceFact::dt_shape(f32::datum_type(), tvec![1, Encoder::HEARTS_LEN]),
     )?;
     model.set_input_fact(
-        5, // charged
-        InferenceFact::dt_shape(f32::datum_type(), tvec![1, 4]),
+        5,
+        InferenceFact::dt_shape(f32::datum_type(), tvec![1, Encoder::CHARGED_LEN]),
     )?;
     model.set_input_fact(
-        6, // led
-        InferenceFact::dt_shape(f32::datum_type(), tvec![1, 3]),
+        6,
+        InferenceFact::dt_shape(f32::datum_type(), tvec![1, Encoder::LED_LEN]),
     )?;
     if !lead {
         model.set_input_fact(
-            7, // trick
-            InferenceFact::dt_shape(f32::datum_type(), tvec![1, 62]),
+            7,
+            InferenceFact::dt_shape(f32::datum_type(), tvec![1, Encoder::TRICK_LEN]),
         )?;
     }
     Ok(model.into_optimized()?.into_runnable()?)
@@ -62,8 +78,10 @@ pub struct NeuralNetworkBot {
 
 impl NeuralNetworkBot {
     pub fn new() -> Self {
-        Lazy::force(&LEAD_MODEL);
-        Lazy::force(&FOLLOW_MODEL);
+        Lazy::force(&LEAD_POLICY);
+        Lazy::force(&LEAD_VALUE);
+        Lazy::force(&FOLLOW_POLICY);
+        Lazy::force(&FOLLOW_VALUE);
         Self {
             hand_maker: HandMaker::new(),
             initial_state: GameState::new(),
@@ -87,8 +105,18 @@ impl NeuralNetworkBot {
         }
         divergence
     }
+}
 
-    fn play_blocking(&self, bot_state: &BotState, game_state: &GameState) -> Card {
+impl Algorithm for NeuralNetworkBot {
+    fn pass(&mut self, bot_state: &BotState, game_state: &GameState) -> Cards {
+        HeuristicBot::new().pass(bot_state, game_state)
+    }
+
+    fn charge(&mut self, bot_state: &BotState, game_state: &GameState) -> Cards {
+        HeuristicBot::new().charge(bot_state, game_state)
+    }
+
+    fn play(&mut self, bot_state: &BotState, game_state: &GameState) -> Card {
         let legal_plays = game_state.legal_plays(bot_state.post_pass_hand);
         let distinct_plays =
             legal_plays.distinct_plays(game_state.played, game_state.current_trick);
@@ -109,7 +137,7 @@ impl NeuralNetworkBot {
                     card,
                 });
                 let mut brute_force = ShallowBruteForce::new(hands);
-                let scores = brute_force.solve(distinct_plays.len(), &mut game);
+                let scores = brute_force.solve(&mut game);
                 *money_counts.entry(card).or_default() += scores.money(bot_state.seat) / divergence;
             }
         }
@@ -123,20 +151,6 @@ impl NeuralNetworkBot {
             }
         }
         choose(bot_state, best_card, legal_plays, distinct_plays)
-    }
-}
-
-impl Algorithm for NeuralNetworkBot {
-    fn pass(&mut self, bot_state: &BotState, game_state: &GameState) -> Cards {
-        HeuristicBot::new().pass(bot_state, game_state)
-    }
-
-    fn charge(&mut self, bot_state: &BotState, game_state: &GameState) -> Cards {
-        HeuristicBot::new().charge(bot_state, game_state)
-    }
-
-    fn play(&mut self, bot_state: &BotState, game_state: &GameState) -> Card {
-        tokio::task::block_in_place(move || self.play_blocking(&bot_state, &game_state))
     }
 
     fn on_event(&mut self, _: &BotState, game_state: &GameState, event: &GameEvent) {
@@ -162,29 +176,39 @@ impl ShallowBruteForce {
         Self { hands }
     }
 
-    fn solve(&mut self, depth: usize, state: &mut GameState) -> ApproximateScores {
-        if state.played.len() >= 48
-            || ((depth >= 32 || state.current_trick.is_empty()) && state.played.len() < 36)
-        {
-            return self.evaluate(state);
+    fn solve(&mut self, state: &mut GameState) -> ApproximateScores {
+        if state.played.len() >= 48 {
+            while state.played != Cards::ALL {
+                let seat = state.next_actor.unwrap();
+                let card = (self.hands[seat.idx()] - state.played).max();
+                state.apply(&GameEvent::Play { seat, card });
+            }
+            return ApproximateScores::from_won(state.charges, state.won);
         }
         let seat = state.next_actor.unwrap();
-        let plays = state
-            .legal_plays(self.hands[seat.idx()])
-            .distinct_plays(state.played, state.current_trick);
+        if state.current_trick.is_empty()
+            && state.won.can_run(seat)
+            && can_claim(seat, self.hands[seat.idx()], state)
+        {
+            return ApproximateScores::from_won(state.charges, state.won.claim(seat));
+        }
+        if state.current_trick.is_empty() && state.played.len() < 36 {
+            return self.generate_value(state);
+        }
+        let plays = self.generate_policy(state);
         if plays.len() == 1 {
             state.apply(&GameEvent::Play {
                 seat,
                 card: plays.max(),
             });
-            return self.solve(depth, state);
+            return self.solve(state);
         }
         let mut best_scores = ApproximateScores::empty();
         let mut best_money = f32::MIN;
         for card in plays {
             let mut state = state.clone();
             state.apply(&GameEvent::Play { seat, card });
-            let scores = self.solve(depth * plays.len(), &mut state);
+            let scores = self.solve(&mut state);
             let money = scores.money(seat);
             if money > best_money {
                 best_scores = scores;
@@ -194,66 +218,178 @@ impl ShallowBruteForce {
         best_scores
     }
 
-    fn evaluate(&self, game_state: &mut GameState) -> ApproximateScores {
-        if game_state.played.len() >= 48 {
-            while game_state.played != Cards::ALL {
-                let seat = game_state.next_actor.unwrap();
-                let card = (self.hands[seat.idx()] - game_state.played).max();
-                game_state.apply(&GameEvent::Play { seat, card });
-            }
-            return ApproximateScores::from_won(game_state.charges, game_state.won);
+    fn generate_policy(&self, game_state: &GameState) -> Cards {
+        let seat = game_state.next_actor.unwrap();
+        let legal = game_state.legal_plays(self.hands[seat.idx()]);
+        let distinct = legal.distinct_plays(game_state.played, game_state.current_trick);
+        if distinct.len() <= 3 {
+            return distinct;
         }
+        let input = self.model_input(game_state);
+        let model = if game_state.current_trick.is_empty() {
+            Lazy::force(&LEAD_POLICY)
+        } else {
+            Lazy::force(&FOLLOW_POLICY)
+        };
+        let output = model.run(input).unwrap();
+        let mut output = output[0].as_slice::<f32>().unwrap().into_iter().cloned();
+
+        let mut policies = Vec::new();
+        for &suit in &Suit::VALUES {
+            let chargeable = (suit.cards() & Cards::CHARGEABLE).max();
+            let nine = suit.with_rank(Rank::Nine);
+            let high = chargeable.above();
+            let middle = nine.above() - high - chargeable;
+            let low = nine.below();
+
+            let mut cards = (high & legal).into_iter();
+            for _ in 0..high.len() {
+                let value = output.next().unwrap();
+                if let Some(card) = cards.next() {
+                    policies.push((card, value));
+                }
+            }
+            let value = output.next().unwrap();
+            if legal.contains(chargeable) {
+                policies.push((chargeable, value));
+            }
+
+            let mut cards = (middle & legal).into_iter();
+            for _ in 0..middle.len() {
+                let value = output.next().unwrap();
+                if let Some(card) = cards.next() {
+                    policies.push((card, value));
+                }
+            }
+            let value = output.next().unwrap();
+            if legal.contains(nine) {
+                policies.push((nine, value));
+            }
+
+            let mut cards = (low & legal).into_iter();
+            for _ in 0..low.len() {
+                let value = output.next().unwrap();
+                if let Some(card) = cards.next() {
+                    policies.push((card, value));
+                }
+            }
+        }
+        policies.sort_unstable_by(|p1, p2| {
+            if p1.1 < p2.1 {
+                Ordering::Less
+            } else {
+                Ordering::Greater
+            }
+        });
+        let mut plays = Cards::NONE;
+        while plays.len() < 3 {
+            let card = policies.pop().unwrap().0;
+            plays |= if distinct.contains(card) {
+                card
+            } else {
+                (card.above() & distinct).min()
+            };
+        }
+        plays
+    }
+
+    fn generate_value(&self, game_state: &mut GameState) -> ApproximateScores {
+        let input = self.model_input(game_state);
+        let model = if game_state.current_trick.is_empty() {
+            Lazy::force(&LEAD_VALUE)
+        } else {
+            Lazy::force(&FOLLOW_VALUE)
+        };
+        let output = model.run(input).unwrap();
+        ApproximateScores::from_model(&game_state, output)
+    }
+
+    fn model_input(&self, game_state: &GameState) -> TVec<Tensor> {
         let seat = game_state.next_actor.unwrap();
         let mut input = TVec::with_capacity(8);
         input.push(
             Array2::from_shape_vec(
-                (1, 260),
-                encoder::cards(seat, game_state.played, self.hands),
+                (1, Encoder::CARDS_LEN),
+                Encoder::new(Encoder::CARDS_LEN)
+                    .cards(seat, game_state.played, self.hands)
+                    .into_inner(),
             )
             .unwrap()
             .into(),
         );
         input.push(
-            Array2::from_shape_vec((1, 4), encoder::queen(seat, game_state.won))
-                .unwrap()
-                .into(),
+            Array2::from_shape_vec(
+                (1, Encoder::QUEEN_LEN),
+                Encoder::new(Encoder::QUEEN_LEN)
+                    .queen(seat, game_state.won)
+                    .into_inner(),
+            )
+            .unwrap()
+            .into(),
         );
         input.push(
-            Array2::from_shape_vec((1, 4), encoder::jack(seat, game_state.won))
-                .unwrap()
-                .into(),
+            Array2::from_shape_vec(
+                (1, Encoder::JACK_LEN),
+                Encoder::new(Encoder::JACK_LEN)
+                    .jack(seat, game_state.won)
+                    .into_inner(),
+            )
+            .unwrap()
+            .into(),
         );
         input.push(
-            Array2::from_shape_vec((1, 4), encoder::ten(seat, game_state.won))
-                .unwrap()
-                .into(),
+            Array2::from_shape_vec(
+                (1, Encoder::TEN_LEN),
+                Encoder::new(Encoder::TEN_LEN)
+                    .ten(seat, game_state.won)
+                    .into_inner(),
+            )
+            .unwrap()
+            .into(),
         );
         input.push(
-            Array2::from_shape_vec((1, 4), encoder::hearts(seat, game_state.won))
-                .unwrap()
-                .into(),
+            Array2::from_shape_vec(
+                (1, Encoder::HEARTS_LEN),
+                Encoder::new(Encoder::HEARTS_LEN)
+                    .hearts(seat, game_state.won)
+                    .into_inner(),
+            )
+            .unwrap()
+            .into(),
         );
         input.push(
-            Array2::from_shape_vec((1, 4), encoder::charged(game_state.charges))
-                .unwrap()
-                .into(),
+            Array2::from_shape_vec(
+                (1, Encoder::CHARGED_LEN),
+                Encoder::new(Encoder::CHARGED_LEN)
+                    .charged(game_state.charges)
+                    .into_inner(),
+            )
+            .unwrap()
+            .into(),
         );
         input.push(
-            Array2::from_shape_vec((1, 3), encoder::led(game_state.led_suits))
-                .unwrap()
-                .into(),
+            Array2::from_shape_vec(
+                (1, Encoder::LED_LEN),
+                Encoder::new(Encoder::LED_LEN)
+                    .led(game_state.led_suits)
+                    .into_inner(),
+            )
+            .unwrap()
+            .into(),
         );
-        let output = if game_state.current_trick.is_empty() {
-            LEAD_MODEL.run(input).unwrap()
-        } else {
+        if !game_state.current_trick.is_empty() {
             input.push(
-                Array2::from_shape_vec((1, 62), encoder::trick(seat, game_state.current_trick))
-                    .unwrap()
-                    .into(),
+                Array2::from_shape_vec(
+                    (1, Encoder::TRICK_LEN),
+                    Encoder::new(Encoder::TRICK_LEN)
+                        .trick(seat, game_state.played, game_state.current_trick)
+                        .into_inner(),
+                )
+                .unwrap()
+                .into(),
             );
-            FOLLOW_MODEL.run(input).unwrap()
-        };
-        ApproximateScores::from_model(&game_state, output)
+        }
+        input
     }
 }
 
@@ -367,7 +503,7 @@ fn choose(bot_state: &BotState, card: Card, legal_plays: Cards, distinct_plays: 
     if !passed.is_empty() {
         cards = passed;
     }
-    let index = rand::thread_rng().gen_range(0, cards.len());
+    let index = rand::thread_rng().gen_range(0..cards.len());
     cards.into_iter().nth(index).unwrap()
 }
 
@@ -385,7 +521,7 @@ fn local_divergence(
     };
     let mut best_money = f32::MIN;
     for card in plays - equivalent {
-        let scores = brute_force.evaluate(&mut {
+        let scores = brute_force.generate_value(&mut {
             let mut state = state.clone();
             state.apply(&GameEvent::Play { seat, card });
             state
@@ -395,7 +531,7 @@ fn local_divergence(
             best_money = money;
         }
     }
-    let scores = brute_force.evaluate(&mut {
+    let scores = brute_force.generate_value(&mut {
         let mut state = state.clone();
         state.apply(&GameEvent::Play { seat, card: play });
         state

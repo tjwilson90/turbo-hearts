@@ -1,11 +1,11 @@
-use crate::{persist_events, Database, Games, Lobby};
+use crate::{persist_events, CardsError, Database, Games, Lobby};
 use log::LevelFilter;
 use once_cell::sync::Lazy;
 use std::{collections::HashMap, future::Future};
 use tempfile::TempDir;
 use turbo_hearts_api::{
-    BotStrategy, Card, CardsError, ChargingRules, GameEvent, GameId, GamePhase, LobbyEvent,
-    PassDirection, Player, PlayerWithOptions, Seat, Seed, UserId,
+    BotStrategy, Card, ChargingRules, GameEvent, GameId, GamePhase, LobbyEvent, PassDirection,
+    Player, PlayerWithOptions, RulesError, Seat, Seed, UserId,
 };
 
 macro_rules! h {
@@ -284,29 +284,29 @@ async fn test_pass() -> Result<(), CardsError> {
 
         assert!(matches!(
             games.pass_cards(game_id, *TWILSON, c!(A73S)).await,
-            Err(CardsError::NotYourCards(c)) if c == c!(3S)
+            Err(CardsError::Rules { source: RulesError::NotYourCards(c) }) if c == c!(3S)
         ));
 
         assert!(matches!(
             games.pass_cards(game_id, *TWILSON, c!(A7S A9H)).await,
-            Err(CardsError::IllegalPassSize(c)) if c == c!(A7S A9H)
+            Err(CardsError::Rules { source: RulesError::IllegalPassSize(c) }) if c == c!(A7S A9H)
         ));
 
         assert!(matches!(
             games.charge_cards(game_id, *TWILSON, c!(AH)).await,
-            Err(CardsError::IllegalAction("charge", phase)) if phase == GamePhase::PassLeft
+            Err(CardsError::Rules { source: RulesError::IllegalAction("charge", phase) }) if phase == GamePhase::PassLeft
         ));
 
         assert!(matches!(
             games.play_card(game_id, *TWILSON, Card::SixClubs).await,
-            Err(CardsError::IllegalAction("play", phase)) if phase == GamePhase::PassLeft
+            Err(CardsError::Rules { source: RulesError::IllegalAction("play", phase) }) if phase == GamePhase::PassLeft
         ));
 
         games.pass_cards(game_id, *TWILSON, c!(K86C)).await?;
 
         assert!(matches!(
             games.pass_cards(game_id, *TWILSON, c!(A96H)).await,
-            Err(CardsError::AlreadyPassed(c)) if c == c!(K86C)
+            Err(CardsError::Rules { source: RulesError::AlreadyPassed(c) }) if c == c!(K86C)
         ));
 
         Ok(())

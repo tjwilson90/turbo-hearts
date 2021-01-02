@@ -1,9 +1,9 @@
-use crate::Database;
+use crate::{CardsError, Database, GetStr, ToSqlStr};
 use rusqlite::{OptionalExtension, ToSql};
 use serde::Serialize;
 use std::collections::{HashMap, HashSet};
 use tokio::sync::Mutex;
-use turbo_hearts_api::{CardsError, UserId};
+use turbo_hearts_api::UserId;
 
 #[derive(Debug, Clone, Hash, Eq, PartialEq, Serialize)]
 pub struct User {
@@ -79,7 +79,7 @@ impl Users {
                 &[&auth_token],
                 |row| {
                     Ok(User {
-                        id: row.get_unwrap::<_, UserId>(0),
+                        id: row.get_str(0).unwrap(),
                         name: row.get_unwrap::<_, String>(1),
                         realm: row.get_unwrap::<_, String>(2),
                         external_id: row.get_unwrap::<_, String>(3),
@@ -124,7 +124,7 @@ impl Users {
                 tx.prepare_cached("SELECT name, realm, external_id FROM user WHERE user_id = ?")?;
             for id in &ids {
                 let user = stmt
-                    .query_row(&[id], |row| {
+                    .query_row(&[id.sql()], |row| {
                         Ok(User {
                             id: *id,
                             name: row.get_unwrap::<_, String>(0),
@@ -153,19 +153,19 @@ impl Users {
             let edits = tx.execute::<&[&dyn ToSql]>(
                 "INSERT INTO user (user_id, name, realm, external_id)
                     VALUES (?, ?, ?, ?) ON CONFLICT DO NOTHING",
-                &[&id, &user.name, &user.realm, &user.external_id],
+                &[&id.sql(), &user.name, &user.realm, &user.external_id],
             )?;
             if edits == 0 {
                 id = tx.query_row_and_then(
                     "SELECT user_id FROM user WHERE realm = ? and external_id = ?",
                     &[&user.realm, &user.external_id],
-                    |row| row.get::<_, UserId>(0),
+                    |row| row.get_str(0),
                 )?;
             }
             tx.execute::<&[&dyn ToSql]>(
                 "INSERT INTO auth_token (token, user_id)
                     VALUES (?, ?) ON CONFLICT DO NOTHING",
-                &[&auth_token, &id],
+                &[&auth_token, &id.sql()],
             )?;
             Ok(id)
         })?;

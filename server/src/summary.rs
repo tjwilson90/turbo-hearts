@@ -1,8 +1,8 @@
-use crate::{CardsReject, Database, Game};
+use crate::{CardsError, Database, GetJson, GetStr, ToSqlStr};
 use rusqlite::{Rows, ToSql};
 use std::mem;
 use turbo_hearts_api::{
-    CardsError, ChargingRules, GameEvent, GameEventsRequest, GameId, GameState, GameSummaryEvent,
+    ChargingRules, Game, GameEvent, GameEventsRequest, GameId, GameState, GameSummaryEvent,
     GameSummaryResponse, LeaderboardGame, LeaderboardHand, LeaderboardRequest, LeaderboardResponse,
     Player, Seat, UserId,
 };
@@ -69,22 +69,20 @@ fn leaderboard<'a>(db: infallible!(&'a Database)) -> reply!() {
     async fn handle(db: &Database, request: LeaderboardRequest) -> Result<impl Reply, Rejection> {
         let LeaderboardRequest { game_id, page_size } = request;
         let page_size = page_size.unwrap_or(100);
-        let games = db
-            .run_read_only(|tx| {
-                Ok(match game_id {
-                    None => {
-                        let mut stmt = tx.prepare_cached(SELECT_FIRST_PAGE_OF_GAME_EVENTS)?;
-                        let rows = stmt.query(&[page_size])?;
-                        read_leaderboard(rows)?
-                    }
-                    Some(game_id) => {
-                        let mut stmt = tx.prepare_cached(SELECT_NEXT_PAGE_OF_GAME_EVENTS)?;
-                        let rows = stmt.query::<&[&dyn ToSql]>(&[&game_id, &page_size])?;
-                        read_leaderboard(rows)?
-                    }
-                })
+        let games = db.run_read_only(|tx| {
+            Ok(match game_id {
+                None => {
+                    let mut stmt = tx.prepare_cached(SELECT_FIRST_PAGE_OF_GAME_EVENTS)?;
+                    let rows = stmt.query(&[page_size])?;
+                    read_leaderboard(rows)?
+                }
+                Some(game_id) => {
+                    let mut stmt = tx.prepare_cached(SELECT_NEXT_PAGE_OF_GAME_EVENTS)?;
+                    let rows = stmt.query::<&[&dyn ToSql]>(&[&game_id.sql(), &page_size])?;
+                    read_leaderboard(rows)?
+                }
             })
-            .map_err(CardsReject)?;
+        })?;
         Ok(warp::reply::json(&games))
     }
 
@@ -102,9 +100,9 @@ fn read_leaderboard(mut rows: Rows<'_>) -> Result<LeaderboardResponse, rusqlite:
     }; 4];
     let mut state = GameState::new();
     while let Some(row) = rows.next()? {
-        let game_id = row.get(0)?;
+        let game_id = row.get_str(0)?;
         let timestamp = row.get(1)?;
-        let event = row.get(2)?;
+        let event = row.get_json(2)?;
         let was_playing = state.phase.is_playing();
         state.apply(&event);
         if let GameEvent::Sit {
@@ -155,18 +153,16 @@ fn read_leaderboard(mut rows: Rows<'_>) -> Result<LeaderboardResponse, rusqlite:
 
 fn game<'a>(db: infallible!(&'a Database)) -> reply!() {
     async fn handle(game_id: GameId, db: &Database) -> Result<impl Reply, Rejection> {
-        let reply = db
-            .run_read_only(|tx| {
-                let mut stmt = tx.prepare_cached(SELECT_GAME_EVENTS)?;
-                let rows = stmt.query(&[game_id])?;
-                let mut games = read_games(rows)?;
-                if let Some(game) = games.pop() {
-                    Ok(game)
-                } else {
-                    Err(CardsError::IncompleteGame(game_id))
-                }
-            })
-            .map_err(CardsReject)?;
+        let reply = db.run_read_only(|tx| {
+            let mut stmt = tx.prepare_cached(SELECT_GAME_EVENTS)?;
+            let rows = stmt.query(&[game_id.sql()])?;
+            let mut games = read_games(rows)?;
+            if let Some(game) = games.pop() {
+                Ok(game)
+            } else {
+                Err(CardsError::IncompleteGame(game_id))
+            }
+        })?;
         Ok(warp::reply::json(&reply))
     }
 
@@ -177,22 +173,20 @@ fn games<'a>(db: infallible!(&'a Database)) -> reply!() {
     async fn handle(db: &Database, request: GameEventsRequest) -> Result<impl Reply, Rejection> {
         let GameEventsRequest { game_id, page_size } = request;
         let page_size = page_size.unwrap_or(100);
-        let games = db
-            .run_read_only(|tx| {
-                Ok(match game_id {
-                    None => {
-                        let mut stmt = tx.prepare_cached(SELECT_FIRST_PAGE_OF_GAME_EVENTS)?;
-                        let rows = stmt.query(&[page_size])?;
-                        read_games(rows)?
-                    }
-                    Some(game_id) => {
-                        let mut stmt = tx.prepare_cached(SELECT_NEXT_PAGE_OF_GAME_EVENTS)?;
-                        let rows = stmt.query::<&[&dyn ToSql]>(&[&game_id, &page_size])?;
-                        read_games(rows)?
-                    }
-                })
+        let games = db.run_read_only(|tx| {
+            Ok(match game_id {
+                None => {
+                    let mut stmt = tx.prepare_cached(SELECT_FIRST_PAGE_OF_GAME_EVENTS)?;
+                    let rows = stmt.query(&[page_size])?;
+                    read_games(rows)?
+                }
+                Some(game_id) => {
+                    let mut stmt = tx.prepare_cached(SELECT_NEXT_PAGE_OF_GAME_EVENTS)?;
+                    let rows = stmt.query::<&[&dyn ToSql]>(&[&game_id.sql(), &page_size])?;
+                    read_games(rows)?
+                }
             })
-            .map_err(CardsReject)?;
+        })?;
         Ok(warp::reply::json(&games))
     }
 
@@ -205,16 +199,16 @@ fn games<'a>(db: infallible!(&'a Database)) -> reply!() {
 fn read_games(mut rows: Rows<'_>) -> Result<Vec<GameSummaryResponse>, CardsError> {
     let mut games = Vec::new();
     let mut hands = Vec::new();
-    let mut game = Game::new();
+    let mut game: Game<()> = Game::new();
     let mut events = Vec::new();
     let mut players = [Player::Human {
         user_id: UserId::null(),
     }; 4];
     let mut rules = ChargingRules::Classic;
     while let Some(row) = rows.next()? {
-        let game_id = row.get(0)?;
+        let game_id = row.get_str(0)?;
         let timestamp = row.get(1)?;
-        let event = row.get(2)?;
+        let event = row.get_json(2)?;
         if let GameEvent::Sit {
             north,
             east,

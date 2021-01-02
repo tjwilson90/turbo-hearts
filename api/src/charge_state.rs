@@ -1,8 +1,8 @@
 use crate::{Card, Cards, Seat};
-use serde::export::Formatter;
-use std::fmt;
+use serde::{Deserialize, Serialize};
+use std::{fmt, fmt::Formatter};
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Deserialize, PartialEq, Serialize)]
 pub struct ChargeState {
     charges: u16,
 }

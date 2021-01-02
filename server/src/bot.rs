@@ -1,4 +1,4 @@
-use crate::Games;
+use crate::{CardsError, Games};
 use log::debug;
 use rand::distributions::Distribution;
 use rand_distr::Gamma;
@@ -9,8 +9,7 @@ use tokio::{
     time::Duration,
 };
 use turbo_hearts_api::{
-    can_claim, BotState, BotStrategy, Card, Cards, CardsError, GameEvent, GameId, GameState, Seat,
-    UserId,
+    can_claim, BotState, BotStrategy, Card, Cards, GameEvent, GameId, GameState, Seat, UserId,
 };
 use turbo_hearts_bot::{
     Algorithm, Bot, DuckBot, GottaTryBot, HeuristicBot, NeuralNetworkBot, RandomBot, SimulateBot,
@@ -96,17 +95,17 @@ impl BotRunner {
             }
             match action {
                 Some(Action::Pass) => {
-                    let cards = self.bot.pass(&self.bot_state, &self.game_state);
+                    let cards = self.pass().await;
                     BotRunner::delay(delay, now).await;
                     let _ = games.pass_cards(self.game_id, self.user_id, cards).await;
                 }
                 Some(Action::Charge) => {
-                    let cards = self.bot.charge(&self.bot_state, &self.game_state);
+                    let cards = self.charge().await;
                     BotRunner::delay(delay, now).await;
                     let _ = games.charge_cards(self.game_id, self.user_id, cards).await;
                 }
                 Some(Action::Play) => {
-                    let card = self.bot.play(&self.bot_state, &self.game_state);
+                    let card = self.play().await;
                     if card != Card::TwoClubs {
                         BotRunner::delay(delay, now).await;
                     }
@@ -128,6 +127,39 @@ impl BotRunner {
                 None => return Ok(()),
             }
         }
+    }
+
+    async fn pass(&mut self) -> Cards {
+        let (tx, rx) = tokio::sync::oneshot::channel();
+        rayon::scope(|scope| {
+            scope.spawn(|_| {
+                let cards = self.bot.pass(&self.bot_state, &self.game_state);
+                tx.send(cards).unwrap();
+            });
+        });
+        rx.await.unwrap()
+    }
+
+    async fn charge(&mut self) -> Cards {
+        let (tx, rx) = tokio::sync::oneshot::channel();
+        rayon::scope(|scope| {
+            scope.spawn(|_| {
+                let cards = self.bot.charge(&self.bot_state, &self.game_state);
+                tx.send(cards).unwrap();
+            });
+        });
+        rx.await.unwrap()
+    }
+
+    async fn play(&mut self) -> Card {
+        let (tx, rx) = tokio::sync::oneshot::channel();
+        rayon::scope(|scope| {
+            scope.spawn(|_| {
+                let card = self.bot.play(&self.bot_state, &self.game_state);
+                tx.send(card).unwrap();
+            });
+        });
+        rx.await.unwrap()
     }
 
     async fn delay(delay: Option<Duration>, start: Instant) {

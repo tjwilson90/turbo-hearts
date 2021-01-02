@@ -9,8 +9,12 @@ log = "*"
 once_cell = "*"
 rand = "*"
 tract-onnx = "*"
-tokio = { version = "*", features = ["blocking", "macros", "parking_lot", "rt-threaded", "sync"] }
 turbo-hearts-api = { path = "../api" }
 
 [dev-dependencies]
+criterion = "*"
 env_logger = { version = "*", default-features = false, features = ["humantime"] }
+
+[[bench]]
+name = "inference"
+harness = false

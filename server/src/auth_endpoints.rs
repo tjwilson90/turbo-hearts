@@ -1,4 +1,4 @@
-use crate::{CardsReject, Users, CONFIG};
+use crate::{Users, CONFIG};
 use http::{header, Response, StatusCode};
 use reqwest::Client;
 use serde::Deserialize;
@@ -103,10 +103,7 @@ fn redirect<'a>(users: infallible!(&'a Users), http_client: infallible!(&'a Clie
             _ => panic!("Unknown provider: {}", provider),
         };
         let token = Uuid::new_v4();
-        let user = users
-            .insert(token.to_string(), user)
-            .await
-            .map_err(CardsReject)?;
+        let user = users.insert(token.to_string(), user).await?;
 
         let response = Response::builder()
             .status(StatusCode::SEE_OTHER)

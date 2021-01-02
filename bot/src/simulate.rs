@@ -19,13 +19,19 @@ impl SimulateBot {
     fn heuristic_bot(&mut self) -> HeuristicBot {
         HeuristicBot::from(self.hand_maker.void())
     }
+}
 
-    fn charge_blocking(&mut self, bot_state: &BotState, game_state: &GameState) -> Cards {
+impl Algorithm for SimulateBot {
+    fn pass(&mut self, bot_state: &BotState, game_state: &GameState) -> Cards {
+        self.heuristic_bot().pass(bot_state, game_state)
+    }
+
+    fn charge(&mut self, bot_state: &BotState, game_state: &GameState) -> Cards {
         let chargeable =
             (bot_state.post_pass_hand - game_state.charges.all_charges()) & Cards::CHARGEABLE;
         let mut money_counts = HashMap::new();
         let now = Instant::now();
-        let deadline = 4000 + rand::thread_rng().gen_range(0, 1000);
+        let deadline = 4000 + rand::thread_rng().gen_range(0..1000);
         while now.elapsed().as_millis() < deadline {
             let hands = self.hand_maker.make();
             for cards in chargeable.powerset() {
@@ -52,7 +58,7 @@ impl SimulateBot {
         compute_best(chargeable.powerset(), money_counts)
     }
 
-    fn play_blocking(&mut self, bot_state: &BotState, game_state: &GameState) -> Card {
+    fn play(&mut self, bot_state: &BotState, game_state: &GameState) -> Card {
         let cards = game_state.legal_plays(bot_state.post_pass_hand);
         if cards.contains(Card::TwoClubs) {
             return Card::TwoClubs;
@@ -86,20 +92,6 @@ impl SimulateBot {
             iter += 1;
         }
         compute_best(cards, money_counts)
-    }
-}
-
-impl Algorithm for SimulateBot {
-    fn pass(&mut self, bot_state: &BotState, game_state: &GameState) -> Cards {
-        self.heuristic_bot().pass(bot_state, game_state)
-    }
-
-    fn charge(&mut self, bot_state: &BotState, game_state: &GameState) -> Cards {
-        tokio::task::block_in_place(move || self.charge_blocking(&bot_state, &game_state))
-    }
-
-    fn play(&mut self, bot_state: &BotState, game_state: &GameState) -> Card {
-        tokio::task::block_in_place(move || self.play_blocking(&bot_state, &game_state))
     }
 
     fn on_event(&mut self, _: &BotState, game_state: &GameState, event: &GameEvent) {

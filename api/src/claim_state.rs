@@ -1,6 +1,6 @@
 use crate::Seat;
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct ClaimState {
     accepts: u16,
 }

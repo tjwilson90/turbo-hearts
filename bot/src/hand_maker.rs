@@ -31,7 +31,13 @@ impl HandMaker {
                 self.hands[2] = *south;
                 self.hands[3] = *west;
             }
-            GameEvent::SendPass { from, cards } => self.hands[from.idx()] -= *cards,
+            GameEvent::SendPass { from, cards } => {
+                self.hands[from.idx()] -= *cards;
+                let recv = state.phase.pass_receiver(*from);
+                if *from != recv {
+                    self.hands[recv.idx()] |= *cards;
+                }
+            }
             GameEvent::RecvPass { to, cards } => self.hands[to.idx()] |= *cards,
             GameEvent::Charge { seat, cards } => self.hands[seat.idx()] |= *cards,
             GameEvent::RevealCharges {

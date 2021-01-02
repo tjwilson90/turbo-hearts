@@ -3,13 +3,13 @@ use tokio::sync::mpsc::UnboundedSender;
 use turbo_hearts_api::GameEvent;
 
 #[derive(Debug)]
-pub struct Sender {
+pub struct Subscriber {
     tx: UnboundedSender<(GameEvent, usize)>,
     counter: AtomicUsize,
     last_event_id: usize,
 }
 
-impl Sender {
+impl Subscriber {
     pub fn new(tx: UnboundedSender<(GameEvent, usize)>, last_event_id: Option<usize>) -> Self {
         Self {
             tx,
