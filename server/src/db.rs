@@ -2,7 +2,7 @@ use crate::CardsError;
 use r2d2::{CustomizeConnection, Pool};
 use r2d2_sqlite::SqliteConnectionManager;
 use rusqlite::{
-    types::{FromSql, FromSqlError, ToSqlOutput, Value, ValueRef},
+    types::{FromSqlError, ToSqlOutput, Value, ValueRef},
     Connection, DropBehavior, Row, ToSql, Transaction, TransactionBehavior, NO_PARAMS,
 };
 use serde::{de::DeserializeOwned, Serialize};
@@ -124,31 +124,41 @@ where
     }
 }
 
-impl<T> FromSql for SqlStr<T>
-where
-    T: FromStr,
-    <T as FromStr>::Err: Debug,
-{
-    fn column_result(value: ValueRef<'_>) -> Result<Self, FromSqlError> {
-        value.as_str().map(|s| SqlStr(s.parse().unwrap()))
-    }
-}
-
 pub trait GetStr {
     fn get_str<T>(&self, idx: usize) -> Result<T, rusqlite::Error>
     where
-        T: FromStr,
+        T: FromStr + ToSqlStr,
+        <T as FromStr>::Err: Debug;
+
+    fn get_opt_str<T>(&self, idx: usize) -> Result<Option<T>, rusqlite::Error>
+    where
+        T: FromStr + ToSqlStr,
         <T as FromStr>::Err: Debug;
 }
 
 impl<'stmt> GetStr for Row<'stmt> {
     fn get_str<T>(&self, idx: usize) -> Result<T, rusqlite::Error>
     where
-        T: FromStr,
+        T: FromStr + ToSqlStr,
         <T as FromStr>::Err: Debug,
     {
-        let str: SqlStr<T> = self.get(idx)?;
-        Ok(str.0)
+        let value = self.get_raw_checked(idx)?;
+        Ok(value.as_str()?.parse().unwrap())
+    }
+
+    fn get_opt_str<T>(&self, idx: usize) -> Result<Option<T>, rusqlite::Error>
+    where
+        T: FromStr + ToSqlStr,
+        <T as FromStr>::Err: Debug,
+    {
+        match self.get_raw_checked(idx)? {
+            ValueRef::Null => Ok(None),
+            ValueRef::Text(t) => {
+                let str = std::str::from_utf8(t).unwrap();
+                Ok(Some(str.parse().unwrap()))
+            }
+            _ => Err(FromSqlError::InvalidType.into()),
+        }
     }
 }
 
@@ -184,29 +194,36 @@ where
     }
 }
 
-impl<T> FromSql for SqlJson<T>
-where
-    T: DeserializeOwned,
-{
-    fn column_result(value: ValueRef<'_>) -> Result<Self, FromSqlError> {
-        value
-            .as_str()
-            .map(|s| SqlJson(serde_json::from_str(s).unwrap()))
-    }
-}
-
 pub trait GetJson {
     fn get_json<T>(&self, idx: usize) -> Result<T, rusqlite::Error>
     where
-        T: DeserializeOwned;
+        T: DeserializeOwned + ToSqlJson;
+
+    fn get_opt_json<T>(&self, idx: usize) -> Result<Option<T>, rusqlite::Error>
+    where
+        T: DeserializeOwned + ToSqlJson;
 }
 
 impl<'stmt> GetJson for Row<'stmt> {
     fn get_json<T>(&self, idx: usize) -> Result<T, rusqlite::Error>
     where
-        T: DeserializeOwned,
+        T: DeserializeOwned + ToSqlJson,
     {
-        let json: SqlJson<T> = self.get(idx)?;
-        Ok(json.0)
+        let value = self.get_raw_checked(idx)?;
+        Ok(serde_json::from_str(value.as_str()?).unwrap())
+    }
+
+    fn get_opt_json<T>(&self, idx: usize) -> Result<Option<T>, rusqlite::Error>
+    where
+        T: DeserializeOwned + ToSqlJson,
+    {
+        match self.get_raw_checked(idx)? {
+            ValueRef::Null => Ok(None),
+            ValueRef::Text(t) => {
+                let str = std::str::from_utf8(t).unwrap();
+                Ok(serde_json::from_str(str).unwrap())
+            }
+            _ => Err(FromSqlError::InvalidType.into()),
+        }
     }
 }
