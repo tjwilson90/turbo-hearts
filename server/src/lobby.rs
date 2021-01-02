@@ -161,7 +161,8 @@ impl Lobby {
             let mut players = Vec::with_capacity(4);
             while let Some(row) = rows.next()? {
                 let user_id = row.get_str(0)?;
-                let player = if let Some(strategy) = row.get_json(1)? {
+                let player = if let Some(strategy) = row.get::<_, Option<String>>(1)? {
+                    let strategy = serde_json::from_str(&strategy).unwrap();
                     Player::Bot { user_id, strategy }
                 } else {
                     Player::Human { user_id }
