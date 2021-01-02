@@ -1,12 +1,12 @@
 use std::collections::HashMap;
-use turbo_hearts_api::{Cards, Rank, Seat, Suit, Suits, WonState};
+use turbo_hearts_api::{Cards, GameState, Rank, Seat, Suit, Suits, WonState};
 
-pub struct TranspositionTable {
+pub struct TranspositionTable<T> {
     suits: SuitTranspositions,
-    table: HashMap<TranspositionKey, WonState>,
+    table: HashMap<TranspositionKey, T>,
 }
 
-impl TranspositionTable {
+impl<T: Copy> TranspositionTable<T> {
     pub fn new(hands: [Cards; 4]) -> Self {
         Self {
             suits: SuitTranspositions::new(hands),
@@ -14,22 +14,17 @@ impl TranspositionTable {
         }
     }
 
-    pub fn lookup(
-        &self,
-        leader: Seat,
-        leads: Suits,
-        won: WonState,
-        played: Cards,
-    ) -> Result<WonState, TranspositionKey> {
+    pub fn lookup(&mut self, state: &GameState) -> Result<T, TranspositionKey> {
         let key = TranspositionKey {
-            leader,
-            leads,
-            won,
+            leader: state.next_actor.unwrap(),
+            leads: state.led_suits,
+            won: state.won,
+            trick: trick_transposition(state),
             transpositions: [
-                self.suits.transposition(Suit::Clubs, played),
-                self.suits.transposition(Suit::Diamonds, played),
-                self.suits.transposition(Suit::Hearts, played),
-                self.suits.transposition(Suit::Spades, played),
+                self.suits.transposition(Suit::Clubs, state.played),
+                self.suits.transposition(Suit::Diamonds, state.played),
+                self.suits.transposition(Suit::Hearts, state.played),
+                self.suits.transposition(Suit::Spades, state.played),
             ],
         };
         match self.table.get(&key) {
@@ -38,17 +33,49 @@ impl TranspositionTable {
         }
     }
 
-    pub fn cache(&mut self, key: TranspositionKey, won: WonState) {
+    pub fn cache(&mut self, key: TranspositionKey, won: T) {
         self.table.insert(key, won);
+        if self.table.len() == self.table.capacity() && self.table.capacity() > 1 << 29 {
+            self.shrink();
+        }
+    }
+
+    #[cold]
+    #[inline(never)]
+    fn shrink(&mut self) {
+        let old_len = self.table.len();
+        self.table.retain(|k, _| k.trick == 0);
+        eprintln!("Shrinking from {} to {} keys", old_len, self.table.len());
     }
 }
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct TranspositionKey {
-    leader: Seat,
-    leads: Suits,
-    won: WonState,
-    transpositions: [u16; 4],
+    leader: Seat,             // 2  8
+    leads: Suits,             // 3  8
+    won: WonState,            // 19 32
+    trick: u16,               // 9  16
+    transpositions: [u16; 4], // 52 64
+}
+
+fn trick_transposition(state: &GameState) -> u16 {
+    let trick = state.current_trick;
+    if trick.is_empty() {
+        return 0;
+    }
+    let cards = trick.cards();
+    let len = trick.len();
+    let nined = cards.contains(trick.suit().with_rank(Rank::Nine));
+    let rank = ((Cards::ALL - state.played) & trick.suit().cards())
+        .above((trick.suit().cards() & cards).max())
+        .len();
+    let suit = trick.suit();
+    let seat = trick.winning_seat(state.next_actor.unwrap());
+    (len as u16) << 9
+        | (nined as u16) << 8
+        | (rank as u16) << 4
+        | (suit as u16) << 2
+        | (seat as u16)
 }
 
 struct SuitTranspositions {

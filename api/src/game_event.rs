@@ -213,5 +213,3 @@ impl GameEvent {
         }
     }
 }
-
-sql_json!(GameEvent);

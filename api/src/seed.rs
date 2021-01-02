@@ -29,8 +29,6 @@ impl Seed {
     }
 }
 
-sql_json!(Seed);
-
 #[derive(Debug)]
 pub struct HashedSeed {
     seed: [u8; 32],

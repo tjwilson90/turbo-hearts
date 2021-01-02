@@ -8,17 +8,16 @@ edition = "2018"
 log = "*"
 rand = "*"
 rand_chacha = "*"
-rusqlite = { version = "*", features = ["bundled"] }
 serde = { version = "*", features = ["derive"] }
-serde_json = "*"
 sha2 = "*"
 thiserror = "*"
-tokio = { version = "*", features = ["blocking", "macros", "parking_lot", "rt-threaded", "sync"] }
 uuid = { version = "*", features = ["serde", "v4"] }
 
 [dev-dependencies]
+bincode = "*"
 criterion = "*"
 env_logger = { version = "*", default-features = false, features = ["humantime"] }
+serde_test = "*"
 tempfile = "*"
 
 [[bench]]

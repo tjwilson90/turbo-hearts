@@ -1,4 +1,4 @@
-use crate::{util, Database};
+use crate::{util, CardsError, Database, GetJson, GetStr, ToSqlJson, ToSqlStr};
 use log::info;
 use rusqlite::{OptionalExtension, ToSql, Transaction, NO_PARAMS};
 use std::collections::{HashMap, HashSet};
@@ -7,8 +7,7 @@ use tokio::sync::{
     Mutex,
 };
 use turbo_hearts_api::{
-    CardsError, GameId, LobbyChat, LobbyEvent, LobbyGame, Player, PlayerWithOptions, Seat, Seed,
-    UserId,
+    GameId, LobbyChat, LobbyEvent, LobbyGame, Player, PlayerWithOptions, Seat, Seed, UserId,
 };
 
 pub struct Lobby {
@@ -97,7 +96,14 @@ impl Lobby {
             tx.execute::<&[&dyn ToSql]>(
                 "INSERT INTO game (game_id, seed, created_time, created_by,
                     last_updated_time, last_updated_by) VALUES (?, ?, ?, ?, ?, ?)",
-                &[&game_id, &seed, &timestamp, &user_id, &timestamp, &user_id],
+                &[
+                    &game_id.sql(),
+                    &seed.sql(),
+                    &timestamp,
+                    &user_id.sql(),
+                    &timestamp,
+                    &user_id.sql(),
+                ],
             )?;
             insert_player(&tx, game_id, &player)?;
             Ok(())
@@ -120,18 +126,19 @@ impl Lobby {
         game_id: GameId,
         player: PlayerWithOptions,
     ) -> Result<(), CardsError> {
-        let joined = self.db.run_with_retry(|tx| {
-            validate_game_unstarted(&tx, game_id)?;
-            if insert_player(&tx, game_id, &player)? {
-                tx.execute::<&[&dyn ToSql]>(
+        let joined =
+            self.db.run_with_retry(|tx| {
+                validate_game_unstarted(&tx, game_id)?;
+                if insert_player(&tx, game_id, &player)? {
+                    tx.execute::<&[&dyn ToSql]>(
                     "UPDATE game SET last_updated_time = ?, last_updated_by = ? WHERE game_id = ?",
-                    &[&util::timestamp(), &player.player.user_id(), &game_id],
+                    &[&util::timestamp(), &player.player.user_id().sql(), &game_id.sql()],
                 )?;
-                Ok(true)
-            } else {
-                Ok(false)
-            }
-        })?;
+                    Ok(true)
+                } else {
+                    Ok(false)
+                }
+            })?;
         if joined {
             let mut inner = self.inner.lock().await;
             inner.broadcast(LobbyEvent::JoinGame { game_id, player });
@@ -150,19 +157,19 @@ impl Lobby {
                 "SELECT user_id, strategy, rules, seat FROM game_player
                     WHERE game_id = ? ORDER BY random() LIMIT 4",
             )?;
-            let mut rows = stmt.query(&[game_id])?;
+            let mut rows = stmt.query(&[game_id.sql()])?;
             let mut players = Vec::with_capacity(4);
             while let Some(row) = rows.next()? {
-                let user_id = row.get(0)?;
-                let player = if let Some(strategy) = row.get(1)? {
+                let user_id = row.get_str(0)?;
+                let player = if let Some(strategy) = row.get_json(1)? {
                     Player::Bot { user_id, strategy }
                 } else {
                     Player::Human { user_id }
                 };
                 players.push(PlayerWithOptions {
                     player,
-                    rules: row.get(2)?,
-                    seat: row.get(3)?,
+                    rules: row.get_json(2)?,
+                    seat: row.get_json(3)?,
                 });
             }
             if players.len() < 4 {
@@ -170,7 +177,7 @@ impl Lobby {
             }
             tx.execute::<&[&dyn ToSql]>(
                 "UPDATE game SET started_time = ? WHERE game_id = ?",
-                &[&util::timestamp(), &game_id],
+                &[&util::timestamp(), &game_id.sql()],
             )?;
             for &seat in &Seat::VALUES {
                 if let Some(idx) = players.iter().position(|p| p.seat == Some(seat)) {
@@ -179,8 +186,8 @@ impl Lobby {
             }
             let seed = tx.query_row(
                 "SELECT seed FROM game WHERE game_id = ?",
-                &[game_id],
-                |row| Ok(row.get::<_, Seed>(0)?),
+                &[game_id.sql()],
+                |row| Ok(row.get_json(0)?),
             )?;
             Ok((players, seed))
         })?;
@@ -203,7 +210,7 @@ impl Lobby {
             if player.is_some() {
                 tx.execute::<&[&dyn ToSql]>(
                     "UPDATE game SET last_updated_time = ?, last_updated_by = ? WHERE game_id = ?",
-                    &[&util::timestamp(), &user_id, &game_id],
+                    &[&util::timestamp(), &user_id.sql(), &game_id.sql()],
                 )?;
             }
             Ok(player)
@@ -226,7 +233,7 @@ impl Lobby {
         self.db.run_with_retry(|tx| {
             tx.execute::<&[&dyn ToSql]>(
                 "INSERT INTO lobby_chat (timestamp, user_id, message) VALUES (?, ?, ?)",
-                &[&util::timestamp(), &user_id, &message],
+                &[&util::timestamp(), &user_id.sql(), &message],
             )?;
             Ok(())
         })?;
@@ -272,7 +279,7 @@ fn load_recent_chat(tx: &Transaction) -> Result<Vec<LobbyChat>, CardsError> {
     while let Some(row) = rows.next()? {
         messages.push(LobbyChat {
             timestamp: row.get(0)?,
-            user_id: row.get(1)?,
+            user_id: row.get_str(1)?,
             message: row.get(2)?,
         });
     }
@@ -290,14 +297,14 @@ fn load_games(tx: &Transaction) -> Result<HashMap<GameId, LobbyGame>, CardsError
     let mut rows = stmt.query(&[util::timestamp() - 8 * 60 * 60 * 1000])?;
     while let Some(row) = rows.next()? {
         games.insert(
-            row.get(0)?,
+            row.get_str(0)?,
             LobbyGame {
                 players: HashSet::new(),
-                seed: row.get::<_, Seed>(1)?.redact(),
+                seed: row.get_json::<Seed>(1)?.redact(),
                 created_time: row.get(2)?,
-                created_by: row.get(3)?,
+                created_by: row.get_str(3)?,
                 last_updated_time: row.get(4)?,
-                last_updated_by: row.get(5)?,
+                last_updated_by: row.get_str(5)?,
                 started_time: row.get(6)?,
             },
         );
@@ -309,17 +316,18 @@ fn load_games(tx: &Transaction) -> Result<HashMap<GameId, LobbyGame>, CardsError
     )?;
     let mut rows = stmt.query(NO_PARAMS)?;
     while let Some(row) = rows.next()? {
-        if let Some(game) = games.get_mut(&row.get(0)?) {
-            let user_id = row.get(1)?;
-            let player = if let Some(strategy) = row.get(2)? {
+        let game_id = row.get_str(0)?;
+        if let Some(game) = games.get_mut(&game_id) {
+            let user_id = row.get_str(1)?;
+            let player = if let Some(strategy) = row.get_json(2)? {
                 Player::Bot { user_id, strategy }
             } else {
                 Player::Human { user_id }
             };
             game.players.insert(PlayerWithOptions {
                 player,
-                rules: row.get(3)?,
-                seat: row.get(4)?,
+                rules: row.get_json(3)?,
+                seat: row.get_json(4)?,
             });
         }
     }
@@ -331,7 +339,7 @@ fn validate_game_unstarted(tx: &Transaction, game_id: GameId) -> Result<(), Card
     let started = tx
         .query_row(
             "SELECT started_time FROM game WHERE game_id = ?",
-            &[game_id],
+            &[game_id.sql()],
             |row| Ok(row.get::<_, Option<i64>>(0)?.is_some()),
         )
         .optional()?;
@@ -351,11 +359,11 @@ fn insert_player(
         "INSERT OR IGNORE INTO game_player (game_id, user_id, strategy, rules, seat)
             VALUES (?, ?, ?, ?, ?)",
         &[
-            &game_id,
-            &player.player.user_id(),
-            &player.player.strategy(),
-            &player.rules,
-            &player.seat,
+            &game_id.sql(),
+            &player.player.user_id().sql(),
+            &player.player.strategy().as_ref().map(|s| s.sql()),
+            &player.rules.sql(),
+            &player.seat.as_ref().map(|s| s.sql()),
         ],
     )?;
     Ok(rows > 0)
@@ -369,9 +377,9 @@ fn remove_player(
     let player = tx
         .query_row::<_, &[&dyn ToSql], _>(
             "SELECT strategy FROM game_player WHERE game_id = ? AND user_id = ?",
-            &[&game_id, &user_id],
+            &[&game_id.sql(), &user_id.sql()],
             |row| {
-                Ok(match row.get(0)? {
+                Ok(match row.get_json(0)? {
                     Some(strategy) => Player::Bot { user_id, strategy },
                     None => Player::Human { user_id },
                 })
@@ -380,7 +388,7 @@ fn remove_player(
         .optional()?;
     tx.execute::<&[&dyn ToSql]>(
         "DELETE FROM game_player WHERE game_id = ? AND user_id = ?",
-        &[&game_id, &user_id],
+        &[&game_id.sql(), &user_id.sql()],
     )?;
     Ok(player)
 }

@@ -70,7 +70,7 @@ fn main() {
             None
         }
     });
-    for _ in 0..28 {
+    for _ in 0..24 {
         let seat = state.next_actor.unwrap();
         let bot = &bots[seat.idx()];
         let card = heuristic.play(bot, &state);

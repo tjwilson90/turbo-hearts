@@ -1,4 +1,4 @@
-use crate::{CardsReject, User, Users};
+use crate::{User, Users};
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use turbo_hearts_api::UserId;
@@ -17,7 +17,7 @@ pub fn router<'a>(users: infallible!(&'a Users)) -> reply!() {
 
     async fn handle(users: &Users, request: Request) -> Result<impl Reply, Rejection> {
         let Request { ids } = request;
-        let users = users.get_users(ids).await.map_err(CardsReject)?;
+        let users = users.get_users(ids).await?;
         Ok(warp::reply::json(&users))
     }
 

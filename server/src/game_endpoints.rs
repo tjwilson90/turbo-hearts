@@ -1,4 +1,4 @@
-use crate::{auth_redirect, CardsReject, Games, Lobby};
+use crate::{auth_redirect, Games, Lobby};
 use tokio::{
     stream::{Stream, StreamExt},
     sync::mpsc::UnboundedReceiver,
@@ -44,10 +44,7 @@ fn subscribe<'a>(games: infallible!(&'a Games), user_id: rejection!(UserId)) -> 
         user_id: UserId,
         last_event_id: Option<usize>,
     ) -> Result<impl Reply, Rejection> {
-        let rx = games
-            .subscribe(game_id, user_id, last_event_id)
-            .await
-            .map_err(CardsReject)?;
+        let rx = games.subscribe(game_id, user_id, last_event_id).await?;
         Ok(sse::reply(stream(rx)))
     }
 
@@ -80,10 +77,7 @@ fn pass_cards<'a>(games: infallible!(&'a Games), user_id: rejection!(UserId)) ->
         request: PassRequest,
     ) -> Result<impl Reply, Rejection> {
         let PassRequest { game_id, cards } = request;
-        games
-            .pass_cards(game_id, user_id, cards)
-            .await
-            .map_err(CardsReject)?;
+        games.pass_cards(game_id, user_id, cards).await?;
         Ok(warp::reply())
     }
 
@@ -102,10 +96,7 @@ fn charge_cards<'a>(games: infallible!(&'a Games), user_id: rejection!(UserId)) 
         request: ChargeRequest,
     ) -> Result<impl Reply, Rejection> {
         let ChargeRequest { game_id, cards } = request;
-        games
-            .charge_cards(game_id, user_id, cards)
-            .await
-            .map_err(CardsReject)?;
+        games.charge_cards(game_id, user_id, cards).await?;
         Ok(warp::reply())
     }
 
@@ -129,10 +120,7 @@ fn play_card<'a>(
         request: PlayRequest,
     ) -> Result<impl Reply, Rejection> {
         let PlayRequest { game_id, card } = request;
-        let complete = games
-            .play_card(game_id, user_id, card)
-            .await
-            .map_err(CardsReject)?;
+        let complete = games.play_card(game_id, user_id, card).await?;
         if complete {
             lobby.finish_game(game_id).await;
         }
@@ -155,7 +143,7 @@ fn claim<'a>(games: infallible!(&'a Games), user_id: rejection!(UserId)) -> repl
         request: ClaimRequest,
     ) -> Result<impl Reply, Rejection> {
         let ClaimRequest { game_id } = request;
-        games.claim(game_id, user_id).await.map_err(CardsReject)?;
+        games.claim(game_id, user_id).await?;
         Ok(warp::reply())
     }
 
@@ -174,10 +162,7 @@ fn accept_claim<'a>(games: infallible!(&'a Games), user_id: rejection!(UserId)) 
         request: AcceptClaimRequest,
     ) -> Result<impl Reply, Rejection> {
         let AcceptClaimRequest { game_id, claimer } = request;
-        games
-            .accept_claim(game_id, user_id, claimer)
-            .await
-            .map_err(CardsReject)?;
+        games.accept_claim(game_id, user_id, claimer).await?;
         Ok(warp::reply())
     }
 
@@ -196,10 +181,7 @@ fn reject_claim<'a>(games: infallible!(&'a Games), user_id: rejection!(UserId)) 
         request: RejectClaimRequest,
     ) -> Result<impl Reply, Rejection> {
         let RejectClaimRequest { game_id, claimer } = request;
-        games
-            .reject_claim(game_id, user_id, claimer)
-            .await
-            .map_err(CardsReject)?;
+        games.reject_claim(game_id, user_id, claimer).await?;
         Ok(warp::reply())
     }
 
@@ -218,10 +200,7 @@ fn chat<'a>(games: infallible!(&'a Games), user_id: rejection!(UserId)) -> reply
         request: GameChatRequest,
     ) -> Result<impl Reply, Rejection> {
         let GameChatRequest { game_id, message } = request;
-        games
-            .chat(game_id, user_id, message)
-            .await
-            .map_err(CardsReject)?;
+        games.chat(game_id, user_id, message).await?;
         Ok(warp::reply())
     }
 

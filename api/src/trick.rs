@@ -1,4 +1,5 @@
 use crate::{Card, Cards, Seat, Suit};
+use serde::{Deserialize, Serialize};
 use std::{fmt, fmt::Formatter};
 
 const NINE_MASKS: [u32; 4] = [0x07_07_07_07, 0x17_17_17_17, 0x27_27_27_27, 0x37_37_37_37];
@@ -10,7 +11,7 @@ const SUIT_XORS: [u64; 4] = [
 ];
 const EMPTY: u64 = 0x80_80_80_80_80_80_80_80;
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Deserialize, PartialEq, Serialize)]
 pub struct Trick {
     state: u64,
 }

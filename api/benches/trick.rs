@@ -119,7 +119,7 @@ pub fn push(c: &mut Criterion) {
     c.bench_function("push", |b| {
         b.iter_batched(
             || Trick::new().push(Card::FiveDiamonds),
-            |mut trick| trick.push(Card::ThreeSpades),
+            |trick| trick.push(Card::ThreeSpades),
             BatchSize::SmallInput,
         )
     });

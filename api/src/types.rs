@@ -49,8 +49,6 @@ impl Display for ChargingRules {
     }
 }
 
-sql_json!(ChargingRules);
-
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash, Serialize, Deserialize)]
 pub struct GameId(Uuid);
 
@@ -73,8 +71,6 @@ impl FromStr for GameId {
         Ok(GameId(s.parse()?))
     }
 }
-
-sql_str!(GameId);
 
 #[repr(u8)]
 #[serde(rename_all = "snake_case")]
@@ -139,5 +135,3 @@ impl FromStr for UserId {
         Ok(UserId(s.parse()?))
     }
 }
-
-sql_str!(UserId);

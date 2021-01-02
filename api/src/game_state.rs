@@ -2,17 +2,34 @@ use crate::{
     Card, Cards, ChargeState, ChargingRules, ClaimState, DoneState, GameEvent, GamePhase, Scores,
     Seat, Suits, Trick, WonState,
 };
+use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct GameState {
-    pub rules: ChargingRules,     // 1
-    pub phase: GamePhase,         // 1
-    pub done: DoneState,          // 1
-    pub charge_count: u8,         // 1
+    #[serde(skip_serializing)]
+    #[serde(skip_deserializing)]
+    #[serde(default = "default_rules")]
+    pub rules: ChargingRules, // 1
+    #[serde(skip_serializing)]
+    #[serde(skip_deserializing)]
+    #[serde(default = "default_phase")]
+    pub phase: GamePhase, // 1
+    #[serde(skip_serializing)]
+    #[serde(skip_deserializing)]
+    #[serde(default = "default_done")]
+    pub done: DoneState, // 1
+    #[serde(skip_serializing)]
+    #[serde(skip_deserializing)]
+    #[serde(default)]
+    pub charge_count: u8, // 1
     pub charges: ChargeState,     // 2
     pub next_actor: Option<Seat>, // 1
-    pub played: Cards,            // 8
-    pub claims: ClaimState,       // 2
+    #[serde(with = "played")]
+    pub played: Cards, // 8
+    #[serde(skip_serializing)]
+    #[serde(skip_deserializing)]
+    #[serde(default = "default_claims")]
+    pub claims: ClaimState, // 2
     pub won: WonState,            // 4
     pub led_suits: Suits,         // 1
     pub current_trick: Trick,     // 8
@@ -237,5 +254,138 @@ impl GameState {
             }
         }
         plays
+    }
+}
+
+fn default_rules() -> ChargingRules {
+    ChargingRules::Classic
+}
+
+fn default_phase() -> GamePhase {
+    GamePhase::PlayLeft
+}
+
+fn default_done() -> DoneState {
+    DoneState::new()
+}
+
+fn default_claims() -> ClaimState {
+    ClaimState::new()
+}
+
+mod played {
+    use crate::Cards;
+    use serde::{
+        de::{Error, Visitor},
+        export::Formatter,
+        Deserializer, Serializer,
+    };
+    use std::fmt;
+
+    pub fn serialize<S>(played: &Cards, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_u64(played.bits)
+    }
+
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<Cards, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        Ok(Cards {
+            bits: deserializer.deserialize_u64(Played)?,
+        })
+    }
+
+    struct Played;
+
+    impl<'de> Visitor<'de> for Played {
+        type Value = u64;
+
+        fn expecting<'a>(&self, formatter: &mut Formatter<'a>) -> fmt::Result {
+            write!(formatter, "a u64")
+        }
+
+        fn visit_u64<E>(self, v: u64) -> Result<Self::Value, E>
+        where
+            E: Error,
+        {
+            Ok(v)
+        }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use crate::{GamePhase, GameState};
+    use serde_test::{assert_tokens, Token};
+
+    #[test]
+    fn test_serde() {
+        let mut state = GameState::new();
+        state.phase = GamePhase::PlayLeft;
+        assert_tokens(
+            &state,
+            &[
+                Token::Struct {
+                    name: "GameState",
+                    len: 6,
+                },
+                Token::Str("charges"),
+                Token::Struct {
+                    name: "ChargeState",
+                    len: 1,
+                },
+                Token::Str("charges"),
+                Token::U16(0),
+                Token::StructEnd,
+                Token::Str("next_actor"),
+                Token::None,
+                Token::Str("played"),
+                Token::U64(0),
+                Token::Str("won"),
+                Token::Struct {
+                    name: "WonState",
+                    len: 1,
+                },
+                Token::Str("state"),
+                Token::U32(0),
+                Token::StructEnd,
+                Token::Str("led_suits"),
+                Token::Struct {
+                    name: "Suits",
+                    len: 1,
+                },
+                Token::Str("bits"),
+                Token::U8(0),
+                Token::StructEnd,
+                Token::Str("current_trick"),
+                Token::Struct {
+                    name: "Trick",
+                    len: 1,
+                },
+                Token::Str("state"),
+                Token::U64(0x80_80_80_80_80_80_80_80),
+                Token::StructEnd,
+                Token::StructEnd,
+            ],
+        );
+    }
+
+    #[test]
+    fn test_bincode() {
+        let mut state = GameState::new();
+        state.phase = GamePhase::PlayLeft;
+        assert_eq!(bincode::serialized_size(&state.charges).unwrap(), 2);
+        assert_eq!(bincode::serialized_size(&state.next_actor).unwrap(), 1);
+        assert_eq!(bincode::serialized_size(&state.played).unwrap(), 8);
+        assert_eq!(bincode::serialized_size(&state.won).unwrap(), 4);
+        assert_eq!(bincode::serialized_size(&state.led_suits).unwrap(), 1);
+        assert_eq!(bincode::serialized_size(&state.current_trick).unwrap(), 8);
+        assert_eq!(bincode::serialized_size(&state).unwrap(), 24);
+        let bytes = bincode::serialize(&state).unwrap();
+        let new_state: GameState = bincode::deserialize(&bytes).unwrap();
+        assert_eq!(state, new_state);
     }
 }

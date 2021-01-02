@@ -1,4 +1,4 @@
-use crate::{auth_redirect, CardsReject, Games, Lobby};
+use crate::{auth_redirect, Games, Lobby};
 use tokio::{
     stream::{Stream, StreamExt},
     sync::mpsc::UnboundedReceiver,
@@ -39,7 +39,7 @@ fn html() -> reply!() {
 
 fn subscribe<'a>(lobby: infallible!(&'a Lobby), user_id: rejection!(UserId)) -> reply!() {
     async fn handle(lobby: &Lobby, user_id: UserId) -> Result<impl Reply, Rejection> {
-        let rx = lobby.subscribe(user_id).await.map_err(CardsReject)?;
+        let rx = lobby.subscribe(user_id).await?;
         Ok(sse::reply(stream(rx)))
     }
 
@@ -74,7 +74,7 @@ fn new_game<'a>(lobby: infallible!(&'a Lobby), user_id: rejection!(UserId)) -> r
             rules,
             seat,
         };
-        let game_id = lobby.new_game(player, seed).await.map_err(CardsReject)?;
+        let game_id = lobby.new_game(player, seed).await?;
         Ok(warp::reply::json(&game_id))
     }
 
@@ -102,10 +102,7 @@ fn join_game<'a>(lobby: infallible!(&'a Lobby), user_id: rejection!(UserId)) -> 
             rules,
             seat,
         };
-        lobby
-            .join_game(game_id, player)
-            .await
-            .map_err(CardsReject)?;
+        lobby.join_game(game_id, player).await?;
         Ok(warp::reply())
     }
 
@@ -129,10 +126,8 @@ fn start_game<'a>(
         request: StartGameRequest,
     ) -> Result<impl Reply, Rejection> {
         let StartGameRequest { game_id } = request;
-        let (players, seed) = lobby.start_game(game_id).await.map_err(CardsReject)?;
-        games
-            .start_game(game_id, players, seed)
-            .map_err(CardsReject)?;
+        let (players, seed) = lobby.start_game(game_id).await?;
+        games.start_game(game_id, players, seed)?;
         Ok(warp::reply())
     }
 
@@ -152,10 +147,7 @@ fn leave_game<'a>(lobby: infallible!(&'a Lobby), user_id: rejection!(UserId)) ->
         request: LeaveGameRequest,
     ) -> Result<impl Reply, Rejection> {
         let LeaveGameRequest { game_id } = request;
-        lobby
-            .leave_game(game_id, user_id)
-            .await
-            .map_err(CardsReject)?;
+        lobby.leave_game(game_id, user_id).await?;
         Ok(warp::reply())
     }
 
@@ -187,10 +179,7 @@ fn add_bot<'a>(lobby: infallible!(&'a Lobby), user_id: rejection!(UserId)) -> re
             rules,
             seat: None,
         };
-        lobby
-            .join_game(game_id, player)
-            .await
-            .map_err(CardsReject)?;
+        lobby.join_game(game_id, player).await?;
         Ok(warp::reply::json(&bot_id))
     }
 
@@ -209,10 +198,7 @@ fn remove<'a>(lobby: infallible!(&'a Lobby), user_id: rejection!(UserId)) -> rep
         request: RemovePlayerRequest,
     ) -> Result<impl Reply, Rejection> {
         let RemovePlayerRequest { game_id, user_id } = request;
-        lobby
-            .leave_game(game_id, user_id)
-            .await
-            .map_err(CardsReject)?;
+        lobby.leave_game(game_id, user_id).await?;
         Ok(warp::reply())
     }
 
@@ -231,7 +217,7 @@ fn chat<'a>(lobby: infallible!(&'a Lobby), user_id: rejection!(UserId)) -> reply
         request: LobbyChatRequest,
     ) -> Result<impl Reply, Rejection> {
         let LobbyChatRequest { message } = request;
-        lobby.chat(user_id, message).await.map_err(CardsReject)?;
+        lobby.chat(user_id, message).await?;
         Ok(warp::reply())
     }
 

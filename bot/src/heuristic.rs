@@ -469,7 +469,7 @@ impl Algorithm for HeuristicBot {
         } else {
             self.slough(ours, theirs, bot_state, game_state)
         };
-        let index = rand::thread_rng().gen_range(0, good_plays.len());
+        let index = rand::thread_rng().gen_range(0..good_plays.len());
         good_plays.into_iter().nth(index).unwrap()
     }
 
