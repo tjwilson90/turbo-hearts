@@ -11,7 +11,7 @@ fn main() {
         ..GameState::new()
     };
     for i in 0u64.. {
-        let seat = Seat::VALUES[rng.gen_range(0, 4)];
+        let seat = Seat::VALUES[rng.gen_range(0..4)];
         let hand = deck.choose_multiple(&mut rng, 13).cloned().collect();
         let now = Instant::now();
         can_claim(seat, hand, &state);
