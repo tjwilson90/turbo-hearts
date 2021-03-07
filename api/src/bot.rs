@@ -75,7 +75,7 @@ fn can_leader_claim(hand: Cards, state: &GameState) -> bool {
 }
 
 fn losers(suit: Suit, hand: Cards, state: &GameState) -> i8 {
-    let mut hand = hand & suit.cards();
+    let mut hand = (hand - state.played) & suit.cards();
     let mut remaining = suit.cards() - hand - state.played;
     let nine = suit.with_rank(Rank::Nine);
     let mut legal_plays = if hand.len() == 1 || state.led_suits.contains(suit) {

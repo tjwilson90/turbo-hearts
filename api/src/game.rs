@@ -83,6 +83,7 @@ impl<S> Game<S> {
                 west,
                 ..
             } => {
+                debug_assert_eq!(Cards::ALL, *north | *east | *south | *west);
                 self.pre_pass_hand[Seat::North.idx()] = *north;
                 self.post_pass_hand[Seat::North.idx()] = *north;
                 self.pre_pass_hand[Seat::East.idx()] = *east;
@@ -100,17 +101,22 @@ impl<S> Game<S> {
                 }
             }
             GameEvent::SendPass { from, cards } => {
+                debug_assert_eq!(cards.len(), 3);
+                debug_assert!(self.post_pass_hand[from.idx()].contains_all(*cards));
                 self.post_pass_hand[from.idx()] -= *cards;
                 broadcast(self, &self.state.pass_status_event());
             }
             GameEvent::RecvPass { to, cards } => {
+                debug_assert_eq!(cards.len(), 3);
+                debug_assert!(!self.post_pass_hand[to.idx()].contains_any(*cards));
                 self.post_pass_hand[to.idx()] |= *cards;
                 if self.state.phase.is_charging() {
                     broadcast(self, &GameEvent::StartCharging);
                     broadcast(self, &self.state.charge_status_event());
                 }
             }
-            GameEvent::Charge { .. } => {
+            GameEvent::Charge { seat, cards } => {
+                debug_assert!(self.post_pass_hand[seat.idx()].contains_all(*cards));
                 broadcast(self, &self.state.charge_status_event());
                 if self.state.phase.is_passing() {
                     broadcast(self, &GameEvent::StartPassing);
@@ -133,7 +139,8 @@ impl<S> Game<S> {
                     broadcast(self, &self.play_status_event(leader));
                 }
             }
-            GameEvent::Play { .. } => {
+            GameEvent::Play { seat, card } => {
+                debug_assert!(self.post_pass_hand[seat.idx()].contains(*card));
                 if self.state.current_trick.is_empty() {
                     let winner = self.state.next_actor.unwrap();
                     broadcast(self, &GameEvent::EndTrick { winner });

@@ -1,3 +1,4 @@
+use log::LevelFilter;
 use turbo_hearts_api::{
     BotState, Card, Cards, ChargingRules, Game, GameEvent, GamePhase, PassDirection, Seat,
 };
@@ -79,30 +80,58 @@ impl State {
 }
 
 fn main() {
-    env_logger::init();
-    let mut state = State::new(Seat::West, PassDirection::Left);
+    let _ = env_logger::builder()
+        .filter_level(LevelFilter::Info)
+        .filter_module("turbo_hearts_bot", LevelFilter::Debug)
+        .is_test(true)
+        .try_init();
+    let mut state = State::new(Seat::South, PassDirection::Across);
     state.deal([
-        "AJ94S 762H KQ5D K97C".parse().unwrap(),
-        "Q85S QT43H A64D 863C".parse().unwrap(),
-        "72S 985H 98732D QJ4C".parse().unwrap(),
-        "KT63S AKJH JTD AT52C".parse().unwrap(),
+        "J43S 8765H 83D AK74C".parse().unwrap(),
+        "KT82S KQ942H 42D 63C".parse().unwrap(),
+        "Q65S T3H JT65D Q852C".parse().unwrap(),
+        "A97S AJH AKQ97D JT9C".parse().unwrap(),
     ]);
-    state.send_pass(Seat::North, "76H KC".parse().unwrap());
-    state.send_pass(Seat::East, "QS QTH".parse().unwrap());
-    state.send_pass(Seat::South, "8H QJC".parse().unwrap());
-    state.send_pass(Seat::West, "KS KH TC".parse().unwrap());
+    state.send_pass(Seat::North, "83D AC".parse().unwrap());
+    state.send_pass(Seat::East, "KS KQH".parse().unwrap());
+    state.send_pass(Seat::South, "QS T3H".parse().unwrap());
+    state.send_pass(Seat::West, "7S JH JC".parse().unwrap());
 
-    state.recv_pass(Seat::North, "KS KH TC".parse().unwrap());
-    state.recv_pass(Seat::East, "76H KC".parse().unwrap());
-    state.recv_pass(Seat::South, "QS QTH".parse().unwrap());
-    state.recv_pass(Seat::West, "8H QJC".parse().unwrap());
+    state.recv_pass(Seat::North, "QS T3H".parse().unwrap());
+    state.recv_pass(Seat::East, "7S JH JC".parse().unwrap());
+    state.recv_pass(Seat::South, "83D AC".parse().unwrap());
+    state.recv_pass(Seat::West, "KS KQH".parse().unwrap());
 
+    state.charge(Seat::West, "TC".parse().unwrap());
     state.charge(Seat::North, "".parse().unwrap());
     state.charge(Seat::East, "".parse().unwrap());
     state.charge(Seat::South, "".parse().unwrap());
-    state.charge(Seat::West, "".parse().unwrap());
 
-    for c in &["2C", "9C", "6C", "4C", "QC", "TC", "3C", "7D"] {
+    for c in &["2C", "9C", "7C", "6C", "8C", "TC", "4C", "3C"] {
+        state.play(c.parse().unwrap());
+    }
+    for c in &["AD", "QS", "4D", "3D"] {
+        state.play(c.parse().unwrap());
+    }
+    for c in &["AS", "JS", "8S", "6S"] {
+        state.play(c.parse().unwrap());
+    }
+    for c in &["KD", "KC", "2D", "TD"] {
+        state.play(c.parse().unwrap());
+    }
+    for c in &["9D", "4S", "JC", "5D", "QD", "3S", "7S", "6D"] {
+        state.play(c.parse().unwrap());
+    }
+    for c in &["KS", "8H", "2S", "5S"] {
+        state.play(c.parse().unwrap());
+    }
+    for c in &["AH", "7H", "4H", "AC"] {
+        state.play(c.parse().unwrap());
+    }
+    for c in &["KH", "6H", "2H", "8D"] {
+        state.play(c.parse().unwrap());
+    }
+    for c in &["QH", "5H", "JH"] {
         state.play(c.parse().unwrap());
     }
     println!("{}", state.bot.play(&state.bot_state, &state.game.state));

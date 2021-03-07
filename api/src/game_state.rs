@@ -113,6 +113,7 @@ impl GameState {
                 self.charge(*seat, *count);
             }
             GameEvent::Charge { seat, cards } => {
+                debug_assert!(Cards::CHARGEABLE.contains_all(*cards));
                 self.charge_count += cards.len() as u8;
                 self.charges = self.charges.charge(*seat, *cards);
                 self.charge(*seat, cards.len());
