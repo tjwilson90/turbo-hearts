@@ -1,13 +1,11 @@
 use crate::{auth_redirect, Games, Lobby};
-use tokio::{
-    stream::{Stream, StreamExt},
-    sync::mpsc::UnboundedReceiver,
-};
+use tokio::sync::mpsc::UnboundedReceiver;
+use tokio_stream::{Stream, StreamExt};
 use turbo_hearts_api::{
     AddBotRequest, JoinGameRequest, LeaveGameRequest, LobbyChatRequest, LobbyEvent, NewGameRequest,
     Player, PlayerWithOptions, RemovePlayerRequest, StartGameRequest, UserId,
 };
-use warp::{sse, sse::ServerSentEvent, Filter, Rejection, Reply};
+use warp::{sse, sse::Event, Filter, Rejection, Reply};
 
 pub fn router<'a>(
     lobby: infallible!(&'a Lobby),
@@ -43,14 +41,12 @@ fn subscribe<'a>(lobby: infallible!(&'a Lobby), user_id: rejection!(UserId)) -> 
         Ok(sse::reply(stream(rx)))
     }
 
-    fn stream(
-        rx: UnboundedReceiver<LobbyEvent>,
-    ) -> impl Stream<Item = Result<impl ServerSentEvent, warp::Error>> {
+    fn stream(rx: UnboundedReceiver<LobbyEvent>) -> impl Stream<Item = Result<Event, warp::Error>> {
         rx.map(|event| {
             Ok(if event.is_ping() {
-                sse::comment(String::new()).into_a()
+                Event::default().comment(String::new())
             } else {
-                sse::json(event).into_b()
+                Event::default().json_data(event).unwrap()
             })
         })
     }

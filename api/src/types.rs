@@ -9,8 +9,8 @@ use std::{
 use uuid::Uuid;
 
 #[repr(u8)]
-#[serde(rename_all = "snake_case")]
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum ChargingRules {
     Classic,
     Blind,
@@ -73,8 +73,8 @@ impl FromStr for GameId {
 }
 
 #[repr(u8)]
-#[serde(rename_all = "snake_case")]
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum PassDirection {
     Left,
     Right,

@@ -113,6 +113,7 @@ impl GameState {
                 self.charge(*seat, *count);
             }
             GameEvent::Charge { seat, cards } => {
+                debug_assert!(Cards::CHARGEABLE.contains_all(*cards));
                 self.charge_count += cards.len() as u8;
                 self.charges = self.charges.charge(*seat, *cards);
                 self.charge(*seat, cards.len());
@@ -277,7 +278,6 @@ mod played {
     use crate::Cards;
     use serde::{
         de::{Error, Visitor},
-        export::Formatter,
         Deserializer, Serializer,
     };
     use std::fmt;
@@ -303,7 +303,7 @@ mod played {
     impl<'de> Visitor<'de> for Played {
         type Value = u64;
 
-        fn expecting<'a>(&self, formatter: &mut Formatter<'a>) -> fmt::Result {
+        fn expecting<'a>(&self, formatter: &mut fmt::Formatter<'a>) -> fmt::Result {
             write!(formatter, "a u64")
         }
 

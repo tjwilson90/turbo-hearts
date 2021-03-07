@@ -1,8 +1,8 @@
 use crate::CardsError;
 use http::header;
-use log::error;
 use reqwest::Client;
-use tokio::{stream::StreamExt, time, time::Duration};
+use tokio::{time, time::Duration};
+use tokio_stream::StreamExt;
 use turbo_hearts_api::UserId;
 use warp::{Filter, Rejection};
 
@@ -52,7 +52,7 @@ fn start_stale_game_cleanup(lobby: &'static Lobby) {
         let mut stream = time::interval(Duration::from_secs(60 * 60));
         while let Some(_) = stream.next().await {
             if let Err(e) = lobby.delete_stale_games().await {
-                error!("Failed to delete stale games {}", e);
+                log::error!("Failed to delete stale games {:?}", e);
             }
         }
     });
