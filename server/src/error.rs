@@ -48,12 +48,6 @@ impl CardsError {
 
 impl Reject for CardsError {}
 
-impl From<CardsError> for Rejection {
-    fn from(err: CardsError) -> Self {
-        warp::reject::custom(err)
-    }
-}
-
 pub async fn handle_rejection(err: Rejection) -> Result<impl Reply, Infallible> {
     Ok(if let Some(_) = err.find::<RedirectToAuthChooser>() {
         Response::builder()

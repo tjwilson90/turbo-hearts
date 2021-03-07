@@ -1,13 +1,11 @@
 use crate::{auth_redirect, Games, Lobby};
-use tokio::{
-    stream::{Stream, StreamExt},
-    sync::mpsc::UnboundedReceiver,
-};
+use tokio::sync::mpsc::UnboundedReceiver;
+use tokio_stream::{Stream, StreamExt};
 use turbo_hearts_api::{
     AcceptClaimRequest, ChargeRequest, ClaimRequest, GameChatRequest, GameEvent, GameId,
     PassRequest, PlayRequest, RejectClaimRequest, UserId,
 };
-use warp::{sse, sse::ServerSentEvent, Filter, Rejection, Reply};
+use warp::{sse, sse::Event, Filter, Rejection, Reply};
 
 pub fn router<'a>(
     lobby: infallible!(&'a Lobby),
@@ -50,15 +48,18 @@ fn subscribe<'a>(games: infallible!(&'a Games), user_id: rejection!(UserId)) -> 
 
     fn stream(
         rx: UnboundedReceiver<(GameEvent, usize)>,
-    ) -> impl Stream<Item = Result<impl ServerSentEvent, warp::Error>> {
+    ) -> impl Stream<Item = Result<Event, warp::Error>> {
         rx.map(|(event, id)| {
             if event.is_ping() {
-                return Ok(sse::comment(String::new()).into_a());
+                return Ok(Event::default().comment(String::new()));
             }
             if event.is_stable() {
-                return Ok((sse::json(event), sse::id(id)).into_a().into_b());
+                return Ok(Event::default()
+                    .id(id.to_string())
+                    .json_data(event)
+                    .unwrap());
             }
-            Ok(sse::json(event).into_b().into_b())
+            Ok(Event::default().json_data(event).unwrap())
         })
     }
 

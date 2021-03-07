@@ -20,7 +20,8 @@ rusqlite = { version = "*", features = ["bundled"] }
 serde = { version = "*", features = ["derive"] }
 serde_json = "*"
 thiserror = "*"
-tokio = { version = "*", features = ["blocking", "macros", "parking_lot", "rt-threaded", "sync"] }
+tokio = { version = "*", features = ["blocking", "macros", "parking_lot", "rt-threaded", "stream", "sync", "time"] }
+tokio-stream = "*"
 turbo-hearts-api = { path = "../api" }
 turbo-hearts-bot = { path = "../bot" }
 uuid = { version = "*", features = ["serde", "v4"] }

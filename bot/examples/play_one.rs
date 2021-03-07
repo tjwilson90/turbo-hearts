@@ -82,35 +82,27 @@ fn main() {
     env_logger::init();
     let mut state = State::new(Seat::West, PassDirection::Left);
     state.deal([
-        "AJ3S Q9873H 853D 75C".parse().unwrap(),
-        "852S J6H QJD KQJ864C".parse().unwrap(),
-        "9764S AK42H TD AT93C".parse().unwrap(),
-        "KQTS T5H AK97642D 2C".parse().unwrap(),
+        "AJ94S 762H KQ5D K97C".parse().unwrap(),
+        "Q85S QT43H A64D 863C".parse().unwrap(),
+        "72S 985H 98732D QJ4C".parse().unwrap(),
+        "KT63S AKJH JTD AT52C".parse().unwrap(),
     ]);
-    state.send_pass(Seat::North, "AS 9H 7C".parse().unwrap());
-    state.send_pass(Seat::East, "J6H QD".parse().unwrap());
-    state.send_pass(Seat::South, "KH TD TC".parse().unwrap());
-    state.send_pass(Seat::West, "T5H 2C".parse().unwrap());
+    state.send_pass(Seat::North, "76H KC".parse().unwrap());
+    state.send_pass(Seat::East, "QS QTH".parse().unwrap());
+    state.send_pass(Seat::South, "8H QJC".parse().unwrap());
+    state.send_pass(Seat::West, "KS KH TC".parse().unwrap());
 
-    state.recv_pass(Seat::North, "T5H 2C".parse().unwrap());
-    state.recv_pass(Seat::East, "AS 9H 7C".parse().unwrap());
-    state.recv_pass(Seat::South, "J6H QD".parse().unwrap());
-    state.recv_pass(Seat::West, "KH TD TC".parse().unwrap());
+    state.recv_pass(Seat::North, "KS KH TC".parse().unwrap());
+    state.recv_pass(Seat::East, "76H KC".parse().unwrap());
+    state.recv_pass(Seat::South, "QS QTH".parse().unwrap());
+    state.recv_pass(Seat::West, "8H QJC".parse().unwrap());
 
     state.charge(Seat::North, "".parse().unwrap());
     state.charge(Seat::East, "".parse().unwrap());
-    state.charge(Seat::South, "AH".parse().unwrap());
+    state.charge(Seat::South, "".parse().unwrap());
     state.charge(Seat::West, "".parse().unwrap());
-    state.charge(Seat::North, "".parse().unwrap());
-    state.charge(Seat::East, "".parse().unwrap());
 
-    for c in &["2C", "4C", "9C", "TC", "5C", "7C", "3C", "TD"] {
-        state.play(c.parse().unwrap());
-    }
-    for c in &["9D", "8D", "JD", "QD", "KD", "5D", "AS", "AH"] {
-        state.play(c.parse().unwrap());
-    }
-    for c in &["KS", "JS", "5S", "9S", "TS", "3S", "8S", "6S"] {
+    for c in &["2C", "9C", "6C", "4C", "QC", "TC", "3C", "7D"] {
         state.play(c.parse().unwrap());
     }
     println!("{}", state.bot.play(&state.bot_state, &state.game.state));

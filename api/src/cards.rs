@@ -1,7 +1,6 @@
 use crate::{Card, Rank, Suit, Trick};
 use serde::{
     de::{SeqAccess, Visitor},
-    export::{fmt::Error, Formatter},
     ser::SerializeSeq,
     Deserialize, Deserializer, Serialize, Serializer,
 };
@@ -46,7 +45,7 @@ struct CardsVisitor(Cards);
 impl<'de> Visitor<'de> for CardsVisitor {
     type Value = Cards;
 
-    fn expecting(&self, formatter: &mut Formatter<'_>) -> Result<(), Error> {
+    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
         write!(formatter, "a sequence of cards")
     }
 

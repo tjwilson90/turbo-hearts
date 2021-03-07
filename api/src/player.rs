@@ -8,8 +8,8 @@ pub struct PlayerWithOptions {
     pub seat: Option<Seat>,
 }
 
-#[serde(tag = "type", rename_all = "snake_case")]
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash, Serialize, Deserialize)]
+#[serde(tag = "type", rename_all = "snake_case")]
 pub enum Player {
     Human {
         user_id: UserId,

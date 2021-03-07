@@ -44,8 +44,8 @@ pub struct LobbyChatRequest {
     pub message: String,
 }
 
-#[serde(tag = "type", rename_all = "snake_case")]
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "type", rename_all = "snake_case")]
 pub enum LobbyEvent {
     Ping,
     JoinLobby {

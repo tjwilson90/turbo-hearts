@@ -2,8 +2,8 @@ use crate::{Card, Cards, ChargingRules, PassDirection, Player, Seat, Seed, UserI
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 
-#[serde(tag = "type", rename_all = "snake_case")]
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "type", rename_all = "snake_case")]
 pub enum GameEvent {
     Ping,
     EndReplay {

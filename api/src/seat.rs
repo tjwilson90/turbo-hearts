@@ -6,8 +6,8 @@ use std::{
 };
 
 #[repr(u8)]
-#[serde(rename_all = "snake_case")]
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum Seat {
     North,
     East,

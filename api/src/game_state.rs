@@ -277,7 +277,6 @@ mod played {
     use crate::Cards;
     use serde::{
         de::{Error, Visitor},
-        export::Formatter,
         Deserializer, Serializer,
     };
     use std::fmt;
@@ -303,7 +302,7 @@ mod played {
     impl<'de> Visitor<'de> for Played {
         type Value = u64;
 
-        fn expecting<'a>(&self, formatter: &mut Formatter<'a>) -> fmt::Result {
+        fn expecting<'a>(&self, formatter: &mut fmt::Formatter<'a>) -> fmt::Result {
             write!(formatter, "a u64")
         }
 
