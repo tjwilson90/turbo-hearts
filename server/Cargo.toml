@@ -7,6 +7,7 @@ edition = "2018"
 [dependencies]
 base64 = "*"
 env_logger = { version = "*", default-features = false, features = ["humantime"] }
+futures-util = "*"
 http = "*"
 log = "*"
 once_cell = "*"
@@ -20,7 +21,7 @@ rusqlite = { version = "*", features = ["bundled"] }
 serde = { version = "*", features = ["derive"] }
 serde_json = "*"
 thiserror = "*"
-tokio = { version = "*", features = ["blocking", "macros", "parking_lot", "rt-threaded", "stream", "sync", "time"] }
+tokio = { version = "1", features = ["macros", "parking_lot", "rt-multi-thread", "sync", "time"] }
 tokio-stream = "*"
 turbo-hearts-api = { path = "../api" }
 turbo-hearts-bot = { path = "../bot" }

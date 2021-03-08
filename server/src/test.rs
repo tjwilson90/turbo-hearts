@@ -79,7 +79,7 @@ impl TestRunner {
     }
 }
 
-#[tokio::test(threaded_scheduler)]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_lobby() -> Result<(), CardsError> {
     async fn test(_: &Database, lobby: &Lobby, _: &Games) -> Result<(), CardsError> {
         let mut twilson = lobby.subscribe(*TWILSON).await?;
@@ -183,7 +183,7 @@ async fn test_lobby() -> Result<(), CardsError> {
     TestRunner::new().run(test).await
 }
 
-#[tokio::test(threaded_scheduler)]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_new_game() -> Result<(), CardsError> {
     async fn test(_: &Database, lobby: &Lobby, games: &Games) -> Result<(), CardsError> {
         let game_id = lobby
@@ -252,7 +252,7 @@ async fn test_new_game() -> Result<(), CardsError> {
     TestRunner::new().run(test).await
 }
 
-#[tokio::test(threaded_scheduler)]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_pass() -> Result<(), CardsError> {
     async fn test(db: &Database, _lobby: &Lobby, games: &Games) -> Result<(), CardsError> {
         let game_id = GameId::new();
@@ -314,7 +314,7 @@ async fn test_pass() -> Result<(), CardsError> {
     TestRunner::new().run(test).await
 }
 
-#[tokio::test(threaded_scheduler)]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_seeded_game() -> Result<(), CardsError> {
     async fn test(_db: &Database, lobby: &Lobby, games: &Games) -> Result<(), CardsError> {
         let game_id = lobby
@@ -429,7 +429,7 @@ async fn test_seeded_game() -> Result<(), CardsError> {
     TestRunner::new().run(test).await
 }
 
-#[tokio::test(threaded_scheduler)]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_bot_game() -> Result<(), CardsError> {
     async fn test(_: &Database, lobby: &Lobby, games: &Games) -> Result<(), CardsError> {
         let game_id = lobby

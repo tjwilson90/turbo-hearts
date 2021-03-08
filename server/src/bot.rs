@@ -1,13 +1,10 @@
 use crate::{CardsError, Games};
+use futures_util::FutureExt;
 use log::debug;
 use rand::distributions::Distribution;
 use rand_distr::Gamma;
 use std::time::Instant;
-use tokio::{
-    sync::mpsc::{error::TryRecvError, UnboundedReceiver},
-    time,
-    time::Duration,
-};
+use tokio::{sync::mpsc::UnboundedReceiver, time, time::Duration};
 use turbo_hearts_api::{
     can_claim, BotState, BotStrategy, Card, Cards, GameEvent, GameId, GameState, Seat, UserId,
 };
@@ -58,12 +55,12 @@ impl BotRunner {
         loop {
             let now = Instant::now();
             loop {
-                match rx.try_recv() {
-                    Ok((event, _)) => {
+                match rx.recv().now_or_never() {
+                    Some(Some((event, _))) => {
                         action = self.handle(event);
                     }
-                    Err(TryRecvError::Empty) => break,
-                    Err(TryRecvError::Closed) => return Ok(()),
+                    Some(None) => return Ok(()),
+                    None => break,
                 }
             }
             let delay =
@@ -165,7 +162,7 @@ impl BotRunner {
     async fn delay(delay: Option<Duration>, start: Instant) {
         let delay = delay.and_then(|delay| delay.checked_sub(start.elapsed()));
         if let Some(delay) = delay {
-            time::delay_for(delay).await;
+            time::sleep(delay).await;
         }
     }
 

@@ -2,7 +2,6 @@ use crate::CardsError;
 use http::header;
 use reqwest::Client;
 use tokio::{time, time::Duration};
-use tokio_stream::StreamExt;
 use turbo_hearts_api::UserId;
 use warp::{Filter, Rejection};
 
@@ -49,8 +48,9 @@ fn user_id<'a>(users: infallible!(&'a Users)) -> rejection!(UserId) {
 
 fn start_stale_game_cleanup(lobby: &'static Lobby) {
     tokio::task::spawn(async move {
-        let mut stream = time::interval(Duration::from_secs(60 * 60));
-        while let Some(_) = stream.next().await {
+        let mut ticker = time::interval(Duration::from_secs(60 * 60));
+        loop {
+            ticker.tick().await;
             if let Err(e) = lobby.delete_stale_games().await {
                 log::error!("Failed to delete stale games {:?}", e);
             }
@@ -60,8 +60,9 @@ fn start_stale_game_cleanup(lobby: &'static Lobby) {
 
 fn start_background_pings(lobby: &'static Lobby, games: &'static Games) {
     tokio::task::spawn(async move {
-        let mut stream = time::interval(Duration::from_secs(15));
-        while let Some(_) = stream.next().await {
+        let mut ticker = time::interval(Duration::from_secs(15));
+        loop {
+            ticker.tick().await;
             lobby.ping().await;
             games.ping().await;
         }
