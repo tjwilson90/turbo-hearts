@@ -1,6 +1,6 @@
 use crate::{auth_redirect, Games, Lobby};
 use tokio::sync::mpsc::UnboundedReceiver;
-use tokio_stream::{Stream, StreamExt};
+use tokio_stream::{wrappers::UnboundedReceiverStream, Stream, StreamExt};
 use turbo_hearts_api::{
     AddBotRequest, JoinGameRequest, LeaveGameRequest, LobbyChatRequest, LobbyEvent, NewGameRequest,
     Player, PlayerWithOptions, RemovePlayerRequest, StartGameRequest, UserId,
@@ -42,6 +42,7 @@ fn subscribe<'a>(lobby: infallible!(&'a Lobby), user_id: rejection!(UserId)) -> 
     }
 
     fn stream(rx: UnboundedReceiver<LobbyEvent>) -> impl Stream<Item = Result<Event, warp::Error>> {
+        let rx = UnboundedReceiverStream::new(rx);
         rx.map(|event| {
             Ok(if event.is_ping() {
                 Event::default().comment(String::new())
