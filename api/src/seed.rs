@@ -29,7 +29,7 @@ impl Seed {
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct HashedSeed {
     seed: [u8; 32],
 }

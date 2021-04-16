@@ -70,6 +70,7 @@ fn load_model(lead: bool, policy: bool) -> Result<TypedRunnableModel<TypedModel>
     Ok(model.into_optimized()?.into_runnable()?)
 }
 
+#[derive(Clone)]
 pub struct NeuralNetworkBot {
     hand_maker: HandMaker,
     initial_state: GameState,
@@ -87,23 +88,6 @@ impl NeuralNetworkBot {
             initial_state: GameState::new(),
             plays: Vec::with_capacity(52),
         }
-    }
-
-    fn total_divergence(&self, hands: [Cards; 4]) -> f32 {
-        let brute_force = ShallowBruteForce::new(hands);
-        let mut state = self.initial_state.clone();
-        let mut divergence = 1.0;
-        for &play in &self.plays {
-            let seat = state.next_actor.unwrap();
-            let plays = state
-                .legal_plays(hands[seat.idx()])
-                .distinct_plays(state.played, state.current_trick);
-            if plays.len() > 1 {
-                divergence += local_divergence(&brute_force, &state, seat, play, plays);
-            }
-            state.apply(&GameEvent::Play { seat, card: play });
-        }
-        divergence
     }
 }
 
@@ -129,19 +113,27 @@ impl Algorithm for NeuralNetworkBot {
         while now.elapsed().as_millis() < 4500 {
             iters += 1;
             let hands = self.hand_maker.make();
-            let divergence = self.total_divergence(hands);
+            let brute_force = ShallowBruteForce::new(hands);
             for card in distinct_plays {
                 let mut game = game_state.clone();
                 game.apply(&GameEvent::Play {
                     seat: bot_state.seat,
                     card,
                 });
-                let mut brute_force = ShallowBruteForce::new(hands);
                 let scores = brute_force.solve(&mut game);
-                *money_counts.entry(card).or_default() += scores.money(bot_state.seat) / divergence;
+                *money_counts.entry(card).or_default() += scores.money(bot_state.seat);
             }
         }
-        debug!("{} iterations, {:?}", iters, money_counts);
+        if log::log_enabled!(log::Level::Debug) {
+            debug!(
+                "{} iterations, {:?}",
+                iters,
+                money_counts
+                    .iter()
+                    .map(|(k, v)| (k, *v / iters as f32))
+                    .collect::<HashMap<_, _>>()
+            );
+        }
         let mut best_card = Card::TwoClubs;
         let mut best_money = f32::MIN;
         for (card, money) in money_counts.into_iter() {
@@ -176,7 +168,7 @@ impl ShallowBruteForce {
         Self { hands }
     }
 
-    fn solve(&mut self, state: &mut GameState) -> ApproximateScores {
+    fn solve(&self, state: &mut GameState) -> ApproximateScores {
         if state.played.len() >= 48 {
             while state.played != Cards::ALL {
                 let seat = state.next_actor.unwrap();
@@ -393,6 +385,7 @@ impl ShallowBruteForce {
     }
 }
 
+#[derive(Debug)]
 struct ApproximateScores {
     scores: [f32; 4],
 }
@@ -475,7 +468,7 @@ impl ApproximateScores {
             1.0
         };
         if let Some(s) = state.won.ten_winner() {
-            scores[s.idx()] *= tf * 2.0;
+            scores[s.idx()] *= 1.0 + tf;
         } else {
             let ten = output[2].as_slice::<f32>().unwrap();
             scores[0] *= 1.0 + tf * ten[north];
@@ -505,36 +498,4 @@ fn choose(bot_state: &BotState, card: Card, legal_plays: Cards, distinct_plays: 
     }
     let index = rand::thread_rng().gen_range(0..cards.len());
     cards.into_iter().nth(index).unwrap()
-}
-
-fn local_divergence(
-    brute_force: &ShallowBruteForce,
-    state: &GameState,
-    seat: Seat,
-    play: Card,
-    plays: Cards,
-) -> f32 {
-    let equivalent = if plays.contains(play) {
-        play
-    } else {
-        plays.above(play).min()
-    };
-    let mut best_money = f32::MIN;
-    for card in plays - equivalent {
-        let scores = brute_force.generate_value(&mut {
-            let mut state = state.clone();
-            state.apply(&GameEvent::Play { seat, card });
-            state
-        });
-        let money = scores.money(seat);
-        if money > best_money {
-            best_money = money;
-        }
-    }
-    let scores = brute_force.generate_value(&mut {
-        let mut state = state.clone();
-        state.apply(&GameEvent::Play { seat, card: play });
-        state
-    });
-    f32::max(best_money - scores.money(seat), 0.0)
 }
