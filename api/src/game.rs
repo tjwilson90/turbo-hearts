@@ -3,7 +3,7 @@ use crate::{
     Seat, UserId,
 };
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Game<S> {
     pub events: Vec<GameEvent>,
     pub subscribers: Vec<(UserId, S)>,

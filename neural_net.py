@@ -1,7 +1,7 @@
 # python3 -m venv --system-site-packages ./turbo-hearts-venv
 # source ./turbo-hearts-venv/bin/activate
 # pip install --upgrade pip
-# pip install --upgrade tensorflow keras-tuner onnx onnxmltools
+# pip install --upgrade tensorflow==2.2.0 keras-tuner onnx onnxmltools
 
 import os
 import tensorflow as tf
@@ -90,7 +90,7 @@ def build_model(lead, policy, hp):
     layer = keras.layers.concatenate(inputs)
     layer = keras.layers.Dropout(0.05)(layer)
 
-    for i in range(1 if hp is None else hp.Int('num_layers', 2, 4)):
+    for i in range(2 if hp is None else hp.Int('num_layers', 2, 4)):
         units = [500, 500][i] if hp is None else hp.Int('units' + str(i), min_value=384, max_value=576, step=64)
         layer = keras.layers.Dense(units = units, activation = 'relu')(layer)
         layer = keras.layers.Dropout(0.05)(layer)
