@@ -22,11 +22,7 @@ impl State {
         };
         Self {
             game,
-            bot_state: BotState {
-                seat,
-                pre_pass_hand: Cards::NONE,
-                post_pass_hand: Cards::NONE,
-            },
+            bot_state: BotState::new(seat, Cards::NONE),
             bot: NeuralNetworkBot::new(),
         }
     }
@@ -69,13 +65,11 @@ impl State {
     }
 
     fn apply(&mut self, event: &GameEvent) {
-        let (game, bot_state, bot) = (&mut self.game, &self.bot_state, &mut self.bot);
+        let (game, bot_state, bot) = (&mut self.game, &mut self.bot_state, &mut self.bot);
         game.apply(event, |g, e| {
-            bot.on_event(
-                &bot_state,
-                &g.state,
-                &e.redact(Some(bot_state.seat), ChargingRules::Classic),
-            )
+            let e = e.redact(Some(bot_state.seat), ChargingRules::Classic);
+            bot_state.on_event(&g.state, &e);
+            bot.on_event(&bot_state, &g.state, &e);
         });
     }
 }

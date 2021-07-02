@@ -3,12 +3,6 @@ use turbo_hearts_api::{BotState, Card, Cards, GameEvent, GameState};
 
 pub struct DuckBot;
 
-impl DuckBot {
-    pub fn new() -> Self {
-        Self
-    }
-}
-
 impl Algorithm for DuckBot {
     fn pass(&mut self, bot_state: &BotState, _: &GameState) -> Cards {
         let mut pass = Cards::NONE;

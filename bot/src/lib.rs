@@ -8,7 +8,6 @@ mod neural_network;
 mod random;
 mod simulate;
 mod transposition_table;
-mod void;
 
 pub use brute_force::*;
 pub use duck::*;
@@ -21,7 +20,6 @@ pub use random::*;
 pub use simulate::*;
 pub use transposition_table::*;
 use turbo_hearts_api::{BotState, Card, Cards, GameEvent, GameState};
-pub use void::*;
 
 pub enum Bot {
     Duck(DuckBot),

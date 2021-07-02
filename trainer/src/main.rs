@@ -83,9 +83,9 @@ impl Writer {
 fn bot() -> Bot {
     match rand::thread_rng().gen_range(0..4) {
         0 => Bot::Random(RandomBot::new()),
-        1 => Bot::Duck(DuckBot::new()),
-        2 => Bot::GottaTry(GottaTryBot::new()),
-        _ => Bot::Heuristic(HeuristicBot::new()),
+        1 => Bot::Duck(DuckBot),
+        2 => Bot::GottaTry(GottaTryBot),
+        _ => Bot::Heuristic(HeuristicBot),
     }
 }
 
@@ -94,11 +94,7 @@ fn bot_state(seat: Seat, deck: &[Card]) -> BotState {
         .iter()
         .cloned()
         .collect();
-    BotState {
-        seat,
-        pre_pass_hand: hand,
-        post_pass_hand: hand,
-    }
+    BotState::new(seat, hand)
 }
 
 struct Trainer {
@@ -233,11 +229,9 @@ impl Trainer {
 
     fn apply(&mut self, event: &GameEvent) {
         for i in 0..4 {
-            self.bots[i].on_event(
-                &self.bot_states[i],
-                &self.game_state,
-                &event.redact(Some(self.bot_states[i].seat), ChargingRules::Classic),
-            );
+            let event = event.redact(Some(self.bot_states[i].seat), ChargingRules::Classic);
+            self.bot_states[i].on_event(&self.game_state, &event);
+            self.bots[i].on_event(&self.bot_states[i], &self.game_state, &event);
         }
         self.game_state.apply(event);
     }

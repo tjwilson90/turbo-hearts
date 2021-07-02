@@ -25,9 +25,9 @@ pub struct BotRunner {
 impl BotRunner {
     pub fn new(game_id: GameId, user_id: UserId, strategy: BotStrategy) -> Self {
         let bot = match strategy {
-            BotStrategy::Duck => Bot::Duck(DuckBot::new()),
-            BotStrategy::GottaTry => Bot::GottaTry(GottaTryBot::new()),
-            BotStrategy::Heuristic => Bot::Heuristic(HeuristicBot::new()),
+            BotStrategy::Duck => Bot::Duck(DuckBot),
+            BotStrategy::GottaTry => Bot::GottaTry(GottaTryBot),
+            BotStrategy::Heuristic => Bot::Heuristic(HeuristicBot),
             BotStrategy::Random => Bot::Random(RandomBot::new()),
             BotStrategy::Simulate => Bot::Simulate(SimulateBot::new()),
             BotStrategy::NeuralNet => Bot::NeuralNetwork(NeuralNetworkBot::new()),
@@ -35,11 +35,7 @@ impl BotRunner {
         Self {
             game_id,
             user_id,
-            bot_state: BotState {
-                seat: Seat::North,
-                pre_pass_hand: Cards::NONE,
-                post_pass_hand: Cards::NONE,
-            },
+            bot_state: BotState::new(Seat::North, Cards::NONE),
             game_state: GameState::new(),
             claim_hands: [Cards::NONE; 4],
             bot,
@@ -76,6 +72,7 @@ impl BotRunner {
                 {
                     let accept = can_claim(
                         &self.game_state,
+                        self.bot_state.void,
                         seat,
                         self.claim_hands[seat.idx()] - self.game_state.played,
                     );
@@ -172,6 +169,7 @@ impl BotRunner {
             "handle: game_id={}, user_id={}, event={:?}",
             self.game_id, self.user_id, event
         );
+        self.bot_state.on_event(&self.game_state, &event);
         self.bot.on_event(&self.bot_state, &self.game_state, &event);
         let phase = self.game_state.phase;
         self.game_state.apply(&event);
@@ -244,6 +242,7 @@ impl BotRunner {
             {
                 if should_claim(
                     &self.game_state,
+                    self.bot_state.void,
                     self.bot_state.seat,
                     self.bot_state.post_pass_hand,
                 ) {

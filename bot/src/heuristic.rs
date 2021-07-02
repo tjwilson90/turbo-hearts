@@ -1,4 +1,4 @@
-use crate::{Algorithm, VoidState};
+use crate::Algorithm;
 use rand::Rng;
 use turbo_hearts_api::{BotState, Card, Cards, GameEvent, GameState, Rank, Suit};
 
@@ -32,21 +32,9 @@ macro_rules! dont_play {
     };
 }
 
-pub struct HeuristicBot {
-    void: VoidState,
-}
+pub struct HeuristicBot;
 
 impl HeuristicBot {
-    pub fn new() -> Self {
-        Self {
-            void: VoidState::new(),
-        }
-    }
-
-    pub fn from(void: VoidState) -> Self {
-        Self { void }
-    }
-
     fn lead(&self, mut ours: Cards, theirs: Cards, game_state: &GameState) -> Cards {
         let spades = ours & Cards::SPADES;
         if theirs.contains(Card::QueenSpades) && !spades.is_empty() {
@@ -347,16 +335,20 @@ impl HeuristicBot {
         let seat = bot_state.seat;
         match trick.len() {
             7 => true,
-            6 => self.void.is_void(seat.left(), suit),
-            5 => self.void.is_void(seat.left(), suit) && self.void.is_void(seat.across(), suit),
+            6 => bot_state.void.is_void(seat.left(), suit),
+            5 => {
+                bot_state.void.is_void(seat.left(), suit)
+                    && bot_state.void.is_void(seat.across(), suit)
+            }
             3 => !trick.contains(suit.with_rank(Rank::Nine)),
             2 => {
-                !trick.contains(suit.with_rank(Rank::Nine)) && self.void.is_void(seat.left(), suit)
+                !trick.contains(suit.with_rank(Rank::Nine))
+                    && bot_state.void.is_void(seat.left(), suit)
             }
             1 => {
                 !trick.contains(suit.with_rank(Rank::Nine))
-                    && self.void.is_void(seat.left(), suit)
-                    && self.void.is_void(seat.across(), suit)
+                    && bot_state.void.is_void(seat.left(), suit)
+                    && bot_state.void.is_void(seat.across(), suit)
             }
             _ => false,
         }
@@ -460,9 +452,7 @@ impl Algorithm for HeuristicBot {
         good_plays.into_iter().nth(index).unwrap()
     }
 
-    fn on_event(&mut self, _: &BotState, state: &GameState, event: &GameEvent) {
-        self.void.on_event(state, event);
-    }
+    fn on_event(&mut self, _: &BotState, _: &GameState, _: &GameEvent) {}
 }
 
 fn should_real_charge_queen(hand: Cards) -> bool {

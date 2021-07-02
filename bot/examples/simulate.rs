@@ -9,11 +9,7 @@ fn bot(seat: Seat, deck: &[Card]) -> BotState {
         .iter()
         .cloned()
         .collect();
-    BotState {
-        seat,
-        pre_pass_hand: hand,
-        post_pass_hand: hand,
-    }
+    BotState::new(seat, hand)
 }
 
 struct Game {
@@ -45,11 +41,9 @@ impl Game {
 
     fn apply(&mut self, event: &GameEvent) {
         for &s in &Seat::VALUES {
-            self.bots[s.idx()].on_event(
-                &self.bot_states[s.idx()],
-                &self.state,
-                &event.redact(Some(s), ChargingRules::Classic),
-            );
+            let event = event.redact(Some(s), ChargingRules::Classic);
+            self.bot_states[s.idx()].on_event(&self.state, &event);
+            self.bots[s.idx()].on_event(&self.bot_states[s.idx()], &self.state, &event);
         }
         self.state.apply(event);
     }

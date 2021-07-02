@@ -9,11 +9,7 @@ fn bot(seat: Seat, deck: &[Card]) -> BotState {
         .iter()
         .cloned()
         .collect();
-    BotState {
-        seat,
-        pre_pass_hand: hand,
-        post_pass_hand: hand,
-    }
+    BotState::new(seat, hand)
 }
 
 fn main() {
@@ -26,7 +22,6 @@ fn main() {
         bot(Seat::South, &deck),
         bot(Seat::West, &deck),
     ];
-    let mut heuristic = HeuristicBot::new();
     let mut state = GameState::new();
     state.apply(&GameEvent::Deal {
         north: bots[0].pre_pass_hand,
@@ -36,7 +31,7 @@ fn main() {
         pass: PassDirection::Left,
     });
     for bot in &mut bots {
-        let pass = heuristic.pass(&bot, &state);
+        let pass = HeuristicBot.pass(&bot, &state);
         state.apply(&GameEvent::SendPass {
             from: bot.seat,
             cards: pass,
@@ -55,7 +50,7 @@ fn main() {
     while state.phase.is_charging() {
         for bot in &bots {
             if state.can_charge(bot.seat) {
-                let cards = heuristic.charge(&bot, &state);
+                let cards = HeuristicBot.charge(&bot, &state);
                 state.apply(&GameEvent::Charge {
                     seat: bot.seat,
                     cards,
@@ -73,7 +68,7 @@ fn main() {
     for _ in 0..24 {
         let seat = state.next_actor.unwrap();
         let bot = &bots[seat.idx()];
-        let card = heuristic.play(bot, &state);
+        let card = HeuristicBot.play(bot, &state);
         state.apply(&GameEvent::Play { seat, card });
     }
     let mut brute_force = BruteForce::new([
