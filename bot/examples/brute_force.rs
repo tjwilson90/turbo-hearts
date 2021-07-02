@@ -9,11 +9,7 @@ fn bot(seat: Seat, deck: &[Card]) -> BotState {
         .iter()
         .cloned()
         .collect();
-    BotState {
-        seat,
-        pre_pass_hand: hand,
-        post_pass_hand: hand,
-    }
+    BotState::new(seat, hand)
 }
 
 fn main() {

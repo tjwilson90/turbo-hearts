@@ -1,23 +1,19 @@
-use crate::VoidState;
 use rand::seq::SliceRandom;
-use turbo_hearts_api::{Card, Cards, GameEvent, GameState, Seat, Suit};
+use turbo_hearts_api::{Card, Cards, GameEvent, GameState, Seat, Suit, VoidState};
 
 #[derive(Clone, Debug)]
 pub struct HandMaker {
     hands: [Cards; 4],
-    void: VoidState,
 }
 
 impl HandMaker {
     pub fn new() -> Self {
         Self {
             hands: [Cards::NONE; 4],
-            void: VoidState::new(),
         }
     }
 
     pub fn on_event(&mut self, state: &GameState, event: &GameEvent) {
-        self.void.on_event(state, event);
         match event {
             GameEvent::Deal {
                 north,
@@ -57,35 +53,31 @@ impl HandMaker {
         }
     }
 
-    pub fn void(&self) -> VoidState {
-        self.void.clone()
-    }
-
     pub fn known_cards(&self, seat: Seat) -> Cards {
         self.hands[seat.idx()]
     }
 
-    pub fn make(&self) -> [Cards; 4] {
+    pub fn make(&self, void: &VoidState) -> [Cards; 4] {
         let mut copy = self.clone();
         let cards = Cards::ALL - self.hands[0] - self.hands[1] - self.hands[2] - self.hands[3];
         let mut shuffled = cards.into_iter().collect::<Vec<_>>();
         shuffled.shuffle(&mut rand::thread_rng());
         assert!(
-            copy.assign(&mut shuffled, cards),
+            copy.assign(void, &mut shuffled, cards),
             "failed hand assignment for {:?}",
             self
         );
         copy.hands
     }
 
-    fn assign(&mut self, shuffled: &mut Vec<Card>, cards: Cards) -> bool {
+    fn assign(&mut self, void: &VoidState, shuffled: &mut Vec<Card>, cards: Cards) -> bool {
         if shuffled.is_empty() {
             return true;
         }
         for &seat in &Seat::VALUES {
             let mut available = 0;
             for &suit in &Suit::VALUES {
-                if !self.void.is_void(seat, suit) {
+                if !void.is_void(seat, suit) {
                     available += (cards & suit.cards()).len();
                 }
             }
@@ -95,11 +87,11 @@ impl HandMaker {
         }
         let card = shuffled.pop().unwrap();
         for &seat in &Seat::VALUES {
-            if self.hands[seat.idx()].len() == 13 || self.void.is_void(seat, card.suit()) {
+            if self.hands[seat.idx()].len() == 13 || void.is_void(seat, card.suit()) {
                 continue;
             }
             self.hands[seat.idx()] |= card;
-            if self.assign(shuffled, cards - card) {
+            if self.assign(void, shuffled, cards - card) {
                 return true;
             }
             self.hands[seat.idx()] -= card;

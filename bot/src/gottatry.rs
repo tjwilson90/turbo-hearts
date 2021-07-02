@@ -3,12 +3,6 @@ use turbo_hearts_api::{BotState, Card, Cards, GameEvent, GameState};
 
 pub struct GottaTryBot;
 
-impl GottaTryBot {
-    pub fn new() -> Self {
-        Self
-    }
-}
-
 impl Algorithm for GottaTryBot {
     fn pass(&mut self, bot_state: &BotState, _: &GameState) -> Cards {
         let mut pass = Cards::NONE;
@@ -31,7 +25,7 @@ impl Algorithm for GottaTryBot {
     fn play(&mut self, bot_state: &BotState, game_state: &GameState) -> Card {
         let cards = game_state.legal_plays(bot_state.post_pass_hand);
         if !game_state.won.can_run(bot_state.seat) {
-            return DuckBot::new().play(bot_state, game_state);
+            return DuckBot.play(bot_state, game_state);
         }
         if game_state.current_trick.is_empty() {
             return RandomBot::new().play(bot_state, game_state);
@@ -39,7 +33,7 @@ impl Algorithm for GottaTryBot {
         let trick_cards = game_state.current_trick.cards();
         if Cards::POINTS.contains_any(trick_cards) {
             if !game_state.current_trick.suit().cards().contains_any(cards) {
-                DuckBot::new().play(bot_state, game_state)
+                DuckBot.play(bot_state, game_state)
             } else {
                 cards
                     .into_iter()

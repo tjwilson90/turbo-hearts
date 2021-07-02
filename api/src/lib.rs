@@ -21,6 +21,7 @@ mod suits;
 mod summary_api;
 mod trick;
 mod types;
+mod void;
 mod won_state;
 
 pub use bot::*;
@@ -46,4 +47,5 @@ pub use suits::*;
 pub use summary_api::*;
 pub use trick::*;
 pub use types::*;
+pub use void::*;
 pub use won_state::*;

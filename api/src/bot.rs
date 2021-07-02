@@ -1,4 +1,4 @@
-use crate::{Cards, GameEvent, GameState, Rank, Seat, Suit};
+use crate::{Cards, GameEvent, GameState, Rank, Seat, Suit, VoidState};
 use serde::{Deserialize, Serialize};
 
 #[repr(u8)]
@@ -18,9 +18,29 @@ pub struct BotState {
     pub seat: Seat,
     pub pre_pass_hand: Cards,
     pub post_pass_hand: Cards,
+    pub void: VoidState,
 }
 
-pub fn should_claim(state: &GameState, seat: Seat, hand: Cards) -> bool {
+impl BotState {
+    pub fn new(seat: Seat, hand: Cards) -> BotState {
+        BotState::with_void(seat, hand, VoidState::new())
+    }
+
+    pub fn with_void(seat: Seat, hand: Cards, void: VoidState) -> BotState {
+        BotState {
+            seat,
+            pre_pass_hand: hand,
+            post_pass_hand: hand,
+            void,
+        }
+    }
+
+    pub fn on_event(&mut self, state: &GameState, event: &GameEvent) {
+        self.void = self.void.on_event(state, event);
+    }
+}
+
+pub fn should_claim(state: &GameState, void: &VoidState, seat: Seat, hand: Cards) -> bool {
     if !state.current_trick.is_empty() {
         // checking claims in the middle of tricks is more expensive / not worth it
         false
@@ -34,7 +54,7 @@ pub fn should_claim(state: &GameState, seat: Seat, hand: Cards) -> bool {
     } else if !state.won.can_run(seat) {
         false
     } else {
-        can_claim(state, seat, hand - state.played)
+        can_claim(state, void, seat, hand - state.played)
     }
 }
 
@@ -50,46 +70,54 @@ fn must_claim(hand: Cards, played: Cards) -> bool {
     true
 }
 
-pub fn can_claim(state: &GameState, seat: Seat, hand: Cards) -> bool {
-    if state.current_trick.is_empty() && state.next_actor == Some(seat) {
-        return can_leader_claim(hand, state);
-    }
-    match state.next_actor {
-        Some(actor) if seat == actor => {
-            for card in state
-                .legal_plays(hand)
-                .distinct_plays(state.played, state.current_trick)
-                .shuffled()
-            {
-                let mut state = state.clone();
-                state.apply(&GameEvent::Play { seat, card });
-                if state.current_trick.is_empty() && state.next_actor != Some(seat) {
-                    continue;
-                }
-                if can_claim(&state, seat, hand - card) {
-                    return true;
-                }
-            }
-            false
+pub fn can_claim(state: &GameState, void: &VoidState, seat: Seat, hand: Cards) -> bool {
+    fn can_claim_rec(state: &GameState, void: &VoidState, seat: Seat, hand: Cards) -> bool {
+        if state.current_trick.is_empty() && state.next_actor == Some(seat) {
+            return can_leader_claim(hand, state);
         }
-        Some(actor) => {
-            for card in (Cards::ALL - state.played - hand)
-                .distinct_plays(state.played, state.current_trick)
-                .shuffled()
-            {
-                let mut state = state.clone();
-                state.apply(&GameEvent::Play { seat: actor, card });
-                if state.current_trick.is_empty() && state.next_actor != Some(seat) {
-                    return false;
+        match state.next_actor {
+            Some(actor) if seat == actor => {
+                for card in state
+                    .legal_plays(hand)
+                    .distinct_plays(state.played, state.current_trick)
+                    .shuffled()
+                {
+                    let mut state = state.clone();
+                    state.apply(&GameEvent::Play { seat, card });
+                    if state.current_trick.is_empty() && state.next_actor != Some(seat) {
+                        continue;
+                    }
+                    if can_claim_rec(&state, void, seat, hand - card) {
+                        return true;
+                    }
                 }
-                if !can_claim(&state, seat, hand) {
-                    return false;
-                }
+                false
             }
-            true
+            Some(actor) => {
+                for card in (Cards::ALL - state.played - hand)
+                    .distinct_plays(state.played, state.current_trick)
+                    .shuffled()
+                    .filter(|c| !void.is_void(actor, c.suit()))
+                {
+                    let mut state = state.clone();
+                    state.apply(&GameEvent::Play { seat: actor, card });
+                    if state.current_trick.is_empty() && state.next_actor != Some(seat) {
+                        return false;
+                    }
+                    if !can_claim_rec(&state, void, seat, hand) {
+                        return false;
+                    }
+                }
+                true
+            }
+            None => false,
         }
-        None => false,
     }
+
+    if (state.played - state.current_trick.cards()).contains_all(Cards::SCORING) {
+        return true;
+    }
+    can_claim_rec(state, void, seat, hand)
 }
 
 fn can_leader_claim(hand: Cards, state: &GameState) -> bool {
@@ -229,6 +257,7 @@ mod test {
         };
         assert!(can_claim(
             &state,
+            &VoidState::new(),
             Seat::North,
             "AK9S AK9H AK9D AK9C".parse().unwrap(),
         ));
@@ -255,8 +284,45 @@ mod test {
         };
         assert!(can_claim(
             &state,
+            &VoidState::new(),
             Seat::East,
             "AQJ98652S TH A8D 52C".parse().unwrap(),
+        ));
+    }
+
+    #[test]
+    fn test_can_claim3() {
+        let state = GameState {
+            rules: ChargingRules::Classic,
+            phase: GamePhase::PassAcross,
+            done: DoneState::new(),
+            charge_count: 0,
+            charges: ChargeState::new(),
+            next_actor: Some(Seat::North),
+            played: "2745C  K85TS  A6T4D  AT8JC  947S 9H Q36S 9C  AQH 3D 8H  KH 2S 9D 6H  TH JD 6C JH  53H"
+                .parse()
+                .unwrap(),
+            claims: ClaimState::new(),
+            won: WonState::new()
+                .win(Seat::West, "2745C".parse().unwrap())
+                .win(Seat::West, "K85TS".parse().unwrap())
+                .win(Seat::West, "A6T4D".parse().unwrap())
+                .win(Seat::West, "AT8JC".parse().unwrap())
+                .win(Seat::West, "947S 9H Q36S 9C".parse().unwrap())
+                .win(Seat::West, "AQH 3D 8H".parse().unwrap())
+                .win(Seat::West, "KH 2S 9D 6H".parse().unwrap())
+                .win(Seat::South, "TH JD 6C JH".parse().unwrap()),
+            led_suits: Suits::NONE | Suit::Clubs | Suit::Diamonds | Suit::Hearts | Suit::Spades,
+            current_trick: Trick::new().push(Card::FiveHearts).push(Card::ThreeHearts),
+        };
+        assert!(can_claim(
+            &state,
+            &VoidState::new()
+                .mark_void(Seat::South, Suit::Spades)
+                .mark_void(Seat::East, Suit::Hearts)
+                .mark_void(Seat::North, Suit::Hearts),
+            Seat::South,
+            "TS J9865H KQ4D KJ92C".parse().unwrap(),
         ));
     }
 }

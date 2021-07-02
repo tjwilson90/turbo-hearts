@@ -1,8 +1,7 @@
 use crate::{Algorithm, BruteForce, HandMaker, HeuristicBot};
 use log::debug;
-use rand::Rng;
 use std::{collections::HashMap, fmt::Display, hash::Hash, time::Instant};
-use turbo_hearts_api::{can_claim, BotState, Card, Cards, GameEvent, GameState, Seat};
+use turbo_hearts_api::{can_claim, BotState, Card, Cards, GameEvent, GameState, VoidState};
 
 #[derive(Clone)]
 pub struct SimulateBot {
@@ -15,47 +14,15 @@ impl SimulateBot {
             hand_maker: HandMaker::new(),
         }
     }
-
-    fn heuristic_bot(&mut self) -> HeuristicBot {
-        HeuristicBot::from(self.hand_maker.void())
-    }
 }
 
 impl Algorithm for SimulateBot {
     fn pass(&mut self, bot_state: &BotState, game_state: &GameState) -> Cards {
-        self.heuristic_bot().pass(bot_state, game_state)
+        HeuristicBot.pass(bot_state, game_state)
     }
 
     fn charge(&mut self, bot_state: &BotState, game_state: &GameState) -> Cards {
-        let chargeable =
-            (bot_state.post_pass_hand - game_state.charges.all_charges()) & Cards::CHARGEABLE;
-        let mut money_counts = HashMap::new();
-        let now = Instant::now();
-        let deadline = 4000 + rand::thread_rng().gen_range(0..1000);
-        while now.elapsed().as_millis() < deadline {
-            let hands = self.hand_maker.make();
-            for cards in chargeable.powerset() {
-                let mut bot = self.heuristic_bot();
-                let mut game = game_state.clone();
-                game.apply(&GameEvent::Charge {
-                    seat: bot_state.seat,
-                    cards,
-                });
-                do_charges(&mut bot, &mut game, hands);
-                do_passes(&mut game);
-                do_charges(&mut bot, &mut game, hands);
-                for &seat in &Seat::VALUES {
-                    if hands[seat.idx()].contains(Card::TwoClubs) {
-                        game.next_actor = Some(seat);
-                        break;
-                    }
-                }
-                do_plays(&mut bot, &mut game, hands);
-                let money = money(&bot_state, &game);
-                *money_counts.entry((cards, money)).or_default() += 1;
-            }
-        }
-        compute_best(chargeable.powerset(), money_counts)
+        HeuristicBot.charge(bot_state, game_state)
     }
 
     fn play(&mut self, bot_state: &BotState, game_state: &GameState) -> Card {
@@ -67,13 +34,15 @@ impl Algorithm for SimulateBot {
         let now = Instant::now();
         let mut iter = 0;
         while now.elapsed().as_millis() < 3500 {
-            let hands = self.hand_maker.make();
+            let hands = self.hand_maker.make(&bot_state.void);
             for card in cards {
-                let mut game = game_state.clone();
-                game.apply(&GameEvent::Play {
+                let event = GameEvent::Play {
                     seat: bot_state.seat,
                     card,
-                });
+                };
+                let void = bot_state.void.on_event(&game_state, &event);
+                let mut game = game_state.clone();
+                game.apply(&event);
                 if game.played.len() > 28 && iter > 0 {
                     let mut brute_force = BruteForce::new(hands);
                     let won = brute_force.solve(&mut game);
@@ -83,7 +52,7 @@ impl Algorithm for SimulateBot {
                 } else {
                     for _ in 0..50 {
                         let mut game = game.clone();
-                        do_plays(&mut self.heuristic_bot(), &mut game, hands);
+                        do_plays(&mut game, void, hands);
                         let money = money(&bot_state, &game);
                         *money_counts.entry((card, money)).or_default() += 1;
                     }
@@ -99,54 +68,20 @@ impl Algorithm for SimulateBot {
     }
 }
 
-fn do_passes(game: &mut GameState) {
-    if game.phase.is_passing() {
-        for &seat in &Seat::VALUES {
-            game.apply(&GameEvent::RecvPass {
-                to: seat,
-                cards: Cards::NONE,
-            });
-        }
-    }
-}
-
-fn do_charges(bot: &mut HeuristicBot, game: &mut GameState, hands: [Cards; 4]) {
-    while game.phase.is_charging() {
-        for &seat in &Seat::VALUES {
-            if !game.done.charged(seat) {
-                let cards = bot.charge(
-                    &BotState {
-                        seat,
-                        pre_pass_hand: hands[seat.idx()],
-                        post_pass_hand: hands[seat.idx()],
-                    },
-                    &game,
-                );
-                game.apply(&GameEvent::Charge { seat, cards });
-            }
-        }
-    }
-}
-
-fn do_plays(bot: &mut HeuristicBot, game: &mut GameState, hands: [Cards; 4]) {
+fn do_plays(game: &mut GameState, mut void: VoidState, hands: [Cards; 4]) {
     while game.phase.is_playing() {
         let seat = game.next_actor.unwrap();
         if game.current_trick.is_empty()
             && game.won.can_run(seat)
-            && can_claim(game, seat, hands[seat.idx()])
+            && can_claim(game, &void, seat, hands[seat.idx()])
         {
             game.won = game.won.win(seat, Cards::ALL - game.played);
             return;
         }
-        let card = bot.play(
-            &BotState {
-                seat,
-                pre_pass_hand: hands[seat.idx()],
-                post_pass_hand: hands[seat.idx()],
-            },
-            &game,
-        );
-        game.apply(&GameEvent::Play { seat, card });
+        let card = HeuristicBot.play(&BotState::with_void(seat, hands[seat.idx()], void), &game);
+        let event = GameEvent::Play { seat, card };
+        void = void.on_event(&game, &event);
+        game.apply(&event);
     }
 }
 

@@ -11,7 +11,8 @@ use tract_onnx::{
     tract_hir::tract_core::downcast_rs::__std::cmp::Ordering,
 };
 use turbo_hearts_api::{
-    can_claim, BotState, Card, Cards, ChargeState, GameEvent, GameState, Rank, Seat, Suit, WonState,
+    can_claim, BotState, Card, Cards, ChargeState, GameEvent, GameState, Rank, Seat, Suit,
+    VoidState, WonState,
 };
 
 static LEAD_POLICY: Lazy<TypedRunnableModel<TypedModel>> =
@@ -93,11 +94,11 @@ impl NeuralNetworkBot {
 
 impl Algorithm for NeuralNetworkBot {
     fn pass(&mut self, bot_state: &BotState, game_state: &GameState) -> Cards {
-        HeuristicBot::new().pass(bot_state, game_state)
+        HeuristicBot.pass(bot_state, game_state)
     }
 
     fn charge(&mut self, bot_state: &BotState, game_state: &GameState) -> Cards {
-        HeuristicBot::new().charge(bot_state, game_state)
+        HeuristicBot.charge(bot_state, game_state)
     }
 
     fn play(&mut self, bot_state: &BotState, game_state: &GameState) -> Card {
@@ -112,7 +113,7 @@ impl Algorithm for NeuralNetworkBot {
         let now = Instant::now();
         while now.elapsed().as_millis() < 4500 {
             iters += 1;
-            let hands = self.hand_maker.make();
+            let hands = self.hand_maker.make(&bot_state.void);
             let brute_force = ShallowBruteForce::new(hands);
             for card in distinct_plays {
                 let mut game = game_state.clone();
@@ -180,7 +181,7 @@ impl ShallowBruteForce {
         let seat = state.next_actor.unwrap();
         if state.current_trick.is_empty()
             && state.won.can_run(seat)
-            && can_claim(state, seat, self.hands[seat.idx()])
+            && can_claim(state, &VoidState::new(), seat, self.hands[seat.idx()])
         {
             return ApproximateScores::from_won(state.charges, state.won.claim(seat));
         }
