@@ -72,7 +72,7 @@ impl BotRunner {
                 {
                     let accept = can_claim(
                         &self.game_state,
-                        &self.bot_state.void,
+                        self.bot_state.void,
                         seat,
                         self.claim_hands[seat.idx()] - self.game_state.played,
                     );
@@ -242,7 +242,7 @@ impl BotRunner {
             {
                 if should_claim(
                     &self.game_state,
-                    &self.bot_state.void,
+                    self.bot_state.void,
                     self.bot_state.seat,
                     self.bot_state.post_pass_hand,
                 ) {

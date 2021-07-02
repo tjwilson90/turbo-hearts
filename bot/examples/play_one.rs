@@ -1,7 +1,6 @@
 use log::LevelFilter;
 use turbo_hearts_api::{
     BotState, Card, Cards, ChargingRules, Game, GameEvent, GamePhase, PassDirection, Seat,
-    VoidState,
 };
 use turbo_hearts_bot::{Algorithm, NeuralNetworkBot};
 
