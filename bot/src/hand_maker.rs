@@ -57,7 +57,7 @@ impl HandMaker {
         self.hands[seat.idx()]
     }
 
-    pub fn make(&self, void: &VoidState) -> [Cards; 4] {
+    pub fn make(&self, void: VoidState) -> [Cards; 4] {
         let mut copy = self.clone();
         let cards = Cards::ALL - self.hands[0] - self.hands[1] - self.hands[2] - self.hands[3];
         let mut shuffled = cards.into_iter().collect::<Vec<_>>();
@@ -70,7 +70,7 @@ impl HandMaker {
         copy.hands
     }
 
-    fn assign(&mut self, void: &VoidState, shuffled: &mut Vec<Card>, cards: Cards) -> bool {
+    fn assign(&mut self, void: VoidState, shuffled: &mut Vec<Card>, cards: Cards) -> bool {
         if shuffled.is_empty() {
             return true;
         }

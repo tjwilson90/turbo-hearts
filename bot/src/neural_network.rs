@@ -181,7 +181,7 @@ impl ShallowBruteForce {
         let seat = state.next_actor.unwrap();
         if state.current_trick.is_empty()
             && state.won.can_run(seat)
-            && can_claim(state, &VoidState::new(), seat, self.hands[seat.idx()])
+            && can_claim(state, VoidState::new(), seat, self.hands[seat.idx()])
         {
             return ApproximateScores::from_won(state.charges, state.won.claim(seat));
         }

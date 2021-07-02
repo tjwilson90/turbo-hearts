@@ -40,7 +40,7 @@ impl BotState {
     }
 }
 
-pub fn should_claim(state: &GameState, void: &VoidState, seat: Seat, hand: Cards) -> bool {
+pub fn should_claim(state: &GameState, void: VoidState, seat: Seat, hand: Cards) -> bool {
     if !state.current_trick.is_empty() {
         // checking claims in the middle of tricks is more expensive / not worth it
         false
@@ -70,8 +70,8 @@ fn must_claim(hand: Cards, played: Cards) -> bool {
     true
 }
 
-pub fn can_claim(state: &GameState, void: &VoidState, seat: Seat, hand: Cards) -> bool {
-    fn can_claim_rec(state: &GameState, void: &VoidState, seat: Seat, hand: Cards) -> bool {
+pub fn can_claim(state: &GameState, void: VoidState, seat: Seat, hand: Cards) -> bool {
+    fn can_claim_rec(state: &GameState, void: VoidState, seat: Seat, hand: Cards) -> bool {
         if state.current_trick.is_empty() && state.next_actor == Some(seat) {
             return can_leader_claim(hand, state);
         }
@@ -257,7 +257,7 @@ mod test {
         };
         assert!(can_claim(
             &state,
-            &VoidState::new(),
+            VoidState::new(),
             Seat::North,
             "AK9S AK9H AK9D AK9C".parse().unwrap(),
         ));
@@ -284,7 +284,7 @@ mod test {
         };
         assert!(can_claim(
             &state,
-            &VoidState::new(),
+            VoidState::new(),
             Seat::East,
             "AQJ98652S TH A8D 52C".parse().unwrap(),
         ));
@@ -317,7 +317,7 @@ mod test {
         };
         assert!(can_claim(
             &state,
-            &VoidState::new()
+            VoidState::new()
                 .mark_void(Seat::South, Suit::Spades)
                 .mark_void(Seat::East, Suit::Hearts)
                 .mark_void(Seat::North, Suit::Hearts),
