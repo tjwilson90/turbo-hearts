@@ -1,6 +1,6 @@
 use rand::seq::SliceRandom;
 use turbo_hearts_api::{
-    BotState, Card, Cards, ChargingRules, GameEvent, GameState, PassDirection, Seat, VoidState,
+    BotState, Card, Cards, ChargingRules, GameEvent, GameState, PassDirection, Seat,
 };
 use turbo_hearts_bot::{Algorithm, NeuralNetworkBot};
 
