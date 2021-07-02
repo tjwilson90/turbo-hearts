@@ -14,7 +14,7 @@ fn main() {
         let seat = Seat::VALUES[rng.gen_range(0..4)];
         let hand = deck.choose_multiple(&mut rng, 13).cloned().collect();
         let now = Instant::now();
-        can_claim(seat, hand, &state);
+        can_claim(&state, seat, hand);
         let elapsed = now.elapsed().as_nanos();
         if elapsed > max {
             max = elapsed;
