@@ -34,7 +34,7 @@ impl Algorithm for SimulateBot {
         let now = Instant::now();
         let mut iter = 0;
         while now.elapsed().as_millis() < 3500 {
-            let hands = self.hand_maker.make(&bot_state.void);
+            let hands = self.hand_maker.make(bot_state.void);
             for card in cards {
                 let event = GameEvent::Play {
                     seat: bot_state.seat,
@@ -73,7 +73,7 @@ fn do_plays(game: &mut GameState, mut void: VoidState, hands: [Cards; 4]) {
         let seat = game.next_actor.unwrap();
         if game.current_trick.is_empty()
             && game.won.can_run(seat)
-            && can_claim(game, &void, seat, hands[seat.idx()])
+            && can_claim(game, void, seat, hands[seat.idx()])
         {
             game.won = game.won.win(seat, Cards::ALL - game.played);
             return;

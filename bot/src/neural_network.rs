@@ -113,7 +113,7 @@ impl Algorithm for NeuralNetworkBot {
         let now = Instant::now();
         while now.elapsed().as_millis() < 4500 {
             iters += 1;
-            let hands = self.hand_maker.make(&bot_state.void);
+            let hands = self.hand_maker.make(bot_state.void);
             let brute_force = ShallowBruteForce::new(hands);
             for card in distinct_plays {
                 let mut game = game_state.clone();
