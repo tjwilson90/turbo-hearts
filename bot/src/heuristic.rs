@@ -410,30 +410,17 @@ impl Algorithm for HeuristicBot {
         let chargeable = hand - game_state.charges.all_charges();
         let mut charge = Cards::NONE;
         if chargeable.contains(Card::QueenSpades) {
-            let spades = hand & Cards::SPADES;
-            if spades.len() >= 6 || (spades.len() >= 5 && hand.contains(Card::NineSpades)) {
-                if (hand - Cards::SPADES - Card::TwoClubs)
-                    .into_iter()
-                    .any(|c| c.rank() < Rank::Five)
-                {
-                    charge |= Card::QueenSpades;
-                }
+            if should_real_charge_queen(hand) || should_fake_charge_queen(hand) {
+                charge |= Card::QueenSpades;
             }
         }
         if chargeable.contains(Card::TenClubs) {
-            let clubs = hand & Cards::CLUBS;
-            if clubs.len() >= 6 || (clubs.len() >= 5 && hand.contains(Card::NineClubs)) {
-                if (hand - Cards::CLUBS)
-                    .into_iter()
-                    .any(|c| c.rank() < Rank::Five)
-                {
-                    charge |= Card::TenClubs;
-                }
+            if should_real_charge_ten(hand) || should_fake_charge_ten(hand) {
+                charge |= Card::TenClubs;
             }
         }
         if chargeable.contains(Card::AceHearts) {
-            let hearts = hand & Cards::HEARTS;
-            if hearts.below(Card::EightHearts).len() >= 3 {
+            if should_real_charge_ace(hand) || should_fake_charge_ace(hand) {
                 charge |= Card::AceHearts;
             }
         }
@@ -475,6 +462,87 @@ impl Algorithm for HeuristicBot {
 
     fn on_event(&mut self, _: &BotState, state: &GameState, event: &GameEvent) {
         self.void.on_event(state, event);
+    }
+}
+
+fn should_real_charge_queen(hand: Cards) -> bool {
+    let spades = hand & Cards::SPADES;
+    if spades.len() <= 4 {
+        false
+    } else if spades.len() == 5 && !hand.contains(Card::NineSpades) {
+        false
+    } else {
+        (hand - Cards::SPADES - Card::TwoClubs)
+            .into_iter()
+            .any(|c| c.rank() < Rank::Five)
+    }
+}
+
+fn should_fake_charge_queen(hand: Cards) -> bool {
+    let spades = hand & Cards::SPADES;
+    if spades.len() > 2 {
+        false
+    } else if spades.len() == 2 && !hand.contains(Card::NineSpades) {
+        false
+    } else if (hand & Cards::CLUBS).len() > 1
+        && !(hand & Cards::DIAMONDS - Card::NineDiamonds).is_empty()
+    {
+        false
+    } else {
+        rand::thread_rng().gen_bool(0.1)
+    }
+}
+
+fn should_real_charge_ten(hand: Cards) -> bool {
+    let clubs = hand & Cards::CLUBS;
+    if clubs.len() <= 4 {
+        false
+    } else if clubs.len() == 5 && !hand.contains(Card::NineClubs) {
+        false
+    } else {
+        (hand - Cards::CLUBS)
+            .into_iter()
+            .any(|c| c.rank() < Rank::Five)
+    }
+}
+
+fn should_fake_charge_ten(hand: Cards) -> bool {
+    let clubs = hand & Cards::CLUBS;
+    if clubs.len() > 2 {
+        return false;
+    } else if clubs.len() == 2 && !hand.contains(Card::NineClubs) {
+        return false;
+    }
+    let diamonds = hand & Cards::DIAMONDS;
+    if diamonds.len() >= 3 && diamonds.below(Card::SixDiamonds).is_empty() {
+        return false;
+    }
+    let hearts = hand & Cards::HEARTS;
+    if hearts.below(Card::SixHearts).is_empty() && !hearts.above(Card::FiveHearts).is_empty() {
+        return false;
+    }
+    let spades = hand & Cards::SPADES;
+    if spades.below(Card::QueenSpades).len() <= 3 && !spades.above(Card::JackSpades).is_empty() {
+        return false;
+    }
+    rand::thread_rng().gen_bool(0.5)
+}
+
+fn should_real_charge_ace(hand: Cards) -> bool {
+    let hearts = hand & Cards::HEARTS;
+    hearts.below(Card::EightHearts).len() >= 3
+}
+
+fn should_fake_charge_ace(hand: Cards) -> bool {
+    if (hand & Cards::HEARTS).len() > 1 {
+        false
+    } else if (hand & Cards::CLUBS).len() <= 1
+        || (hand & Cards::DIAMONDS - Card::NineDiamonds).is_empty()
+        || (hand & Cards::SPADES - Card::NineSpades).is_empty()
+    {
+        rand::thread_rng().gen_bool(0.25)
+    } else {
+        false
     }
 }
 
