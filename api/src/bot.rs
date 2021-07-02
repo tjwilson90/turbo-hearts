@@ -20,7 +20,37 @@ pub struct BotState {
     pub post_pass_hand: Cards,
 }
 
-pub fn can_claim(seat: Seat, hand: Cards, state: &GameState) -> bool {
+pub fn should_claim(state: &GameState, seat: Seat, hand: Cards) -> bool {
+    if !state.current_trick.is_empty() {
+        // checking claims in the middle of tricks is more expensive / not worth it
+        false
+    } else if state.claims.is_claiming(seat) {
+        false
+    } else if state.played.len() >= 48 {
+        // don't bother claiming the last trick, more annoying than useful
+        false
+    } else if must_claim(hand - state.played, state.played) {
+        true
+    } else if !state.won.can_run(seat) {
+        false
+    } else {
+        can_claim(state, seat, hand - state.played)
+    }
+}
+
+fn must_claim(hand: Cards, played: Cards) -> bool {
+    let remaining = Cards::ALL - hand - played;
+    for suit in &[Cards::SPADES, Cards::HEARTS, Cards::DIAMONDS, Cards::CLUBS] {
+        let hand = hand & *suit;
+        let remaining = remaining & *suit;
+        if !hand.is_empty() && !remaining.is_empty() && hand.min() < remaining.max() {
+            return false;
+        }
+    }
+    true
+}
+
+pub fn can_claim(state: &GameState, seat: Seat, hand: Cards) -> bool {
     if state.current_trick.is_empty() && state.next_actor == Some(seat) {
         return can_leader_claim(hand, state);
     }
@@ -36,7 +66,7 @@ pub fn can_claim(seat: Seat, hand: Cards, state: &GameState) -> bool {
                 if state.current_trick.is_empty() && state.next_actor != Some(seat) {
                     continue;
                 }
-                if can_claim(seat, hand - card, &state) {
+                if can_claim(&state, seat, hand - card) {
                     return true;
                 }
             }
@@ -52,7 +82,7 @@ pub fn can_claim(seat: Seat, hand: Cards, state: &GameState) -> bool {
                 if state.current_trick.is_empty() && state.next_actor != Some(seat) {
                     return false;
                 }
-                if !can_claim(seat, hand, &state) {
+                if !can_claim(&state, seat, hand) {
                     return false;
                 }
             }
@@ -136,8 +166,8 @@ fn losers(suit: Suit, hand: Cards, state: &GameState) -> i8 {
 mod test {
     use super::*;
     use crate::{
-        ChargeState, ChargingRules, ClaimState, DoneState, GamePhase, GameState, Suits, Trick,
-        WonState,
+        Card, ChargeState, ChargingRules, ClaimState, DoneState, GamePhase, GameState, Suits,
+        Trick, WonState,
     };
 
     #[test]
@@ -198,9 +228,35 @@ mod test {
             current_trick: Trick::new(),
         };
         assert!(can_claim(
+            &state,
             Seat::North,
             "AK9S AK9H AK9D AK9C".parse().unwrap(),
-            &state
+        ));
+    }
+
+    #[test]
+    fn test_can_claim2() {
+        let state = GameState {
+            rules: ChargingRules::Classic,
+            phase: GamePhase::PassLeft,
+            done: DoneState::new(),
+            charge_count: 2,
+            charges: ChargeState::new()
+                .charge(Seat::West, Card::TenClubs.into())
+                .charge(Seat::North, Card::JackDiamonds.into()),
+            next_actor: Some(Seat::West),
+            played: "2K9C TS 584C TD  7D JC 68D  AKS".parse().unwrap(),
+            claims: ClaimState::new(),
+            won: WonState::new()
+                .win(Seat::South, "2K9C TS 584C TD".parse().unwrap())
+                .win(Seat::East, "7D JC 68D".parse().unwrap()),
+            led_suits: Suits::NONE | Suit::Clubs | Suit::Diamonds | Suit::Spades,
+            current_trick: Trick::new().push(Card::AceSpades).push(Card::KingSpades),
+        };
+        assert!(can_claim(
+            &state,
+            Seat::East,
+            "AQJ98652S TH A8D 52C".parse().unwrap(),
         ));
     }
 }

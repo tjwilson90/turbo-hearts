@@ -6,7 +6,8 @@ use rand_distr::Gamma;
 use std::time::Instant;
 use tokio::{sync::mpsc::UnboundedReceiver, time, time::Duration};
 use turbo_hearts_api::{
-    can_claim, BotState, BotStrategy, Card, Cards, GameEvent, GameId, GameState, Seat, UserId,
+    can_claim, should_claim, BotState, BotStrategy, Card, Cards, GameEvent, GameId, GameState,
+    Seat, UserId,
 };
 use turbo_hearts_bot::{
     Algorithm, Bot, DuckBot, GottaTryBot, HeuristicBot, NeuralNetworkBot, RandomBot, SimulateBot,
@@ -74,9 +75,9 @@ impl BotRunner {
                         .has_accepted(seat, self.bot_state.seat)
                 {
                     let accept = can_claim(
+                        &self.game_state,
                         seat,
                         self.claim_hands[seat.idx()] - self.game_state.played,
-                        &self.game_state,
                     );
                     BotRunner::delay(delay, now).await;
                     if accept {
@@ -241,20 +242,15 @@ impl BotRunner {
             if (self.bot_state.post_pass_hand - self.game_state.played).contains(Card::TwoClubs)
                 || Some(self.bot_state.seat) == self.game_state.next_actor
             {
-                Some(
-                    if self.game_state.current_trick.is_empty()
-                        && !self.game_state.claims.is_claiming(self.bot_state.seat)
-                        && self.game_state.played.len() < 48
-                        && must_claim(
-                            self.bot_state.post_pass_hand - self.game_state.played,
-                            self.game_state.played,
-                        )
-                    {
-                        Action::Claim
-                    } else {
-                        Action::Play
-                    },
-                )
+                if should_claim(
+                    &self.game_state,
+                    self.bot_state.seat,
+                    self.bot_state.post_pass_hand,
+                ) {
+                    Some(Action::Claim)
+                } else {
+                    Some(Action::Play)
+                }
             } else {
                 None
             }
@@ -270,16 +266,4 @@ enum Action {
     Charge,
     Play,
     Claim,
-}
-
-fn must_claim(hand: Cards, played: Cards) -> bool {
-    let remaining = Cards::ALL - hand - played;
-    for suit in &[Cards::SPADES, Cards::HEARTS, Cards::DIAMONDS, Cards::CLUBS] {
-        let hand = hand & *suit;
-        let remaining = remaining & *suit;
-        if !hand.is_empty() && !remaining.is_empty() && hand.min() < remaining.max() {
-            return false;
-        }
-    }
-    true
 }

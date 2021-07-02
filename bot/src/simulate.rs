@@ -133,7 +133,7 @@ fn do_plays(bot: &mut HeuristicBot, game: &mut GameState, hands: [Cards; 4]) {
         let seat = game.next_actor.unwrap();
         if game.current_trick.is_empty()
             && game.won.can_run(seat)
-            && can_claim(seat, hands[seat.idx()], game)
+            && can_claim(game, seat, hands[seat.idx()])
         {
             game.won = game.won.win(seat, Cards::ALL - game.played);
             return;
