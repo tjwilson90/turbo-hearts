@@ -22,7 +22,7 @@ export interface LeaderboardEntry {
 export function calculateScores(game: GameResult): GameScores {
     const handScores = [];
     for (const hand of game.hands) {
-        const chargeSet = new Set([].concat(...hand.charges));
+        const chargeSet = new Set(([] as string[]).concat(...hand.charges));
         const qsCharged = chargeSet.has("QS");
         const jdCharged = chargeSet.has("JD");
         const tcCharged = chargeSet.has("TC");
