@@ -1,6 +1,5 @@
 use crate::{CardsError, Games};
 use futures_util::FutureExt;
-use log::debug;
 use rand::distributions::Distribution;
 use rand_distr::Gamma;
 use std::time::Instant;
@@ -14,7 +13,6 @@ use turbo_hearts_bot::{
 };
 
 pub struct BotRunner {
-    game_id: GameId,
     user_id: UserId,
     bot_state: BotState,
     game_state: GameState,
@@ -23,7 +21,7 @@ pub struct BotRunner {
 }
 
 impl BotRunner {
-    pub fn new(game_id: GameId, user_id: UserId, strategy: BotStrategy) -> Self {
+    pub fn new(user_id: UserId, strategy: BotStrategy) -> Self {
         let bot = match strategy {
             BotStrategy::Duck => Bot::Duck(DuckBot),
             BotStrategy::GottaTry => Bot::GottaTry(GottaTryBot),
@@ -33,7 +31,6 @@ impl BotRunner {
             BotStrategy::NeuralNet => Bot::NeuralNetwork(NeuralNetworkBot::new()),
         };
         Self {
-            game_id,
             user_id,
             bot_state: BotState::new(Seat::North, Cards::NONE),
             game_state: GameState::new(),
@@ -44,22 +41,24 @@ impl BotRunner {
 
     pub async fn run(
         mut self,
+        game_id: GameId,
         games: Games,
         mut rx: UnboundedReceiver<(GameEvent, usize)>,
         delay: Option<Gamma<f32>>,
     ) -> Result<(), CardsError> {
-        let mut action = None;
         loop {
-            let now = Instant::now();
+            let mut action = match rx.recv().await {
+                Some((event, _)) => self.apply(&event),
+                None => return Ok(()),
+            };
             loop {
-                match rx.recv().now_or_never() {
-                    Some(Some((event, _))) => {
-                        action = self.handle(event);
-                    }
+                action = match rx.recv().now_or_never() {
+                    Some(Some((event, _))) => self.apply(&event),
                     Some(None) => return Ok(()),
                     None => break,
-                }
+                };
             }
+            let now = Instant::now();
             let delay =
                 delay.map(|delay| Duration::from_secs_f32(delay.sample(&mut rand::thread_rng())));
             for &seat in &Seat::VALUES {
@@ -78,12 +77,12 @@ impl BotRunner {
                     );
                     BotRunner::delay(delay, now).await;
                     if accept {
-                        match games.accept_claim(self.game_id, self.user_id, seat).await {
+                        match games.accept_claim(game_id, self.user_id, seat).await {
                             Ok(true) => return Ok(()),
                             _ => {}
                         }
                     } else {
-                        let _ = games.reject_claim(self.game_id, self.user_id, seat).await;
+                        let _ = games.reject_claim(game_id, self.user_id, seat).await;
                     }
                 }
                 self.claim_hands[seat.idx()] = Cards::NONE;
@@ -92,34 +91,28 @@ impl BotRunner {
                 Some(Action::Pass) => {
                     let cards = self.pass().await;
                     BotRunner::delay(delay, now).await;
-                    let _ = games.pass_cards(self.game_id, self.user_id, cards).await;
+                    let _ = games.pass_cards(game_id, self.user_id, cards).await;
                 }
                 Some(Action::Charge) => {
                     let cards = self.charge().await;
                     BotRunner::delay(delay, now).await;
-                    let _ = games.charge_cards(self.game_id, self.user_id, cards).await;
+                    let _ = games.charge_cards(game_id, self.user_id, cards).await;
                 }
                 Some(Action::Play) => {
                     let card = self.play().await;
                     if card != Card::TwoClubs {
                         BotRunner::delay(delay, now).await;
                     }
-                    match games.play_card(self.game_id, self.user_id, card).await {
+                    match games.play_card(game_id, self.user_id, card).await {
                         Ok(true) => return Ok(()),
                         _ => {}
                     }
                 }
                 Some(Action::Claim) => {
                     BotRunner::delay(delay, now).await;
-                    let _ = games.claim(self.game_id, self.user_id).await;
+                    let _ = games.claim(game_id, self.user_id).await;
                 }
                 None => {}
-            }
-            match rx.recv().await {
-                Some((event, _)) => {
-                    action = self.handle(event);
-                }
-                None => return Ok(()),
             }
         }
     }
@@ -164,20 +157,16 @@ impl BotRunner {
         }
     }
 
-    fn handle(&mut self, event: GameEvent) -> Option<Action> {
-        debug!(
-            "handle: game_id={}, user_id={}, event={:?}",
-            self.game_id, self.user_id, event
-        );
-        self.bot_state.on_event(&self.game_state, &event);
-        self.bot.on_event(&self.bot_state, &self.game_state, &event);
+    fn apply(&mut self, event: &GameEvent) -> Option<Action> {
+        self.bot_state.on_event(&self.game_state, event);
+        self.bot.on_event(&self.bot_state, &self.game_state, event);
         let phase = self.game_state.phase;
-        self.game_state.apply(&event);
+        self.game_state.apply(event);
         if phase.is_playing() && !self.game_state.phase.is_playing() {
             self.bot_state.pre_pass_hand = Cards::NONE;
             self.bot_state.post_pass_hand = Cards::NONE;
         }
-        match &event {
+        match event {
             GameEvent::Sit {
                 north,
                 east,

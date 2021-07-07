@@ -74,6 +74,8 @@ function unrustify(event: any): LobbyEvent {
             renameCommon(event.east);
             return event;
         case "leave_game":
+            renameCommon(event.player);
+            return event;
         case "finish_game":
         case "chat":
         default:
