@@ -100,7 +100,8 @@ impl Games {
         if let Player::Bot { user_id, strategy } = player {
             let (tx, rx) = mpsc::unbounded_channel();
             let sub = Subscriber::new(tx, None);
-            task::spawn(BotRunner::new(game_id, user_id, strategy).run(
+            task::spawn(BotRunner::new(user_id, strategy).run(
+                game_id,
                 self.clone(),
                 rx,
                 self.bot_delay,
