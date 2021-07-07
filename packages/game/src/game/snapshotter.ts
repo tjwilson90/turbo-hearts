@@ -179,10 +179,10 @@ export class Snapshotter {
           ...previous,
           index: previous.index + 1,
           event,
-          north: withDeal(previous.north, []),
-          east: withDeal(previous.east, []),
-          south: withDeal(previous.south, []),
-          west: withDeal(previous.west, [])
+          north: withAction(withDeal(previous.north, []), "none"),
+          east: withAction(withDeal(previous.east, []), "none"),
+          south: withAction(withDeal(previous.south, []), "none"),
+          west: withAction(withDeal(previous.west, []), "none")
         });
         break;
       }
