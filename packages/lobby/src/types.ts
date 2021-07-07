@@ -73,7 +73,7 @@ export interface JoinGameEvent {
 
 export interface LeaveGameEvent {
     type: "leave_game";
-    userId: string;
+    player: LobbyPlayer;
     gameId: string;
 }
 
