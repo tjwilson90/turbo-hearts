@@ -15,6 +15,7 @@ import {
   Z_CHARGED_CARDS,
   Z_DEALING_CARDS,
   Z_HAND_CARDS,
+  Z_LIMBO_CARDS,
   Z_PILE_CARDS,
   Z_PLAYED_CARDS,
   Z_TRANSIT_CARDS,
@@ -168,7 +169,7 @@ export class StepAnimation implements Animation {
             card.sprite.texture = this.cardTextures[card.card].texture;
           }
           finished++;
-          if (finished === started) {
+          if (finished === 52) {
             this.finished = true;
           }
         })
@@ -218,6 +219,11 @@ export class StepAnimation implements Animation {
         }
       }
     }
+    let i = Z_LIMBO_CARDS;
+    for (const card of cardsToMove) {
+      card.sprite.zIndex = i++;
+    }
+    this.zSort();
     const layout = LIMBO_POSITIONS_FOR_BOTTOM_SEAT[this.bottomSeat][event.from][this.next.pass];
     await Promise.all([
       this.animateCards(cardsToMove, layout.x, layout.y, layout.rotation),
@@ -428,7 +434,7 @@ export class StepAnimation implements Animation {
         })
         .onComplete(() => {
           finished++;
-          if (finished === started) {
+          if (finished === 52) {
             this.finished = true;
           }
         })
@@ -458,7 +464,6 @@ export class StepAnimation implements Animation {
     const cardDests = groupCards(cards, x, y, rotation, overlap, invert);
     return new Promise(resolve => {
       let finished = 0;
-      let started = 0;
       let i = 0;
       if (cards.length === 0) {
         resolve();
@@ -469,12 +474,11 @@ export class StepAnimation implements Animation {
           .easing(TWEEN.Easing.Quadratic.Out)
           .onComplete(() => {
             finished++;
-            if (finished === started) {
+            if (finished === 2 * cards.length) {
               resolve();
             }
           })
           .start();
-        started++;
         const totalRotation = rotation - card.sprite.rotation;
         // Prevent overly spinny cards
         if (Math.abs(totalRotation) > Math.PI) {
@@ -485,12 +489,11 @@ export class StepAnimation implements Animation {
           .easing(TWEEN.Easing.Quadratic.Out)
           .onComplete(() => {
             finished++;
-            if (finished === started) {
+            if (finished === 2 * cards.length) {
               resolve();
             }
           })
           .start();
-        started++;
         i++;
       }
     });

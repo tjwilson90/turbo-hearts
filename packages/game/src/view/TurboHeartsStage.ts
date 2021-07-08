@@ -24,6 +24,7 @@ import {
   Z_BACKGROUND,
   Z_CHARGED_CARDS,
   Z_HAND_CARDS,
+  Z_LIMBO_CARDS,
   Z_PILE_CARDS,
   Z_PLAYED_CARDS,
   CARD_DISPLAY_HEIGHT,
@@ -146,7 +147,6 @@ export class TurboHeartsStage {
 
   private picked: Set<SpriteCard> = new Set();
   private hovered: SpriteCard | undefined = undefined;
-  private initialPosition: Map<SpriteCard, number> = new Map();
   private cardMap: Map<PIXI.Sprite, SpriteCard> = new Map();
   private cardTweens: Map<PIXI.Sprite, TWEEN.Tween> = new Map();
 
@@ -360,7 +360,7 @@ export class TurboHeartsStage {
         const card = limboCards[i];
         card.sprite.position.set(limboDests[i].x, limboDests[i].y);
         card.sprite.rotation = limboPosition.rotation;
-        card.sprite.zIndex = Z_HAND_CARDS;
+        card.sprite.zIndex = Z_LIMBO_CARDS;
         this.cardContainer.addChild(card.sprite);
       }
     };
@@ -431,7 +431,6 @@ export class TurboHeartsStage {
     const spriteCards = spriteCardsOf([...this.bottom.hand, ...this.bottom.charged], legalPlays);
     for (const card of spriteCards) {
       this.cardMap.set(card.sprite, card);
-      this.initialPosition.set(card, card.sprite.position.y);
       card.sprite.interactive = true;
       card.sprite.buttonMode = true;
       card.sprite.addListener("pointertap", this.onClick);
@@ -445,11 +444,6 @@ export class TurboHeartsStage {
       tween.stop();
     }
     for (const sprite of this.cardMap.keys()) {
-      const spriteCard = this.cardMap.get(sprite)!;
-      if (!this.picked.has(spriteCard)) {
-        const pos = this.initialPosition.get(spriteCard)!;
-        sprite.position.y = pos;
-      }
       sprite.interactive = false;
       sprite.buttonMode = false;
       sprite.removeListener("pointertap", this.onClick);
@@ -458,7 +452,6 @@ export class TurboHeartsStage {
     }
     this.picked.clear();
     this.hovered = undefined;
-    this.initialPosition.clear();
     this.cardMap.clear();
     this.cardTweens.clear();
     this.emitter.emit("pick", []);
@@ -477,18 +470,14 @@ export class TurboHeartsStage {
   }
 
   private animate(card: SpriteCard) {
-    const initialPosition = this.initialPosition.get(card);
-    if (initialPosition === undefined) {
-      throw new Error("missing card to animate");
-    }
     let pos;
     const offset = CARD_DISPLAY_HEIGHT / 4;
     if (this.picked.has(card)) {
-      pos = initialPosition - 1.33 * offset;
+      pos = BOTTOM.y - 1.33 * offset;
     } else if (this.hovered === card) {
-      pos = initialPosition - offset;
+      pos = BOTTOM.y - offset;
     } else {
-      pos = initialPosition;
+      pos = BOTTOM.y;
     }
     this.tweenTo(card.sprite, pos);
   }
