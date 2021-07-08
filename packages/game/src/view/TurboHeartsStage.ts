@@ -49,7 +49,7 @@ import { StepAnimation } from "./StepAnimation";
 import { spriteCardsOf } from "../util/helpers";
 import EventEmitter from "eventemitter3";
 import { emptyArray } from "../util/array";
-import { POSITION_FOR_BOTTOM_SEAT } from "../util/seatPositions";
+import { POSITION_FOR_BOTTOM_SEAT, addToSeat, subtractSeats } from "../util/seatPositions";
 
 const CHARGEABLE_CARDS: Card[] = ["TC", "JD", "AH", "QS"];
 
@@ -290,6 +290,7 @@ export class TurboHeartsStage {
 
   private snapToState(state: TurboHearts.StateSnapshot) {
     const bottomSeat = this.getBottomSeat(state);
+    const lastPlaySeat = state.event.type === "play_status" ? addToSeat(state.event.nextPlayer, -1) : "north";
     this.cardContainer.removeChildren();
 
     const layoutHand = (seat: Seat, position: Position, layout: PlayerCardPositions) => {
@@ -323,13 +324,13 @@ export class TurboHeartsStage {
       }
 
       const playCards = state[seat].plays.map(c => createSpriteCard(this.app.loader.resources, c, false));
-      const playDests = groupCards(playCards, layout.playX, layout.playY, layout.rotation, CARD_OVERLAP, false);
+      const playDests = groupCards(playCards, layout.playX, layout.playY, layout.rotation, CARD_OVERLAP, true);
       this[position].plays = playCards;
       for (let i = 0; i < playCards.length; i++) {
         const card = playCards[i];
         card.sprite.position.set(playDests[i].x, playDests[i].y);
         card.sprite.rotation = layout.rotation;
-        card.sprite.zIndex = Z_PLAYED_CARDS;
+        card.sprite.zIndex = Z_PLAYED_CARDS - subtractSeats(lastPlaySeat, seat) - 4 * (playCards.length - i);
         this.cardContainer.addChild(card.sprite);
       }
 
