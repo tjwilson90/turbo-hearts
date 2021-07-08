@@ -168,6 +168,7 @@ export class StepAnimation implements Animation {
           if (!card.hidden && card.sprite.texture === backTexture) {
             card.sprite.texture = this.cardTextures[card.card].texture;
           }
+          card.sprite.zIndex = Z_HAND_CARDS - finished;
           finished++;
           if (finished === 52) {
             this.finished = true;

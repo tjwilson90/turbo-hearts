@@ -35,6 +35,11 @@ export function addToSeat(seat: Seat, n: number): Seat {
   return SEAT_ORDER[i];
 }
 
+export function subtractSeats(left: Seat, right: Seat): number {
+  let n = SEAT_ORDER.indexOf(left) - SEAT_ORDER.indexOf(right);
+  return n < 0 ? n + SEAT_ORDER.length : n;
+}
+
 /**
  * A map from a bottom Seat to all Seats in Top, Right, Bottom, Left order.
  */
