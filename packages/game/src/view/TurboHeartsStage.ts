@@ -470,14 +470,11 @@ export class TurboHeartsStage {
   }
 
   private animate(card: SpriteCard) {
-    let pos;
-    const offset = CARD_DISPLAY_HEIGHT / 4;
+    let pos = this.bottom.charged.includes(card) ? BOTTOM.chargeY : BOTTOM.y;
     if (this.picked.has(card)) {
-      pos = BOTTOM.y - 1.33 * offset;
+      pos -= 1.33 * CARD_DISPLAY_HEIGHT / 4;
     } else if (this.hovered === card) {
-      pos = BOTTOM.y - offset;
-    } else {
-      pos = BOTTOM.y;
+      pos -= CARD_DISPLAY_HEIGHT / 4;
     }
     this.tweenTo(card.sprite, pos);
   }
