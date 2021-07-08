@@ -3,7 +3,7 @@ use http::header;
 use reqwest::Client;
 use tokio::{time, time::Duration};
 use turbo_hearts_api::UserId;
-use warp::{Filter, Rejection};
+use warp::{http::Uri, Filter, Rejection};
 
 #[macro_use]
 mod macros;
@@ -98,7 +98,9 @@ async fn main() -> Result<(), CardsError> {
     let http_client = warp::any().map(move || http_client);
     let user_id = user_id(users);
 
-    let app = asset_endpoints::router()
+    let app = warp::path::end()
+        .map(|| warp::redirect(Uri::from_static("/lobby")))
+        .or(asset_endpoints::router())
         .or(game_endpoints::router(lobby, games, user_id.clone()))
         .or(lobby_endpoints::router(lobby, games, user_id))
         .or(auth_endpoints::router(users, http_client))
