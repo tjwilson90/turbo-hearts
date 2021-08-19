@@ -31,9 +31,7 @@ import {
   PlayerCardPositions,
   PlayerSpriteCards,
   Point,
-  ReceivePassEventData,
   Seat,
-  SendPassEventData,
   SpriteCard,
   ClaimEventData
 } from "../types";
@@ -42,6 +40,7 @@ import { groupCards } from "../util/groupCards";
 import { sleep, spriteCardsOf } from "../util/helpers";
 import { POSITIONS, POSITION_ORDER, SEAT_ORDER_FOR_BOTTOM_SEAT, addToSeat, PASS_OFFSETS } from "../util/seatPositions";
 import { LIMBO_POSITIONS_FOR_BOTTOM_SEAT } from "./TurboHeartsStage";
+import { EMPTY_HAND } from "../game/stateSnapshot";
 
 const POSITION_LAYOUTS = { top: TOP, right: RIGHT, bottom: BOTTOM, left: LEFT };
 
@@ -68,10 +67,16 @@ export class StepAnimation implements Animation {
         this.animateDeal();
         break;
       case "send_pass":
-        this.animateSendPass(this.next.event);
+        this.animateSendPass(this.next.event.from, this.next.event.cards, -1);
         break;
       case "recv_pass":
-        this.animateReceivePass(this.next.event);
+        this.animateReceivePass(this.next.event.to, this.next.event.cards, -1);
+        break;
+      case "hidden_send_pass":
+        this.animateSendPass(this.next.event.from, [], this.next.event.count);
+        break;
+      case "hidden_recv_pass":
+        this.animateReceivePass(this.next.event.to, [], this.next.event.count);
         break;
       case "charge":
         this.animateCharge(this.next.event);
@@ -204,14 +209,14 @@ export class StepAnimation implements Animation {
     };
   }
 
-  private async animateSendPass(event: SendPassEventData) {
-    const fromPlayer = this.getSpritePlayer(event.from);
+  private async animateSendPass(from: Seat, cards: Card[], count: number) {
+    const fromPlayer = this.getSpritePlayer(from);
     let cardsToMove: SpriteCard[];
-    if (event.cards.length === 0) {
-      cardsToMove = fromPlayer.sprites.hand.splice(0, 3);
+    if (count >= 0) {
+      cardsToMove = fromPlayer.sprites.hand.splice(0, count);
       pushAll(fromPlayer.sprites.limbo, cardsToMove);
     } else {
-      cardsToMove = spriteCardsOf(fromPlayer.sprites.hand, event.cards);
+      cardsToMove = spriteCardsOf(fromPlayer.sprites.hand, cards);
       removeAll(fromPlayer.sprites.hand, cardsToMove);
       pushAll(fromPlayer.sprites.limbo, cardsToMove);
       if (!this.spectatorMode) {
@@ -225,7 +230,7 @@ export class StepAnimation implements Animation {
       card.sprite.zIndex = i++;
     }
     this.zSort();
-    const layout = LIMBO_POSITIONS_FOR_BOTTOM_SEAT[this.bottomSeat][event.from][this.next.pass];
+    const layout = LIMBO_POSITIONS_FOR_BOTTOM_SEAT[this.bottomSeat][from][this.next.pass];
     await Promise.all([
       this.animateCards(cardsToMove, layout.x, layout.y, layout.rotation),
       this.animateCards(fromPlayer.sprites.hand, fromPlayer.layout.x, fromPlayer.layout.y, fromPlayer.layout.rotation)
@@ -233,11 +238,11 @@ export class StepAnimation implements Animation {
     this.finished = true;
   }
 
-  private async animateReceivePass(event: ReceivePassEventData) {
-    const fromSeat = addToSeat(event.to, -PASS_OFFSETS[this.next.pass]);
-    const toPlayer = this.getSpritePlayer(event.to);
+  private async animateReceivePass(to: Seat, cards: Card[], count: number) {
+    const fromSeat = addToSeat(to, -PASS_OFFSETS[this.next.pass]);
+    const toPlayer = this.getSpritePlayer(to);
     const fromPlayer = this.getSpritePlayer(fromSeat);
-    const received = [...event.cards];
+    const received = count >= 0 ? EMPTY_HAND.slice(0, count) : [...cards];
     while (fromPlayer.sprites.limbo.length > 0) {
       // Note: this is mutating both hand and limbo arrays
       const fromLimbo = fromPlayer.sprites.limbo.pop()!;

@@ -13,6 +13,8 @@ import { Card, Pass } from "../types";
 import { emptyArray } from "../util/array";
 import { ClaimResponse } from "./ClaimResponse";
 
+const SECRET_KEY_CODE = "`";
+
 const directionText: { [P in Pass]: string } = {
   left: "left",
   right: "right",
@@ -37,6 +39,7 @@ export namespace GameApp {
     action: Action;
     picks: Card[];
     snapshot: TurboHearts.StateSnapshot;
+    isSecretButtonHeld: boolean;
   }
 }
 
@@ -47,10 +50,12 @@ class GameAppInternal extends React.Component<GameApp.Props, GameApp.State> {
   public state: GameApp.State = {
     action: "none",
     snapshot: emptyStateSnapshot(""),
-    picks: []
+    picks: [],
+    isSecretButtonHeld: false,
   };
 
   public render() {
+    const passAny = this.state.isSecretButtonHeld && this.state.snapshot.pass === "keeper";
     return (
       <React.Fragment>
         <div className="canvas-container">
@@ -61,8 +66,8 @@ class GameAppInternal extends React.Component<GameApp.Props, GameApp.State> {
           <Nameplate user={this.props.game.left} className="left" action={this.props.game.leftAction} />
           {this.state.action === "pass" && (
             <div className="input">
-              <div>Choose 3 cards to pass {directionText[this.state.snapshot.pass]}</div>
-              <button onClick={this.handlePass} disabled={this.state.picks.length !== 3}>
+              <div>Choose {passAny ? "any number of" : "3"} cards to pass {directionText[this.state.snapshot.pass]}</div>
+              <button onClick={this.handlePass} disabled={!passAny && this.state.picks.length !== 3}>
                 Pass
               </button>
             </div>
@@ -112,6 +117,8 @@ class GameAppInternal extends React.Component<GameApp.Props, GameApp.State> {
     this.stage.on("action", action => {
       this.setState({ action });
     });
+    document.addEventListener("keydown", this.onKeydown);
+    document.addEventListener("keyup", this.onKeyup);
   }
 
   public componentDidUpdate(prevProps: GameApp.Props) {
@@ -134,7 +141,7 @@ class GameAppInternal extends React.Component<GameApp.Props, GameApp.State> {
   }
 
   private handlePass = () => {
-    if (this.state.picks.length === 3) {
+    if (this.state.picks.length === 3 || (this.state.isSecretButtonHeld && this.state.snapshot.pass === "keeper")) {
       this.stage.setAction("none", emptyArray(), true);
       this.props.context.service.passCards(this.state.picks);
     }
@@ -151,6 +158,18 @@ class GameAppInternal extends React.Component<GameApp.Props, GameApp.State> {
 
   private handleClaim = () => {
     this.props.context.service.claim();
+  };
+
+  private onKeydown = (evt: KeyboardEvent) => {
+    if (evt.key === SECRET_KEY_CODE) {
+      this.setState({ isSecretButtonHeld: true });
+    }
+  };
+
+  private onKeyup = (evt: KeyboardEvent) => {
+    if (evt.key === SECRET_KEY_CODE) {
+      this.setState({ isSecretButtonHeld: false });
+    }
   };
 }
 

@@ -11,7 +11,9 @@ import {
   withEndTrick,
   withPlay,
   withReceivePass,
-  withSentPass
+  withSentPass,
+  withHiddenReceivePass,
+  withHiddenSentPass
 } from "./stateSnapshot";
 
 export class Snapshotter {
@@ -81,6 +83,32 @@ export class Snapshotter {
         const fromSeat = addToSeat(event.to, -PASS_OFFSETS[previous.pass]);
         const fromPlayer = previous[fromSeat];
         const passPlayers = withReceivePass(fromPlayer, toPlayer, event.cards);
+        this.snapshots.push({
+          ...previous,
+          index: previous.index + 1,
+          event,
+          [event.to]: passPlayers.to,
+          [fromSeat]: passPlayers.from
+        });
+        break;
+      }
+
+      case "hidden_send_pass": {
+        const fromPlayer = previous[event.from];
+        this.snapshots.push({
+          ...previous,
+          index: previous.index + 1,
+          event,
+          [event.from]: withHiddenSentPass(fromPlayer, event.count)
+        });
+        break;
+      }
+
+      case "hidden_recv_pass": {
+        const toPlayer = previous[event.to];
+        const fromSeat = addToSeat(event.to, -PASS_OFFSETS[previous.pass]);
+        const fromPlayer = previous[fromSeat];
+        const passPlayers = withHiddenReceivePass(fromPlayer, toPlayer, event.count);
         this.snapshots.push({
           ...previous,
           index: previous.index + 1,

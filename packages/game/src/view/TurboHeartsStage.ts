@@ -255,6 +255,8 @@ export class TurboHeartsStage {
         next.event.type === "end_trick" ||
         next.event.type === "recv_pass" ||
         next.event.type === "send_pass" ||
+        next.event.type === "hidden_recv_pass" ||
+        next.event.type === "hidden_send_pass" ||
         next.event.type === "claim" ||
         next.event.type === "charge" ||
         next.event.type === "game_complete"

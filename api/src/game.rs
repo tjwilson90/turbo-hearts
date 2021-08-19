@@ -101,13 +101,11 @@ impl<S> Game<S> {
                 }
             }
             GameEvent::SendPass { from, cards } => {
-                debug_assert_eq!(cards.len(), 3);
                 debug_assert!(self.post_pass_hand[from.idx()].contains_all(*cards));
                 self.post_pass_hand[from.idx()] -= *cards;
                 broadcast(self, &self.state.pass_status_event());
             }
             GameEvent::RecvPass { to, cards } => {
-                debug_assert_eq!(cards.len(), 3);
                 debug_assert!(!self.post_pass_hand[to.idx()].contains_any(*cards));
                 self.post_pass_hand[to.idx()] |= *cards;
                 if self.state.phase.is_charging() {
@@ -202,7 +200,7 @@ impl<S> Game<S> {
                 cards - self.pre_pass_hand[seat.idx()],
             ));
         }
-        if cards.len() != 3 {
+        if self.state.phase.direction() != PassDirection::Keeper && cards.len() != 3 {
             return Err(RulesError::IllegalPassSize(cards));
         }
         let passed = self.pre_pass_hand[seat.idx()] - self.post_pass_hand[seat.idx()];

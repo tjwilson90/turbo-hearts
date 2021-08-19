@@ -97,10 +97,10 @@ impl GameState {
                 self.led_suits = Suits::NONE;
                 self.current_trick = Trick::new();
             }
-            GameEvent::SendPass { from, .. } => {
+            GameEvent::SendPass { from, .. } | GameEvent::HiddenSendPass { from, .. } => {
                 self.done = self.done.send_pass(*from);
             }
-            GameEvent::RecvPass { to, .. } => {
+            GameEvent::RecvPass { to, .. } | GameEvent::HiddenRecvPass { to, .. } => {
                 self.done = self.done.recv_pass(*to);
                 if self.done.all_recv_pass() {
                     self.phase = self.phase.next(self.charge_count != 0);
