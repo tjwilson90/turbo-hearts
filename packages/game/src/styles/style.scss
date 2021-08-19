@@ -168,13 +168,17 @@ body {
 
         .pass-section {
           text-align: center;
-          margin-bottom: 20px;
+          margin-bottom: 10px;
           &:not(:first-child) {
             margin-bottom: 0px;
           }
           .pass-cards {
             margin-top: 2px;
-            font-size: 15px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            font-size: 11px;
+            margin-left: 5px;
             * {
               margin-right: 5px;
             }
