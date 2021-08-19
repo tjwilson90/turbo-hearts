@@ -23,18 +23,6 @@ function unrustify(event: EventData): EventData {
       renameProp(event.south, "user_id", "userId");
       renameProp(event.west, "user_id", "userId");
       return event;
-    case "end_replay":
-    case "deal":
-    case "start_passing":
-    case "send_pass":
-    case "recv_pass":
-    case "start_charging":
-    case "charge":
-    case "start_trick":
-    case "play":
-    case "end_trick":
-    case "game_complete":
-      return event;
     case "chat":
     case "join_game":
     case "leave_game":

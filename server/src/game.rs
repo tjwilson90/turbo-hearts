@@ -217,13 +217,9 @@ impl Games {
                     if game.state.phase == GamePhase::PassKeeper
                         && Seat::all(|s| s == seat || game.state.done.sent_pass(s))
                     {
-                        let passes = Cards::ALL
-                            - game.post_pass_hand[0]
-                            - game.post_pass_hand[1]
-                            - game.post_pass_hand[2]
-                            - game.post_pass_hand[3]
-                            | cards;
-                        events.extend_from_slice(&game.seed.keeper_pass(passes));
+                        let mut hands = game.post_pass_hand;
+                        hands[seat.idx()] -= cards;
+                        events.extend_from_slice(&game.seed.keeper_pass(hands));
                     }
                     self.db.run_with_retry(|tx| {
                         persist_events(&tx, game_id, game.events.len(), &events)

@@ -4,6 +4,7 @@ use rand::{seq::SliceRandom, SeedableRng};
 use rand_chacha::ChaCha20Rng;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
+use std::borrow::BorrowMut;
 use uuid::Uuid;
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
@@ -74,27 +75,39 @@ impl HashedSeed {
         }
     }
 
-    pub fn keeper_pass(&self, cards: Cards) -> [GameEvent; 4] {
+    pub fn keeper_pass(&self, partial_hands: [Cards; 4]) -> [GameEvent; 4] {
         let mut rng = ChaCha20Rng::from_seed(self.seed);
         rng.set_stream(4);
-        let mut passes = cards.into_iter().collect::<Vec<_>>();
+        let cards =
+            Cards::ALL - partial_hands[0] - partial_hands[1] - partial_hands[2] - partial_hands[3];
+        let mut passes: Vec<_> = cards.into_iter().collect();
         passes.shuffle(&mut rng);
+        let mut passes = passes.into_iter();
         [
             GameEvent::RecvPass {
                 to: Seat::North,
-                cards: passes[0..3].iter().cloned().collect(),
+                cards: passes
+                    .borrow_mut()
+                    .take(13 - partial_hands[0].len())
+                    .collect(),
             },
             GameEvent::RecvPass {
                 to: Seat::East,
-                cards: passes[3..6].iter().cloned().collect(),
+                cards: passes
+                    .borrow_mut()
+                    .take(13 - partial_hands[1].len())
+                    .collect(),
             },
             GameEvent::RecvPass {
                 to: Seat::South,
-                cards: passes[6..9].iter().cloned().collect(),
+                cards: passes
+                    .borrow_mut()
+                    .take(13 - partial_hands[2].len())
+                    .collect(),
             },
             GameEvent::RecvPass {
                 to: Seat::West,
-                cards: passes[9..12].iter().cloned().collect(),
+                cards: passes.collect(),
             },
         ]
     }

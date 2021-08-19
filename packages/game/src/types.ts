@@ -66,6 +66,18 @@ export interface ReceivePassEventData {
   cards: Card[];
 }
 
+export interface HiddenSendPassEventData {
+  type: "hidden_send_pass";
+  from: Seat;
+  count: number;
+}
+
+export interface HiddenReceivePassEventData {
+  type: "hidden_recv_pass";
+  to: Seat;
+  count: number;
+}
+
 export interface StartChargingEventData {
   type: "start_charging";
 }

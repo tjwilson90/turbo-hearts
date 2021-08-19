@@ -49,6 +49,14 @@ pub enum GameEvent {
         to: Seat,
         cards: Cards,
     },
+    HiddenSendPass {
+        from: Seat,
+        count: usize,
+    },
+    HiddenRecvPass {
+        to: Seat,
+        count: usize,
+    },
     StartCharging,
     ChargeStatus {
         next_charger: Option<Seat>,
@@ -178,17 +186,17 @@ impl GameEvent {
                 },
                 None => self.clone(),
             },
-            GameEvent::SendPass { from, cards: _ } => match seat {
-                Some(seat) if seat != *from => GameEvent::SendPass {
+            GameEvent::SendPass { from, cards } => match seat {
+                Some(seat) if seat != *from => GameEvent::HiddenSendPass {
                     from: *from,
-                    cards: Cards::NONE,
+                    count: cards.len(),
                 },
                 _ => self.clone(),
             },
-            GameEvent::RecvPass { to, cards: _ } => match seat {
-                Some(seat) if seat != *to => GameEvent::RecvPass {
+            GameEvent::RecvPass { to, cards } => match seat {
+                Some(seat) if seat != *to => GameEvent::HiddenRecvPass {
                     to: *to,
-                    cards: Cards::NONE,
+                    count: cards.len(),
                 },
                 _ => self.clone(),
             },

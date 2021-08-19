@@ -18,8 +18,6 @@ export const EMPTY_HAND: Card[] = [
   "BACK"
 ];
 
-const EMPTY_PASS: Card[] = ["BACK", "BACK", "BACK"];
-
 export function cardsOf(cards: Card[], rawCards: Card[]) {
   const set = new Set(rawCards);
   return cards.filter(c => set.has(c));
@@ -112,19 +110,10 @@ export function withAction(player: TurboHearts.Player, action: Action, legalPlay
 }
 
 export function withSentPass(fromPlayer: TurboHearts.Player, passCards: Card[]): TurboHearts.Player {
-  const hidden = passCards.length === 0;
-  const limbo: Card[] = hidden ? EMPTY_PASS : passCards;
-  let hand: Card[];
-  if (hidden) {
-    hand = [...fromPlayer.hand];
-    hand.splice(0, 3);
-  } else {
-    hand = notCardsOf(fromPlayer.hand, passCards);
-  }
   return {
     ...fromPlayer,
-    limbo,
-    hand
+    limbo: passCards,
+    hand: notCardsOf(fromPlayer.hand, passCards)
   };
 }
 
@@ -134,8 +123,7 @@ export function withReceivePass(
   passCards: Card[]
 ): { from: TurboHearts.Player; to: TurboHearts.Player } {
   if (fromPlayer === toPlayer) {
-    const actualPassCards = passCards.length === 0 ? EMPTY_PASS : passCards;
-    const combined = [...toPlayer.hand, ...actualPassCards];
+    const combined = [...toPlayer.hand, ...passCards];
     sortCards(combined);
     const self: TurboHearts.Player = {
       ...toPlayer,
@@ -151,7 +139,49 @@ export function withReceivePass(
       ...fromPlayer,
       limbo: emptyArray()
     };
-    const incoming = passCards.length === 0 ? EMPTY_PASS : passCards;
+    const combined = [...toPlayer.hand, ...passCards];
+    sortCards(combined);
+    const to: TurboHearts.Player = {
+      ...toPlayer,
+      hand: combined
+    };
+    return { from, to };
+  }
+}
+
+export function withHiddenSentPass(fromPlayer: TurboHearts.Player, count: number): TurboHearts.Player {
+  const hand = [...fromPlayer.hand];
+  hand.splice(0, count);
+  return {
+    ...fromPlayer,
+    limbo: EMPTY_HAND.slice(0, count),
+    hand,
+  };
+}
+
+export function withHiddenReceivePass(
+  fromPlayer: TurboHearts.Player,
+  toPlayer: TurboHearts.Player,
+  count: number
+): { from: TurboHearts.Player; to: TurboHearts.Player } {
+  const incoming = EMPTY_HAND.slice(0, count);
+  if (fromPlayer === toPlayer) {
+    const combined = [...toPlayer.hand, ...incoming];
+    sortCards(combined);
+    const self: TurboHearts.Player = {
+      ...toPlayer,
+      limbo: emptyArray(),
+      hand: combined
+    };
+    return {
+      from: self,
+      to: self
+    };
+  } else {
+    const from: TurboHearts.Player = {
+      ...fromPlayer,
+      limbo: emptyArray()
+    };
     const combined = [...toPlayer.hand, ...incoming];
     sortCards(combined);
     const to: TurboHearts.Player = {
