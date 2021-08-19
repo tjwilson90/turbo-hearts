@@ -65,7 +65,7 @@ class PlayHistoryInternal extends React.Component<TrickLog.Props> {
           {this.props.localPass.sent && (
             <div className="pass-section">
               <div>Passed</div>
-              <div className="pass-cards">
+              <div className="pass-cards" style={{fontSize: this.passCardsSize(this.props.localPass.sent.length) + 'px'}}>
                 {this.props.localPass.sent.map(card => (
                   <NiceCard card={card} />
                 ))}
@@ -75,7 +75,7 @@ class PlayHistoryInternal extends React.Component<TrickLog.Props> {
           {this.props.localPass.received && (
             <div className="pass-section">
               <div>Received</div>
-              <div className="pass-cards">
+              <div className="pass-cards" style={{fontSize: this.passCardsSize(this.props.localPass.received.length) + 'px'}}>
                 {this.props.localPass.received.map(card => (
                   <NiceCard card={card} />
                 ))}
@@ -89,6 +89,22 @@ class PlayHistoryInternal extends React.Component<TrickLog.Props> {
       return <div className="play-history"></div>;
     }
     return <div className="play-history">{this.renderNiceTrick(this.props.tricks[this.props.tricks.length - 1])}</div>;
+  }
+
+  private passCardsSize(passSize: number) {
+    if (passSize <= 4) {
+      return 15;
+    }
+    if (passSize <= 6) {
+      return 14;
+    }
+    if (passSize <= 8) {
+      return 13;
+    }
+    if (passSize <= 10) {
+      return 12;
+    }
+    return 11;
   }
 
   private renderNiceTrick(trick: TurboHearts.Trick) {
