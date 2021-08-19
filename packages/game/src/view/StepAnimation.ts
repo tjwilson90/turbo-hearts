@@ -31,9 +31,7 @@ import {
   PlayerCardPositions,
   PlayerSpriteCards,
   Point,
-  ReceivePassEventData,
   Seat,
-  SendPassEventData,
   SpriteCard,
   ClaimEventData
 } from "../types";
