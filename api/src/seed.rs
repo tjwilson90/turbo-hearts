@@ -209,7 +209,12 @@ mod test {
             value: "chosen".to_string(),
         });
         assert_eq!(
-            seed.keeper_pass("QJT7S KJ43H J97D AC".parse().unwrap()),
+            seed.keeper_pass([
+                "AK9865432S AH".parse().unwrap(),
+                "QT987652H AKD".parse().unwrap(),
+                "QT865432D KQC".parse().unwrap(),
+                "JT98765432C".parse().unwrap()
+            ]),
             [
                 GameEvent::RecvPass {
                     to: Seat::North,
