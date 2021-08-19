@@ -201,6 +201,8 @@ export type EventData =
   | PassStatusEventData
   | SendPassEventData
   | ReceivePassEventData
+  | HiddenSendPassEventData
+  | HiddenReceivePassEventData
   | StartChargingEventData
   | ChargeStatusEventData
   | ChargeEventData
