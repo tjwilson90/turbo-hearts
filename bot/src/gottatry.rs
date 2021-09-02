@@ -73,6 +73,13 @@ fn lead(ours: Cards, theirs: Cards) -> Cards {
             return nine.into();
         }
     }
+    for &suit in &Suit::VALUES {
+        let us = ours & suit.cards();
+        let them = theirs & suit.cards();
+        if !us.is_empty() && (them.is_empty() || us.max() > them.max()) {
+            return us.max().into();
+        }
+    }
     ours
 }
 
