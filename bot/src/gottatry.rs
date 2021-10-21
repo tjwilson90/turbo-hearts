@@ -51,7 +51,9 @@ fn lead(ours: Cards, theirs: Cards) -> Cards {
     }
     for &suit in &Suit::VALUES {
         if can_drain_without_nine(suit, ours - suit.with_rank(Rank::Nine), theirs) {
-            return (ours - suit.with_rank(Rank::Nine)).max().into();
+            let nine = suit.with_rank(Rank::Nine);
+            let us = (ours & suit.cards()) - nine;
+            return us.max().into();
         }
     }
     for &suit in &Suit::VALUES {
@@ -180,4 +182,42 @@ fn worst(ours: Cards, theirs: Cards) -> Card {
         })
         .unwrap()
         .into()
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use turbo_hearts_api::{
+        ChargeState, ChargingRules, ClaimState, DoneState, GamePhase, Seat, Suits, Trick,
+        VoidState, WonState,
+    };
+
+    #[test]
+    fn test_play() {
+        let bot_state = BotState {
+            seat: Seat::South,
+            pre_pass_hand: "A96S A6H KQ3D AKQT5C".parse().unwrap(),
+            post_pass_hand: "A9S AJH AKQD AKQJT5C".parse().unwrap(),
+            void: VoidState::new(),
+        };
+        let game_state = GameState {
+            rules: ChargingRules::Classic,
+            phase: GamePhase::PassRight,
+            done: DoneState::new(),
+            charge_count: 0,
+            charges: ChargeState::new()
+                .charge(Seat::South, "AH TC".parse().unwrap())
+                .charge(Seat::East, "QS".parse().unwrap()),
+            next_actor: Some(Seat::South),
+            played: "2975648JC QTJ3D K856D 9875AKT6S A4D TH 7D".parse().unwrap(),
+            claims: ClaimState::new(),
+            won: WonState::new().win(
+                Seat::South,
+                "2975648JC QTJ3D K856D 9875AKT6S A4D TH 7D".parse().unwrap(),
+            ),
+            led_suits: Suits::NONE | Suit::Clubs | Suit::Diamonds | Suit::Spades,
+            current_trick: Trick::new(),
+        };
+        assert_eq!(Card::AceClubs, GottaTryBot.play(&bot_state, &game_state));
+    }
 }
