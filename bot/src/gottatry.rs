@@ -1,6 +1,6 @@
 use crate::{Algorithm, DuckBot};
 use rand::Rng;
-use turbo_hearts_api::{BotState, Card, Cards, GameEvent, GameState, Rank, Suit};
+use turbo_hearts_api::{BotState, Card, Cards, GameEvent, GamePhase, GameState, Rank, Suit};
 
 pub struct GottaTryBot;
 
@@ -91,6 +91,10 @@ fn follow(ours: Cards, theirs: Cards, bot_state: &BotState, game_state: &GameSta
     let winning = game_state.current_trick.winning_seat(bot_state.seat) == bot_state.seat;
     let winning_card = (trick & suit.cards()).max();
 
+    if !winning && trick.contains_any(Cards::POINTS) && ours.max() < winning_card {
+        return ours.max().into();
+    }
+
     if trick.len() == 4 && can_drain_without_nine(suit, ours, theirs) {
         return ours.max().into();
     }
@@ -113,8 +117,16 @@ fn slough(ours: Cards, theirs: Cards, bot_state: &BotState, game_state: &GameSta
     let winning = game_state.current_trick.winning_seat(bot_state.seat) == bot_state.seat;
     let winning_card = (trick & suit.cards()).max();
 
+    if !winning && trick.contains_any(Cards::POINTS) {
+        return DuckBot.play(bot_state, game_state).into();
+    }
+
     if Cards::POINTS.contains_all(ours) {
-        return ours.min().into();
+        return if winning {
+            ours.min().into()
+        } else {
+            ours.max().into()
+        };
     }
 
     let them = theirs & suit.cards();
@@ -141,7 +153,13 @@ impl Algorithm for GottaTryBot {
     }
 
     fn charge(&mut self, bot_state: &BotState, game_state: &GameState) -> Cards {
-        (bot_state.post_pass_hand & Cards::CHARGEABLE) - game_state.charges.all_charges()
+        if game_state.phase == GamePhase::ChargeKeeper1
+            && game_state.charges.all_charges().is_empty()
+        {
+            Cards::NONE
+        } else {
+            (bot_state.post_pass_hand & Cards::CHARGEABLE) - game_state.charges.all_charges()
+        }
     }
 
     fn play(&mut self, bot_state: &BotState, game_state: &GameState) -> Card {
