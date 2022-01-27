@@ -152,6 +152,8 @@ fn losers(suit: Suit, hand: Cards, state: &GameState) -> i8 {
         }
         let top = if remaining == nine.into() {
             nine
+        } else if legal_plays.max() < nine {
+            remaining.max()
         } else {
             (remaining - nine).max()
         };
@@ -323,6 +325,46 @@ mod test {
                 .mark_void(Seat::North, Suit::Hearts),
             Seat::South,
             "TS J9865H KQ4D KJ92C".parse().unwrap(),
+        ));
+    }
+
+    #[test]
+    fn test_can_claim4() {
+        let state = GameState {
+            rules: ChargingRules::Classic,
+            phase: GamePhase::PlayKeeper,
+            done: DoneState::new(),
+            charge_count: 0,
+            charges: ChargeState::new(),
+            next_actor: Some(Seat::South),
+            played: "2QJAC  7356D  A96K3S KC 72S  QS JD 8S QH  JS TC A8D  K294QD 9C A8H  TD 8C KH 7C  TS 6C J7H  5S 5TH 5C"
+                .parse()
+                .unwrap(),
+            claims: ClaimState::new(),
+            won: WonState::new()
+                .win(Seat::South, "2QJAC".parse().unwrap())
+                .win(Seat::South, "7356D".parse().unwrap())
+                .win(Seat::South, "A96K3S KC 72S".parse().unwrap())
+                .win(Seat::South, "QS JD 8S QH".parse().unwrap())
+                .win(Seat::South, "JS TC A8D".parse().unwrap())
+                .win(Seat::South, "K294QD 9C A8H".parse().unwrap())
+                .win(Seat::South, "TD 8C KH 7C".parse().unwrap())
+                .win(Seat::South, "TS 6C J7H".parse().unwrap())
+                .win(Seat::South, "5S 5TH 5C".parse().unwrap()),
+            led_suits: Suits::NONE | Suit::Clubs | Suit::Diamonds | Suit::Hearts | Suit::Spades,
+            current_trick: Trick::new(),
+        };
+        assert!(!can_claim(
+            &state,
+            VoidState::new()
+                .mark_void(Seat::North, Suit::Spades)
+                .mark_void(Seat::East, Suit::Spades)
+                .mark_void(Seat::West, Suit::Spades)
+                .mark_void(Seat::North, Suit::Diamonds)
+                .mark_void(Seat::East, Suit::Diamonds)
+                .mark_void(Seat::West, Suit::Diamonds),
+            Seat::South,
+            "4S 6H".parse().unwrap(),
         ));
     }
 }
