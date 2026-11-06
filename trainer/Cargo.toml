@@ -5,14 +5,15 @@ authors = ["Tim Wilson <twilson@palantir.com>"]
 edition = "2018"
 
 [dependencies]
-bincode = "*"
-ctrlc = "*"
-env_logger = { version = "*", default-features = false, features = ["humantime"] }
-flate2 = "*"
-log = "*"
-rand = { version = "*" }
+# 3.0.0 is a compile-error placeholder; use 2.x with config::legacy() for saved data.
+bincode = { version = "2.0.1", features = ["serde"] }
+ctrlc = "3.5.2"
+env_logger = { version = "0.11.11", default-features = false, features = ["humantime", "regex"] }
+flate2 = "1.1.11"
+log = "0.4.35"
+rand = { version = "0.10.3" }
 turbo-hearts-api = { path = "../api" }
 turbo-hearts-bot = { path = "../bot" }
 
 [dev-dependencies]
-tfrecord = "*"
+tfrecord = "0.15.0"

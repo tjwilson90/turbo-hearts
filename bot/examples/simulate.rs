@@ -21,7 +21,7 @@ struct Game {
 impl Game {
     fn new() -> Self {
         let mut deck = Cards::ALL.into_iter().collect::<Vec<_>>();
-        deck.shuffle(&mut rand::thread_rng());
+        deck.shuffle(&mut rand::rng());
         Self {
             state: GameState::new(),
             bot_states: [

@@ -1,5 +1,5 @@
 use flate2::{write::GzEncoder, Compression};
-use rand::{seq::SliceRandom, Rng};
+use rand::{seq::SliceRandom, RngExt};
 use std::{
     error::Error,
     fs,
@@ -35,7 +35,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         let path = format!("data/partial-{}.gz", timestamp);
         let mut writer = Writer::new(&path)?;
         for _ in 0..3000 {
-            deck.shuffle(&mut rand::thread_rng());
+            deck.shuffle(&mut rand::rng());
             let mut trainer = Trainer::new(&deck);
             trainer.run(&mut writer)?;
             cnt += 1;
@@ -69,19 +69,40 @@ impl Writer {
         won: &WonState,
         plays: &[i16],
     ) -> Result<(), Box<dyn Error>> {
-        bincode::serialize_into(&mut self.encoder, game_state)?;
-        bincode::serialize_into(&mut self.encoder, &hands[0].bits)?;
-        bincode::serialize_into(&mut self.encoder, &hands[1].bits)?;
-        bincode::serialize_into(&mut self.encoder, &hands[2].bits)?;
-        bincode::serialize_into(&mut self.encoder, &hands[3].bits)?;
-        bincode::serialize_into(&mut self.encoder, won)?;
-        bincode::serialize_into(&mut self.encoder, plays)?;
+        // Preserve the bincode 1.x format used by existing training archives.
+        bincode::serde::encode_into_std_write(
+            game_state,
+            &mut self.encoder,
+            bincode::config::legacy(),
+        )?;
+        bincode::serde::encode_into_std_write(
+            &hands[0].bits,
+            &mut self.encoder,
+            bincode::config::legacy(),
+        )?;
+        bincode::serde::encode_into_std_write(
+            &hands[1].bits,
+            &mut self.encoder,
+            bincode::config::legacy(),
+        )?;
+        bincode::serde::encode_into_std_write(
+            &hands[2].bits,
+            &mut self.encoder,
+            bincode::config::legacy(),
+        )?;
+        bincode::serde::encode_into_std_write(
+            &hands[3].bits,
+            &mut self.encoder,
+            bincode::config::legacy(),
+        )?;
+        bincode::serde::encode_into_std_write(won, &mut self.encoder, bincode::config::legacy())?;
+        bincode::serde::encode_into_std_write(plays, &mut self.encoder, bincode::config::legacy())?;
         Ok(())
     }
 }
 
 fn bot() -> Bot {
-    match rand::thread_rng().gen_range(0..4) {
+    match rand::rng().random_range(0..4) {
         0 => Bot::Random(RandomBot::new()),
         1 => Bot::Duck(DuckBot),
         2 => Bot::GottaTry(GottaTryBot),
@@ -165,7 +186,7 @@ impl Trainer {
     }
 
     fn deal(&mut self) {
-        let pass_direction = PassDirection::from(rand::thread_rng().gen_range(0..4));
+        let pass_direction = PassDirection::from(rand::rng().random_range(0..4));
         self.game_state.phase = match pass_direction {
             PassDirection::Left => GamePhase::PassLeft,
             PassDirection::Right => GamePhase::PassRight,

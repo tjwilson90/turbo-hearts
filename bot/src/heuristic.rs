@@ -1,5 +1,5 @@
 use crate::Algorithm;
-use rand::Rng;
+use rand::RngExt;
 use turbo_hearts_api::{BotState, Card, Cards, GameEvent, GameState, Rank, Suit};
 
 macro_rules! check {
@@ -35,7 +35,7 @@ macro_rules! dont_play {
 pub struct HeuristicBot;
 
 impl HeuristicBot {
-    pub fn charge_with_rng<R: Rng + ?Sized>(
+    pub fn charge_with_rng<R: RngExt + ?Sized>(
         &self,
         bot_state: &BotState,
         game_state: &GameState,
@@ -76,7 +76,7 @@ impl HeuristicBot {
         charge
     }
 
-    pub fn play_with_rng<R: Rng + ?Sized>(
+    pub fn play_with_rng<R: RngExt + ?Sized>(
         &self,
         bot_state: &BotState,
         game_state: &GameState,
@@ -89,7 +89,7 @@ impl HeuristicBot {
         let choices = self.choices(bot_state, game_state);
         choices
             .into_iter()
-            .nth(rng.gen_range(0..choices.len()))
+            .nth(rng.random_range(0..choices.len()))
             .unwrap()
     }
 
@@ -474,11 +474,11 @@ impl Algorithm for HeuristicBot {
     }
 
     fn charge(&mut self, bot_state: &BotState, game_state: &GameState) -> Cards {
-        self.charge_with_rng(bot_state, game_state, &mut rand::thread_rng())
+        self.charge_with_rng(bot_state, game_state, &mut rand::rng())
     }
 
     fn play(&mut self, bot_state: &BotState, game_state: &GameState) -> Card {
-        self.play_with_rng(bot_state, game_state, &mut rand::thread_rng())
+        self.play_with_rng(bot_state, game_state, &mut rand::rng())
     }
 
     fn on_event(&mut self, _: &BotState, _: &GameState, _: &GameEvent) {}
@@ -497,7 +497,7 @@ fn should_real_charge_queen(hand: Cards) -> bool {
     }
 }
 
-fn should_fake_charge_queen<R: Rng + ?Sized>(hand: Cards, rng: &mut R) -> bool {
+fn should_fake_charge_queen<R: RngExt + ?Sized>(hand: Cards, rng: &mut R) -> bool {
     let spades = hand & Cards::SPADES;
     if spades.len() > 2 {
         false
@@ -508,7 +508,7 @@ fn should_fake_charge_queen<R: Rng + ?Sized>(hand: Cards, rng: &mut R) -> bool {
     {
         false
     } else {
-        rng.gen_bool(0.1)
+        rng.random_bool(0.1)
     }
 }
 
@@ -525,7 +525,7 @@ fn should_real_charge_ten(hand: Cards) -> bool {
     }
 }
 
-fn should_fake_charge_ten<R: Rng + ?Sized>(hand: Cards, rng: &mut R) -> bool {
+fn should_fake_charge_ten<R: RngExt + ?Sized>(hand: Cards, rng: &mut R) -> bool {
     let clubs = hand & Cards::CLUBS;
     if clubs.len() > 2 {
         return false;
@@ -544,7 +544,7 @@ fn should_fake_charge_ten<R: Rng + ?Sized>(hand: Cards, rng: &mut R) -> bool {
     if spades.below(Card::QueenSpades).len() <= 3 && !spades.above(Card::JackSpades).is_empty() {
         return false;
     }
-    rng.gen_bool(0.5)
+    rng.random_bool(0.5)
 }
 
 fn should_real_charge_ace(hand: Cards) -> bool {
@@ -552,14 +552,14 @@ fn should_real_charge_ace(hand: Cards) -> bool {
     hearts.below(Card::EightHearts).len() >= 3
 }
 
-fn should_fake_charge_ace<R: Rng + ?Sized>(hand: Cards, rng: &mut R) -> bool {
+fn should_fake_charge_ace<R: RngExt + ?Sized>(hand: Cards, rng: &mut R) -> bool {
     if (hand & Cards::HEARTS).len() > 1 {
         false
     } else if (hand & Cards::CLUBS).len() <= 1
         || (hand & Cards::DIAMONDS - Card::NineDiamonds).is_empty()
         || (hand & Cards::SPADES - Card::NineSpades).is_empty()
     {
-        rng.gen_bool(0.25)
+        rng.random_bool(0.25)
     } else {
         false
     }

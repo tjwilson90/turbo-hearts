@@ -1,4 +1,5 @@
 use crate::{ExternalUser, CONFIG};
+use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
 use reqwest::{Client, Url};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -30,7 +31,9 @@ pub async fn exchange_code(http_client: &Client, code: &str) -> ExternalUser {
         .await
         .unwrap();
     let response = response.json::<AuthResponse>().await.unwrap();
-    let jwt = base64::decode(response.id_token.split(".").nth(1).unwrap()).unwrap();
+    let jwt = URL_SAFE_NO_PAD
+        .decode(response.id_token.split(".").nth(1).unwrap())
+        .unwrap();
     let Jwt { sub, name } = serde_json::from_slice::<Jwt>(&jwt).unwrap();
     ExternalUser {
         name,

@@ -5,14 +5,15 @@ authors = ["Tim Wilson <twilson@palantir.com>"]
 edition = "2018"
 
 [dependencies]
-log = "*"
-rand = "*"
+log = "0.4.35"
+rand = "0.10.3"
+rand_chacha = "0.10.0"
 turbo-hearts-api = { path = "../api" }
 
 [dev-dependencies]
-serde_json = "*"
-criterion = "*"
-env_logger = { version = "*", default-features = false, features = ["humantime"] }
+serde_json = "1.0.154"
+criterion = "0.8.2"
+env_logger = { version = "0.11.11", default-features = false, features = ["humantime", "regex"] }
 
 [[bench]]
 name = "inference"

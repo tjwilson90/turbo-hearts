@@ -1,6 +1,6 @@
 use crate::{CardsError, Games};
 use futures_util::FutureExt;
-use rand::distributions::Distribution;
+use rand::distr::Distribution;
 use rand_distr::Gamma;
 use std::time::Instant;
 use tokio::{sync::mpsc::UnboundedReceiver, time, time::Duration};
@@ -59,8 +59,7 @@ impl BotRunner {
                 };
             }
             let now = Instant::now();
-            let delay =
-                delay.map(|delay| Duration::from_secs_f32(delay.sample(&mut rand::thread_rng())));
+            let delay = delay.map(|delay| Duration::from_secs_f32(delay.sample(&mut rand::rng())));
             for &seat in &Seat::VALUES {
                 if seat != self.bot_state.seat
                     && self.game_state.claims.is_claiming(seat)

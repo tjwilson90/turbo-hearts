@@ -1,11 +1,11 @@
 use crate::{Algorithm, DuckBot};
-use rand::Rng;
+use rand::RngExt;
 use turbo_hearts_api::{BotState, Card, Cards, GameEvent, GamePhase, GameState, Rank, Suit};
 
 pub struct GottaTryBot;
 
 impl GottaTryBot {
-    pub fn play_with_rng<R: Rng + ?Sized>(
+    pub fn play_with_rng<R: RngExt + ?Sized>(
         &self,
         bot_state: &BotState,
         game_state: &GameState,
@@ -21,7 +21,7 @@ impl GottaTryBot {
         let choices = self.choices(bot_state, game_state);
         choices
             .into_iter()
-            .nth(rng.gen_range(0..choices.len()))
+            .nth(rng.random_range(0..choices.len()))
             .unwrap()
     }
 
@@ -204,7 +204,7 @@ impl Algorithm for GottaTryBot {
     }
 
     fn play(&mut self, bot_state: &BotState, game_state: &GameState) -> Card {
-        self.play_with_rng(bot_state, game_state, &mut rand::thread_rng())
+        self.play_with_rng(bot_state, game_state, &mut rand::rng())
     }
 
     fn on_event(&mut self, _: &BotState, _: &GameState, _: &GameEvent) {}

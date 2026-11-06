@@ -28,6 +28,15 @@ yarn start
 1) Install rust - https://www.rust-lang.org/tools/install
 2) Run the server - `cargo run --bin turbo-hearts`
 
+Cargo dependencies use explicit compatible version ranges, with exact versions
+recorded in `Cargo.lock`. After updating them, run
+`cargo test --locked --workspace --all-targets` and
+`cargo build --locked --release --workspace --all-targets`.
+The dealer preserves historical seeded games across random-library upgrades;
+bot simulation sequences can change, so reproducing older evaluation results
+also requires the original code and lockfile. Training archives retain the
+bincode 1.x wire format through bincode 2's legacy configuration.
+
 ## Bot training and evaluation
 
 See [bot/README.md](bot/README.md) for the updated bot, moon planning, reproducible matches, and neural training.

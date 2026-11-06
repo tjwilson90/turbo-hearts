@@ -1,6 +1,7 @@
 //! Matched-budget hard-position and uniform-position search distillation.
+use rand_chacha::ChaCha12Rng;
 mod support;
-use rand::{rngs::StdRng, seq::SliceRandom, SeedableRng};
+use rand::{seq::SliceRandom, SeedableRng};
 use std::{
     fs::File,
     io::{self, BufWriter, Write},
@@ -31,7 +32,7 @@ fn main() -> io::Result<()> {
         BufWriter::new(File::create(&args[2])?),
     ];
     let network = PolicyNetwork::load("assets/models/policy-moon.thp")?;
-    let mut rng = StdRng::seed_from_u64(seed ^ 0x48415244);
+    let mut rng = ChaCha12Rng::seed_from_u64(seed ^ 0x48415244);
     let mut rows = [0; 2];
     let mut positions = 0;
     let mut overlaps = 0;

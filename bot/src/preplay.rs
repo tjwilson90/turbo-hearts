@@ -1,7 +1,8 @@
 //! Pass/charge search using complete scoring, including moons and keeper redraws.
 use crate::experimental::simulate_style;
 use crate::{Algorithm, DuckBot, GottaTryBot, HeuristicBot, NeuralNetworkBot};
-use rand::{seq::SliceRandom, Rng};
+use rand::{seq::SliceRandom, RngExt};
+use rand_chacha::ChaCha12Rng;
 use std::time::Instant;
 use turbo_hearts_api::{BotState, Card, Cards, GameEvent, GameState, Seat, VoidState};
 
@@ -14,7 +15,7 @@ fn style_pass(style: usize, seat: Seat, hand: Cards, state: &GameState) -> Cards
     }
 }
 
-fn finish_preplay<R: Rng + ?Sized>(
+fn finish_preplay<R: RngExt + ?Sized>(
     state: &mut GameState,
     hands: &mut [Cards; 4],
     root: Seat,
@@ -121,7 +122,7 @@ impl NeuralNetworkBot {
             }
             let hands = sampler.sample(&mut rng);
             let mut styles = std::array::from_fn(|_| {
-                let x = rng.gen::<f32>();
+                let x = rng.random::<f32>();
                 if x < 0.7 {
                     0
                 } else if x < 0.85 {
@@ -133,7 +134,7 @@ impl NeuralNetworkBot {
             styles[bot.seat.idx()] = 0;
             let passes: [Cards; 4] =
                 std::array::from_fn(|i| style_pass(styles[i], Seat::VALUES[i], hands[i], state));
-            let seed: u64 = rng.gen();
+            let seed: u64 = rng.random();
             for (i, &candidate) in candidates.iter().enumerate() {
                 let mut passes = passes;
                 passes[bot.seat.idx()] = candidate;
@@ -148,8 +149,7 @@ impl NeuralNetworkBot {
                     game.phase = state.phase.next(false);
                     game.next_actor = game.phase.first_charger(game.rules);
                     let mut hands = post;
-                    let mut sim_rng =
-                        <rand::rngs::StdRng as rand::SeedableRng>::seed_from_u64(seed);
+                    let mut sim_rng = <ChaCha12Rng as rand::SeedableRng>::seed_from_u64(seed);
                     finish_preplay(
                         &mut game,
                         &mut hands,
@@ -209,7 +209,7 @@ impl NeuralNetworkBot {
             }
             let hands = sampler.sample(&mut rng);
             let mut styles = std::array::from_fn(|_| {
-                let x = rng.gen::<f32>();
+                let x = rng.random::<f32>();
                 if x < 0.7 {
                     0
                 } else if x < 0.85 {
@@ -219,7 +219,7 @@ impl NeuralNetworkBot {
                 }
             });
             styles[bot.seat.idx()] = 0;
-            let seed: u64 = rng.gen();
+            let seed: u64 = rng.random();
             for (i, &cards) in candidates.iter().enumerate() {
                 let mut game = state.clone();
                 let mut hands = hands;
@@ -227,7 +227,7 @@ impl NeuralNetworkBot {
                     seat: bot.seat,
                     cards,
                 });
-                let mut sim_rng = <rand::rngs::StdRng as rand::SeedableRng>::seed_from_u64(seed);
+                let mut sim_rng = <ChaCha12Rng as rand::SeedableRng>::seed_from_u64(seed);
                 finish_preplay(&mut game, &mut hands, bot.seat, 0, styles, &mut sim_rng);
                 for shoot in 0..2 {
                     let mut game = game.clone();
@@ -258,12 +258,12 @@ impl NeuralNetworkBot {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rand::{rngs::StdRng, SeedableRng};
+    use rand::SeedableRng;
     use turbo_hearts_api::{ChargingRules, GamePhase};
 
     #[test]
     fn preplay_preserves_ownership_and_terminates_under_all_charging_rules() {
-        let mut rng = StdRng::seed_from_u64(771);
+        let mut rng = ChaCha12Rng::seed_from_u64(771);
         for rules in [
             ChargingRules::Classic,
             ChargingRules::Blind,

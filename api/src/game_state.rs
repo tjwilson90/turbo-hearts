@@ -375,17 +375,29 @@ mod test {
 
     #[test]
     fn test_bincode() {
+        use bincode::{
+            config::legacy,
+            serde::{decode_from_slice, encode_to_vec},
+        };
         let mut state = GameState::new();
         state.phase = GamePhase::PlayLeft;
-        assert_eq!(bincode::serialized_size(&state.charges).unwrap(), 2);
-        assert_eq!(bincode::serialized_size(&state.next_actor).unwrap(), 1);
-        assert_eq!(bincode::serialized_size(&state.played).unwrap(), 8);
-        assert_eq!(bincode::serialized_size(&state.won).unwrap(), 4);
-        assert_eq!(bincode::serialized_size(&state.led_suits).unwrap(), 1);
-        assert_eq!(bincode::serialized_size(&state.current_trick).unwrap(), 8);
-        assert_eq!(bincode::serialized_size(&state).unwrap(), 24);
-        let bytes = bincode::serialize(&state).unwrap();
-        let new_state: GameState = bincode::deserialize(&bytes).unwrap();
+        assert_eq!(encode_to_vec(state.charges, legacy()).unwrap().len(), 2);
+        assert_eq!(encode_to_vec(state.next_actor, legacy()).unwrap().len(), 1);
+        assert_eq!(encode_to_vec(state.played, legacy()).unwrap().len(), 8);
+        assert_eq!(encode_to_vec(state.won, legacy()).unwrap().len(), 4);
+        assert_eq!(encode_to_vec(state.led_suits, legacy()).unwrap().len(), 1);
+        assert_eq!(
+            encode_to_vec(state.current_trick, legacy()).unwrap().len(),
+            8
+        );
+        let bytes = encode_to_vec(&state, legacy()).unwrap();
+        // Legacy bincode 1.x representation: zeroed fields followed by the
+        // empty trick's eight 0x80 sentinel bytes.
+        let mut expected = vec![0; 16];
+        expected.extend_from_slice(&[0x80; 8]);
+        assert_eq!(bytes, expected);
+        let (new_state, consumed): (GameState, _) = decode_from_slice(&bytes, legacy()).unwrap();
+        assert_eq!(consumed, bytes.len());
         assert_eq!(state, new_state);
     }
 }

@@ -1,4 +1,3 @@
-use crate::CardsError;
 use http::header;
 use reqwest::Client;
 use tokio::{time, time::Duration};

@@ -1,8 +1,9 @@
 //! On-policy trajectories with terminal-money rewards and a paired greedy
 //! reference baseline. Opponents are sampled from a population, including
 //! archived policies, rather than supplied with the learner's private cards.
+use rand_chacha::ChaCha12Rng;
 mod support;
-use rand::{rngs::StdRng, Rng, SeedableRng};
+use rand::{RngExt, SeedableRng};
 use std::{
     fs::File,
     io::{self, BufWriter, Write},
@@ -32,13 +33,13 @@ fn main() -> io::Result<()> {
     for archive in &args[6..] {
         population.push(format!("policy:{}:0", archive));
     }
-    let mut rng = StdRng::seed_from_u64(seed ^ 0x504f50);
+    let mut rng = ChaCha12Rng::seed_from_u64(seed ^ 0x504f50);
     let mut scores = [0.0; 2];
     let mut rows = 0;
     for deal in seed..seed + hands {
         let hero = Seat::VALUES[(deal % 4) as usize];
         let mut kinds: [&str; 4] =
-            std::array::from_fn(|_| population[rng.gen_range(0..population.len())].as_str());
+            std::array::from_fn(|_| population[rng.random_range(0..population.len())].as_str());
         kinds[hero.idx()] = &reference;
         let direction = PassDirection::from((deal / 4 % 4) as u8);
         let mut control = Match::new(deal, direction, kinds, ChargingRules::Classic);

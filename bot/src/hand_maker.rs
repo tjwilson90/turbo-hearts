@@ -1,4 +1,4 @@
-use rand::{seq::SliceRandom, Rng};
+use rand::{seq::SliceRandom, RngExt};
 use std::collections::HashMap;
 use turbo_hearts_api::{Card, Cards, GameEvent, GameState, Seat, Suit, VoidState};
 
@@ -60,7 +60,7 @@ impl HandMaker {
     }
 
     pub fn make(&self, void: VoidState) -> [Cards; 4] {
-        self.sampler(void).sample(&mut rand::thread_rng())
+        self.sampler(void).sample(&mut rand::rng())
     }
 
     /// Build once per decision, then reuse for all determinizations.
@@ -152,7 +152,7 @@ impl HandSampler {
         total
     }
 
-    pub fn sample<R: Rng + ?Sized>(&mut self, rng: &mut R) -> [Cards; 4] {
+    pub fn sample<R: RngExt + ?Sized>(&mut self, rng: &mut R) -> [Cards; 4] {
         let mut hands = self.known;
         if self.unconstrained {
             let mut cards = self.unknown.iter().flatten().copied().collect::<Vec<_>>();
@@ -168,7 +168,7 @@ impl HandSampler {
         }
         let mut capacities = self.capacities;
         for suit in 0..4 {
-            let mut target = rng.gen::<f64>() * self.count(suit, capacities);
+            let mut target = rng.random::<f64>() * self.count(suit, capacities);
             let mut chosen = None;
             for (allocation, weight) in self.allocations(suit, capacities) {
                 let remaining = std::array::from_fn(|i| capacities[i] - allocation[i]);
@@ -205,7 +205,8 @@ fn binomial(n: u8, k: u8) -> f64 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rand::{rngs::StdRng, SeedableRng};
+    use rand::SeedableRng;
+    use rand_chacha::ChaCha12Rng;
 
     #[test]
     fn uniform_constrained_deals() {
@@ -218,7 +219,7 @@ mod tests {
         let mut sampler = HandSampler::new(known, void);
         assert_eq!(sampler.count(0, [1; 4]), 8.0);
         let mut counts = HashMap::new();
-        let mut rng = StdRng::seed_from_u64(1);
+        let mut rng = ChaCha12Rng::seed_from_u64(1);
         for _ in 0..8000 {
             let hands = sampler.sample(&mut rng);
             let mut all = Cards::NONE;

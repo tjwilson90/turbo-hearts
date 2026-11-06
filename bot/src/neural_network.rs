@@ -1,5 +1,6 @@
 use crate::{policy_features, Algorithm, GottaTryBot, HandMaker, HeuristicBot, PolicyNetwork};
-use rand::{rngs::StdRng, Rng, SeedableRng};
+use rand::{RngExt, SeedableRng};
+use rand_chacha::ChaCha12Rng;
 use std::time::{Duration, Instant};
 use turbo_hearts_api::{BotState, Card, Cards, GameEvent, GameState, Seat, VoidState, WonState};
 
@@ -35,8 +36,10 @@ impl Default for SearchConfig {
 #[derive(Clone)]
 pub struct NeuralNetworkBot {
     pub(crate) hand_maker: HandMaker,
-    pub(crate) rng: StdRng,
-    charge_rng: StdRng,
+    // Search clones streams for paired continuations; rand 0.10's StdRng is
+    // no longer Clone. Name the ChaCha12 algorithm explicitly for replay.
+    pub(crate) rng: ChaCha12Rng,
+    charge_rng: ChaCha12Rng,
     pub(crate) config: SearchConfig,
     pub(crate) policy: Option<PolicyNetwork>,
     pub(crate) experiments: crate::SearchExperiments,
@@ -49,7 +52,7 @@ pub struct NeuralNetworkBot {
 
 impl NeuralNetworkBot {
     pub fn new() -> Self {
-        Self::with_seed(rand::thread_rng().gen())
+        Self::with_seed(rand::rng().random())
     }
 
     /// Production policy with a chosen random seed and the usual soft time cap.
@@ -68,8 +71,8 @@ impl NeuralNetworkBot {
         );
         Self {
             hand_maker: HandMaker::new(),
-            rng: StdRng::seed_from_u64(seed),
-            charge_rng: StdRng::seed_from_u64(seed),
+            rng: ChaCha12Rng::seed_from_u64(seed),
+            charge_rng: ChaCha12Rng::seed_from_u64(seed),
             config,
             policy: None,
             experiments: crate::SearchExperiments::default(),
@@ -146,7 +149,7 @@ impl NeuralNetworkBot {
                 break;
             }
             let hands = sampler.sample(&mut self.rng);
-            let rollout_seed = self.rng.gen();
+            let rollout_seed = self.rng.random();
             let exact = 52 - state.played.len() <= self.config.exact_cards;
             for (i, &card) in plays.iter().enumerate() {
                 let event = GameEvent::Play {
@@ -170,7 +173,7 @@ impl NeuralNetworkBot {
                         bot.seat,
                         None,
                         self.config.opponent_moon,
-                        &mut StdRng::seed_from_u64(rollout_seed),
+                        &mut ChaCha12Rng::seed_from_u64(rollout_seed),
                     );
                     game.won
                 };
@@ -186,7 +189,7 @@ impl NeuralNetworkBot {
                         bot.seat,
                         Some(bot.seat),
                         self.config.opponent_moon,
-                        &mut StdRng::seed_from_u64(rollout_seed),
+                        &mut ChaCha12Rng::seed_from_u64(rollout_seed),
                     );
                     self.last_evaluations += 1;
                     moon_totals[i] += game.scores().money(bot.seat) as f32;
@@ -275,7 +278,7 @@ impl Algorithm for NeuralNetworkBot {
     }
 }
 
-pub(crate) fn rollout<R: Rng + ?Sized>(
+pub(crate) fn rollout<R: RngExt + ?Sized>(
     state: &mut GameState,
     mut void: VoidState,
     hands: [Cards; 4],
@@ -284,7 +287,7 @@ pub(crate) fn rollout<R: Rng + ?Sized>(
     model_opponent_moon: bool,
     rng: &mut R,
 ) {
-    let opponent_moon = if model_opponent_moon && rng.gen_bool(0.5) {
+    let opponent_moon = if model_opponent_moon && rng.random_bool(0.5) {
         Seat::VALUES.iter().copied().find(|s| {
             *s != root_seat
                 && state.won.can_run(*s)
@@ -422,7 +425,7 @@ mod tests {
     #[test]
     fn endgames_match_the_existing_full_solver() {
         use rand::seq::SliceRandom;
-        let mut rng = StdRng::seed_from_u64(82);
+        let mut rng = ChaCha12Rng::seed_from_u64(82);
         for deal in 0..12 {
             let mut deck: Vec<_> = Cards::ALL.into_iter().collect();
             deck.shuffle(&mut rng);
@@ -447,7 +450,7 @@ mod tests {
                 let legal = state.legal_plays(hands[seat.idx()]);
                 let card = legal
                     .into_iter()
-                    .nth(rng.gen_range(0..legal.len()))
+                    .nth(rng.random_range(0..legal.len()))
                     .unwrap();
                 let event = GameEvent::Play { seat, card };
                 void = void.on_event(&state, &event);

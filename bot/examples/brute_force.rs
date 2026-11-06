@@ -15,7 +15,7 @@ fn bot(seat: Seat, deck: &[Card]) -> BotState {
 fn main() {
     env_logger::init();
     let mut deck = Cards::ALL.into_iter().collect::<Vec<_>>();
-    deck.shuffle(&mut rand::thread_rng());
+    deck.shuffle(&mut rand::rng());
     let mut bots = [
         bot(Seat::North, &deck),
         bot(Seat::East, &deck),

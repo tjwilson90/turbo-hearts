@@ -2,7 +2,8 @@
 //! held-out matches, not by a promising training loss or a single lineup.
 use crate::neural_network::{rollout, solve_endgame};
 use crate::{policy_features, DuckBot, GottaTryBot, HeuristicBot, NeuralNetworkBot};
-use rand::{rngs::StdRng, Rng, SeedableRng};
+use rand::{RngExt, SeedableRng};
+use rand_chacha::ChaCha12Rng;
 use std::{collections::HashMap, time::Instant};
 use turbo_hearts_api::{BotState, Card, Cards, GameEvent, GameState, Seat, VoidState, WonState};
 
@@ -177,9 +178,9 @@ fn posterior(logs: [f64; 3]) -> ([f64; 3], f64) {
     posterior_with_prior(logs, [0.6, 0.2, 0.2])
 }
 
-fn choose_weighted<R: Rng + ?Sized>(weights: &[f64], rng: &mut R) -> usize {
+fn choose_weighted<R: RngExt + ?Sized>(weights: &[f64], rng: &mut R) -> usize {
     let sum: f64 = weights.iter().sum();
-    let mut target = rng.gen::<f64>() * sum;
+    let mut target = rng.random::<f64>() * sum;
     for (i, weight) in weights.iter().enumerate() {
         target -= weight;
         if target <= 0.0 {
@@ -340,20 +341,20 @@ impl NeuralNetworkBot {
             } else {
                 (sampler.sample(&mut self.rng), [[0.6, 0.2, 0.2]; 4])
             };
-            let seed: u64 = self.rng.gen();
+            let seed: u64 = self.rng.random();
             let styles = if conservative {
                 Some(conservative_styles)
             } else if self.experiments.opponent_model {
-                let mut rng = StdRng::seed_from_u64(seed ^ 0x5354594c45);
+                let mut rng = ChaCha12Rng::seed_from_u64(seed ^ 0x5354594c45);
                 Some(style_prob.map(|w| choose_weighted(&w, &mut rng)))
             } else {
                 None
             };
-            let mut defense_rng = StdRng::seed_from_u64(seed ^ 0x444546454e44);
+            let mut defense_rng = ChaCha12Rng::seed_from_u64(seed ^ 0x444546454e44);
             let defenders = std::array::from_fn(|s| {
                 self.experiments.moon_defense > 0.0
                     && !styles.map_or(false, |styles| styles[s] == 1 || styles[s] == 2)
-                    && defense_rng.gen_bool(self.experiments.moon_defense)
+                    && defense_rng.random_bool(self.experiments.moon_defense)
             });
             for &i in &active {
                 for mode in 0..=moon as usize {
@@ -387,7 +388,7 @@ impl NeuralNetworkBot {
                             } else {
                                 Vec::new()
                             },
-                            &mut StdRng::seed_from_u64(seed),
+                            &mut ChaCha12Rng::seed_from_u64(seed),
                         );
                         game.won
                     };
@@ -473,7 +474,7 @@ struct SearchTree {
 }
 
 impl SearchTree {
-    fn simulate<R: Rng + ?Sized>(
+    fn simulate<R: RngExt + ?Sized>(
         &mut self,
         state: &mut GameState,
         mut void: VoidState,
@@ -500,8 +501,9 @@ impl SearchTree {
             );
             return;
         }
-        let consider_shooting =
-            (styles.is_none() || styles.unwrap().contains(&3)) && model_moon && rng.gen_bool(0.5);
+        let consider_shooting = (styles.is_none() || styles.unwrap().contains(&3))
+            && model_moon
+            && rng.random_bool(0.5);
         let opponent_moon = if consider_shooting {
             Seat::VALUES.iter().copied().find(|s| {
                 *s != root
@@ -598,7 +600,7 @@ impl SearchTree {
     }
 }
 
-pub(crate) fn style_play<R: Rng + ?Sized>(
+pub(crate) fn style_play<R: RngExt + ?Sized>(
     style: usize,
     bot: &BotState,
     state: &GameState,
@@ -611,7 +613,7 @@ pub(crate) fn style_play<R: Rng + ?Sized>(
     }
 }
 
-pub(crate) fn simulate_style<R: Rng + ?Sized>(
+pub(crate) fn simulate_style<R: RngExt + ?Sized>(
     state: &mut GameState,
     void: VoidState,
     hands: [Cards; 4],
@@ -633,7 +635,7 @@ pub(crate) fn simulate_style<R: Rng + ?Sized>(
     let defenders = std::array::from_fn(|s| {
         experiments.moon_defense > 0.0
             && !styles.map_or(false, |p| p[s] == 1 || p[s] == 2)
-            && rng.gen_bool(experiments.moon_defense)
+            && rng.random_bool(experiments.moon_defense)
     });
     SearchTree::default().simulate(
         state,
@@ -673,6 +675,8 @@ mod tests {
         assert!(!initial.won.queen(Seat::West));
         let mut fixed = initial.clone();
         let mut dynamic = initial.clone();
+        // rand 0.10's range sampler uses a different sequence than rand 0.8.
+        // This seed retains the same four-heart vs. completed-moon regression.
         for (state, enabled) in [(&mut fixed, false), (&mut dynamic, true)] {
             SearchTree::default().simulate(
                 state,
@@ -686,7 +690,7 @@ mod tests {
                 enabled,
                 0,
                 Vec::new(),
-                &mut StdRng::seed_from_u64(2),
+                &mut ChaCha12Rng::seed_from_u64(339),
             );
         }
         // West starts with no captured points. Once the opportunity emerges,
@@ -711,7 +715,7 @@ mod tests {
 
     #[test]
     fn choice_support_is_legal_and_likelihood_identifies_known_behaviors() {
-        let mut rng = StdRng::seed_from_u64(763);
+        let mut rng = ChaCha12Rng::seed_from_u64(763);
         for style in 0..3 {
             let mut log_totals = [0.0; 3];
             for _ in 0..24 {

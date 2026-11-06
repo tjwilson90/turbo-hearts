@@ -1,5 +1,5 @@
 use crate::Algorithm;
-use rand::Rng;
+use rand::RngExt;
 use turbo_hearts_api::{BotState, Card, Cards, GameEvent, GameState};
 
 pub struct DuckBot;
@@ -27,7 +27,7 @@ impl DuckBot {
         card.into()
     }
 
-    pub fn play_with_rng<R: Rng + ?Sized>(
+    pub fn play_with_rng<R: RngExt + ?Sized>(
         &self,
         bot_state: &BotState,
         game_state: &GameState,
@@ -37,7 +37,7 @@ impl DuckBot {
         if game_state.current_trick.is_empty() {
             return cards
                 .into_iter()
-                .nth(rng.gen_range(0..cards.len()))
+                .nth(rng.random_range(0..cards.len()))
                 .unwrap();
         }
         self.choices(bot_state, game_state).max()
@@ -64,7 +64,7 @@ impl Algorithm for DuckBot {
     }
 
     fn play(&mut self, bot_state: &BotState, game_state: &GameState) -> Card {
-        self.play_with_rng(bot_state, game_state, &mut rand::thread_rng())
+        self.play_with_rng(bot_state, game_state, &mut rand::rng())
     }
 
     fn on_event(&mut self, _: &BotState, _: &GameState, _: &GameEvent) {}

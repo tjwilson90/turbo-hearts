@@ -1,5 +1,6 @@
 #![allow(dead_code)]
-use rand::{rngs::StdRng, Rng, SeedableRng};
+use rand::{RngExt, SeedableRng};
+use rand_chacha::ChaCha12Rng;
 use std::time::Instant;
 use turbo_hearts_api::*;
 use turbo_hearts_bot::*;
@@ -9,7 +10,7 @@ pub struct Player {
     kind: String,
     pub network: Option<PolicyNetwork>,
     temperature: f64,
-    rng: StdRng,
+    rng: ChaCha12Rng,
 }
 
 impl Player {
@@ -197,7 +198,7 @@ impl Player {
             kind: kind.to_owned(),
             network,
             temperature,
-            rng: StdRng::seed_from_u64(seed),
+            rng: ChaCha12Rng::seed_from_u64(seed),
         }
     }
     pub fn policy_distribution(&self, bot: &BotState, state: &GameState) -> Vec<(Card, f64)> {
@@ -262,7 +263,7 @@ impl Algorithm for Player {
     fn play(&mut self, bot: &BotState, state: &GameState) -> Card {
         if self.network.is_some() {
             let distribution = self.policy_distribution(bot, state);
-            let mut target = self.rng.gen::<f64>();
+            let mut target = self.rng.random::<f64>();
             for (card, p) in &distribution {
                 target -= p;
                 if target <= 0.0 {
@@ -281,7 +282,7 @@ impl Algorithm for Player {
             let legal = state.legal_plays(bot.post_pass_hand);
             return legal
                 .into_iter()
-                .nth(self.rng.gen_range(0..legal.len()))
+                .nth(self.rng.random_range(0..legal.len()))
                 .unwrap();
         }
         if self.kind == "duck" {

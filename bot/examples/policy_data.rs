@@ -1,5 +1,6 @@
+use rand_chacha::ChaCha12Rng;
 mod support;
-use rand::{rngs::StdRng, Rng, SeedableRng};
+use rand::{RngExt, SeedableRng};
 use std::{
     fs::File,
     io::{self, BufWriter, Write},
@@ -26,7 +27,7 @@ fn main() -> io::Result<()> {
     let strategy = args.get(5).map(String::as_str).unwrap_or("defend");
     let kind = format!("{}:{}:12", strategy, samples);
     let mut rows = 0;
-    let mut rng = StdRng::seed_from_u64(seed);
+    let mut rng = ChaCha12Rng::seed_from_u64(seed);
     for deal in seed..seed + hands {
         let mut game = Match::new(
             deal,
@@ -63,8 +64,8 @@ fn main() -> io::Result<()> {
                 }
                 rows += 1;
             }
-            let card = if rng.gen_bool(0.15) {
-                values[rng.gen_range(0..values.len())].0
+            let card = if rng.random_bool(0.15) {
+                values[rng.random_range(0..values.len())].0
             } else {
                 values
                     .iter()
