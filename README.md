@@ -59,6 +59,10 @@ for OAuth 2.0 [client credentials](https://console.developers.google.com/).
 
 The `port` is the port the backend should serve from.
 
+Additional login providers can be configured in the optional `oidc` object.
+See [OpenID Connect setup](docs/openid-connect.md) for provider configuration,
+callback URLs, environment-variable secrets, supported flows, and verification.
+
 ## Endpoints
 
 ### `POST /users`
