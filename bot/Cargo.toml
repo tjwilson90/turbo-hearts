@@ -6,12 +6,11 @@ edition = "2018"
 
 [dependencies]
 log = "*"
-once_cell = "*"
 rand = "*"
-tract-onnx = "*"
 turbo-hearts-api = { path = "../api" }
 
 [dev-dependencies]
+serde_json = "*"
 criterion = "*"
 env_logger = { version = "*", default-features = false, features = ["humantime"] }
 

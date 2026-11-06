@@ -28,6 +28,10 @@ yarn start
 1) Install rust - https://www.rust-lang.org/tools/install
 2) Run the server - `cargo run --bin turbo-hearts`
 
+## Bot training and evaluation
+
+See [bot/README.md](bot/README.md) for the updated bot, moon planning, reproducible matches, and neural training.
+
 ## Configuration
 
 The backend loads a `config.json` file from its working directory for configuration. A

@@ -1,0 +1,2 @@
+# Runtime play needs only Rust; this is for neural_net.py.
+numpy>=2.0,<3

@@ -4,6 +4,33 @@ use turbo_hearts_api::{BotState, Card, Cards, GameEvent, GamePhase, GameState, R
 
 pub struct GottaTryBot;
 
+impl GottaTryBot {
+    pub fn play_with_rng<R: Rng + ?Sized>(
+        &self,
+        bot_state: &BotState,
+        game_state: &GameState,
+        rng: &mut R,
+    ) -> Card {
+        if !game_state.won.can_run(bot_state.seat) {
+            return DuckBot.play_with_rng(bot_state, game_state, rng);
+        }
+        let ours = game_state.legal_plays(bot_state.post_pass_hand);
+        if ours.len() == 1 {
+            return ours.max();
+        }
+        let theirs = Cards::ALL - bot_state.post_pass_hand - game_state.played;
+        let good_plays = if game_state.current_trick.is_empty() {
+            lead(ours, theirs)
+        } else if game_state.current_trick.suit().cards().contains_any(ours) {
+            follow(ours, theirs, bot_state, game_state)
+        } else {
+            slough(ours, theirs, bot_state, game_state)
+        };
+        let index = rng.gen_range(0..good_plays.len());
+        good_plays.into_iter().nth(index).unwrap()
+    }
+}
+
 fn can_drain_without_nine(suit: Suit, mut ours: Cards, mut theirs: Cards) -> bool {
     ours &= suit.cards();
     theirs &= suit.cards();
@@ -35,7 +62,7 @@ fn can_drain_with_nine(suit: Suit, mut ours: Cards, mut theirs: Cards) -> bool {
     if ours.len() <= 2 {
         return ours.max() > theirs.max();
     }
-    can_drain_with_nine(
+    can_drain_without_nine(
         suit,
         ours - suit.with_rank(Rank::Nine),
         theirs - theirs.min(),
@@ -163,23 +190,7 @@ impl Algorithm for GottaTryBot {
     }
 
     fn play(&mut self, bot_state: &BotState, game_state: &GameState) -> Card {
-        if !game_state.won.can_run(bot_state.seat) {
-            return DuckBot.play(bot_state, game_state);
-        }
-        let ours = game_state.legal_plays(bot_state.post_pass_hand);
-        if ours.len() == 1 {
-            return ours.max();
-        }
-        let theirs = Cards::ALL - bot_state.post_pass_hand - game_state.played;
-        let good_plays = if game_state.current_trick.is_empty() {
-            lead(ours, theirs)
-        } else if game_state.current_trick.suit().cards().contains_any(ours) {
-            follow(ours, theirs, bot_state, game_state)
-        } else {
-            slough(ours, theirs, bot_state, game_state)
-        };
-        let index = rand::thread_rng().gen_range(0..good_plays.len());
-        good_plays.into_iter().nth(index).unwrap()
+        self.play_with_rng(bot_state, game_state, &mut rand::thread_rng())
     }
 
     fn on_event(&mut self, _: &BotState, _: &GameState, _: &GameEvent) {}
@@ -209,6 +220,20 @@ mod test {
         ChargeState, ChargingRules, ClaimState, DoneState, GamePhase, Seat, Suits, Trick,
         VoidState, WonState,
     };
+
+    #[test]
+    fn draining_with_a_nine_preserves_following_winners() {
+        assert!(can_drain_with_nine(
+            Suit::Spades,
+            "AK9S".parse().unwrap(),
+            "QJTS".parse().unwrap()
+        ));
+        assert!(!can_drain_with_nine(
+            Suit::Spades,
+            "KQ9S".parse().unwrap(),
+            "AJTS".parse().unwrap()
+        ));
+    }
 
     #[test]
     fn test_play() {

@@ -1,0 +1,37 @@
+{
+  "format": "THP1",
+  "features": 256,
+  "hidden": 64,
+  "seed": 42,
+  "batch_size": 1024,
+  "learning_rate": 0.001,
+  "train_deals": 3600,
+  "validation_deals": 400,
+  "train_rows": 477032,
+  "validation_rows": 53750,
+  "validation_split": "deal_id % 10 == 0",
+  "best": {
+    "epoch": 39,
+    "validation_mse": 0.033753376454114914,
+    "validation_regret_money": 5.101539611816406
+  },
+  "sha256": "dd3e81ae3c4be94691cd7edb58539e1a3ca58202c665e39c914f5903efab3ae7",
+  "training_data": {
+    "generator": "cargo run --release -p turbo-hearts-bot --example policy_data -- DATA 4000 10000 64 search",
+    "hands": 4000,
+    "first_seed": 10000,
+    "last_seed": 13999,
+    "teacher_samples": 64,
+    "teacher_exact_cards": 12,
+    "exploration_probability": 0.15,
+    "features": "own hand and public information only",
+    "strategy": "search"
+  },
+  "training_command": "OPENBLAS_NUM_THREADS=1 python3 neural_net.py DATA assets/models/policy-avoid.thp --epochs 45",
+  "status": "Experimental prior; evaluate playing strength before enabling",
+  "training_environment": {
+    "numpy": "2.5.1",
+    "python": "3.14.6",
+    "OPENBLAS_NUM_THREADS": "1"
+  }
+}
