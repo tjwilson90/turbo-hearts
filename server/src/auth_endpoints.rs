@@ -19,17 +19,14 @@ pub fn router(
 ) -> reply!() {
     oidc::router(users.clone(), Arc::clone(&oidc))
         .or(redirect(users, http_client))
-        .or(warp::path("auth").and(html(oidc).or(fusion()).or(github()).or(google())))
+        .or(warp::path("auth").and(html().or(fusion()).or(github()).or(google())))
         .boxed()
 }
 
-fn html(oidc: Arc<oidc::Oidc>) -> reply!() {
-    warp::path::end().and(warp::get()).map(move || {
-        warp::reply::html(
-            include_str!("../../assets/auth/index.html")
-                .replace("<!-- OIDC_PROVIDERS -->", &oidc.login_links()),
-        )
-    })
+fn html() -> reply!() {
+    warp::path::end()
+        .and(warp::get())
+        .map(|| warp::reply::html(include_str!("../../assets/auth/index.html")))
 }
 
 // Keep the existing browser-readable session cookies: the lobby clears them

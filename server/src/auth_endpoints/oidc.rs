@@ -455,7 +455,7 @@ impl Oidc {
         })
     }
 
-    pub fn login_links(&self) -> String {
+    fn login_links(&self) -> String {
         self.providers
             .iter()
             .map(|(id, provider)| {
@@ -466,6 +466,22 @@ impl Oidc {
                 )
             })
             .collect()
+    }
+
+    fn chooser(&self) -> impl Reply {
+        let providers = if self.providers.is_empty() {
+            "<p>No OpenID Connect providers are available on this server.</p>".into()
+        } else {
+            self.login_links()
+        };
+        warp::reply::with_header(
+            warp::reply::html(
+                include_str!("../../../assets/auth/oidc.html")
+                    .replace("<!-- OIDC_PROVIDERS -->", &providers),
+            ),
+            header::CACHE_CONTROL,
+            "no-store",
+        )
     }
 }
 
@@ -489,6 +505,10 @@ pub fn router(
     oidc: Arc<Oidc>,
 ) -> impl Filter<Extract = (impl Reply,), Error = Rejection> + Clone {
     let state = warp::any().map(move || Arc::clone(&oidc));
+    let chooser = warp::path!("auth" / "oidc")
+        .and(warp::get())
+        .and(state.clone())
+        .map(|oidc: Arc<Oidc>| oidc.chooser().into_response());
     let start = warp::path!("auth" / "oidc" / String)
         .and(warp::get())
         .and(state.clone())
@@ -539,7 +559,7 @@ pub fn router(
                 Ok::<_, Rejection>(response)
             },
         );
-    start.or(callback)
+    chooser.or(start).or(callback)
 }
 
 #[cfg(test)]

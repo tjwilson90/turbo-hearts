@@ -226,17 +226,26 @@ fn session_cookie(
 async fn discovery_pkce_signed_login_and_existing_account_reuse() {
     let mock = MockProvider::new().await;
     let app = App::new(mock.configure("example"));
-    let page = warp::test::request()
-        .reply(&super::super::html(Arc::clone(&app.oidc)))
-        .await;
+    let page = warp::test::request().reply(&super::super::html()).await;
     let page = std::str::from_utf8(page.body()).unwrap();
-    assert!(page.contains("/auth/oidc/example"));
-    assert!(page.contains("Example &amp; &lt;Friends&gt;"));
+    assert!(page.contains("href=\"/auth/oidc\""));
+    assert!(page.contains("Sign in with OpenID Connect"));
     assert!(
         page.contains("/auth/github")
             && page.contains("/auth/google")
             && page.contains("/auth/fusion")
     );
+    let chooser = warp::test::request()
+        .path("/auth/oidc")
+        .reply(&app.routes())
+        .await;
+    assert_eq!(chooser.status(), StatusCode::OK);
+    assert_eq!(chooser.headers()[header::CACHE_CONTROL], "no-store");
+    let chooser = std::str::from_utf8(chooser.body()).unwrap();
+    assert!(chooser.contains("href=\"/auth/oidc/example\""));
+    assert!(chooser.contains("Example &amp; &lt;Friends&gt;"));
+    assert!(!chooser.contains("test-secret"));
+    assert!(!chooser.contains("No OpenID Connect providers"));
     let mut user_id = None;
     for _ in 0..2 {
         let (params, cookie) = app.begin().await;
@@ -573,4 +582,32 @@ async fn transport_rejects_redirects_insecure_endpoints_and_oversized_responses(
         Err(TransportError::Insecure)
     ));
     task.abort();
+}
+
+#[tokio::test]
+async fn frontend_exposes_oidc_without_configured_providers() {
+    let oidc = Arc::new(Oidc::new(&BTreeMap::new(), "https://game.example").unwrap());
+    let dir = tempfile::tempdir().unwrap();
+    let db = &*Box::leak(Box::new(Database::new(dir.path().join("auth.db")).unwrap()));
+    let users = &*Box::leak(Box::new(Users::new(db)));
+    let client = &*Box::leak(Box::new(Client::new()));
+    let routes = super::super::router(
+        warp::any().map(move || users),
+        warp::any().map(move || client),
+        oidc,
+    );
+    let response = warp::test::request().path("/auth").reply(&routes).await;
+    assert_eq!(response.status(), StatusCode::OK);
+    let page = std::str::from_utf8(response.body()).unwrap();
+    assert!(page.contains("href=\"/auth/oidc\""));
+    assert!(page.contains("Sign in with OpenID Connect"));
+    let response = warp::test::request()
+        .path("/auth/oidc")
+        .reply(&routes)
+        .await;
+    assert_eq!(response.status(), StatusCode::OK);
+    let chooser = std::str::from_utf8(response.body()).unwrap();
+    assert!(chooser.contains("No OpenID Connect providers are available on this server."));
+    assert!(chooser.contains("href=\"/auth\""));
+    assert!(!chooser.contains("<!-- OIDC_PROVIDERS -->"));
 }

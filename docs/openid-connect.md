@@ -1,9 +1,12 @@
 # Configurable OpenID Connect login
 
 Add entries to the optional `oidc` object in `config.json`, then restart the
-server. Each entry adds a login button automatically. Existing FusionAuth,
-GitHub, and Google login routes continue to work without configuration changes.
-No database migration is needed.
+server. The auth page always offers **Sign in with OpenID Connect**, linking
+to `/auth/oidc`. That chooser lists the configured providers; if there are none,
+it shows an unavailable message and a link back to the other sign-in methods.
+Each configuration entry adds a provider button automatically. Existing
+FusionAuth, GitHub, and Google login routes continue to work without
+configuration changes. No database migration is needed.
 
 For example, add this object alongside the existing configuration fields:
 
