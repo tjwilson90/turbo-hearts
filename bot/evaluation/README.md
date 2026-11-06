@@ -1,8 +1,14 @@
 # Evaluation, November 2026
 
+This page records the first improvement round. The subsequent
+[seven-direction exploration](round2/README.md) includes implementations,
+training checkpoints, paired matches, failures to generalize, and fresh-deal
+confirmation. The [third-round follow-up](round3/README.md) then improved the
+continuation model and became the current production default.
+
 The original four ONNX weight files were absent, so it was impossible to measure
 the historical neural bot's playing strength. All comparisons below are against
-working, reproducible baselines. The current `default` is `defend:128:12`:
+working, reproducible baselines. The `default` selected in this first round was `defend:128:12`:
 128 shared determinizations, point-avoidance and shooting continuations, a
 mixture model for opposing shooters, and exact 12-card endgames. Passing and
 charging use the existing heuristic. Neural priors are experimental.

@@ -41,7 +41,9 @@ impl PolicyNetwork {
         Ok(Self { weights })
     }
 
-    /// Returns expected advantage in money units, relative to other legal moves.
+    /// Returns the scalar output multiplied by 100. Distilled value checkpoints
+    /// use money advantage; policy-gradient checkpoints use policy scores and
+    /// must not be interpreted as calibrated monetary values.
     pub fn predict(&self, input: &[f32; POLICY_FEATURES]) -> f32 {
         let first_bias = POLICY_FEATURES * HIDDEN;
         let output = first_bias + HIDDEN;

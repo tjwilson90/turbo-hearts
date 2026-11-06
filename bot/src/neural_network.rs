@@ -34,19 +34,32 @@ impl Default for SearchConfig {
 /// The historical `neural_net` strategy, now able to play without external weights.
 #[derive(Clone)]
 pub struct NeuralNetworkBot {
-    hand_maker: HandMaker,
-    rng: StdRng,
+    pub(crate) hand_maker: HandMaker,
+    pub(crate) rng: StdRng,
     charge_rng: StdRng,
-    config: SearchConfig,
-    policy: Option<PolicyNetwork>,
+    pub(crate) config: SearchConfig,
+    pub(crate) policy: Option<PolicyNetwork>,
+    pub(crate) experiments: crate::SearchExperiments,
+    pub(crate) history: crate::experimental::BehaviorHistory,
+    pub(crate) last_evaluations: usize,
+    pub(crate) last_belief_ess: f64,
+    pub(crate) last_tree_nodes: usize,
     prior_samples: f32,
 }
 
 impl NeuralNetworkBot {
     pub fn new() -> Self {
-        Self::with_config(SearchConfig::default(), rand::thread_rng().gen())
+        Self::with_seed(rand::thread_rng().gen())
     }
 
+    /// Production policy with a chosen random seed and the usual soft time cap.
+    pub fn with_seed(seed: u64) -> Self {
+        Self::with_config(SearchConfig::default(), seed)
+            .with_experiments(crate::SearchExperiments::production())
+    }
+
+    /// Budget-configured frozen baseline. Add `with_experiments` to select
+    /// production extensions or research variants explicitly.
     pub fn with_config(config: SearchConfig, seed: u64) -> Self {
         assert!(config.samples > 0, "search needs at least one sample");
         assert!(
@@ -59,6 +72,11 @@ impl NeuralNetworkBot {
             charge_rng: StdRng::seed_from_u64(seed),
             config,
             policy: None,
+            experiments: crate::SearchExperiments::default(),
+            history: crate::experimental::BehaviorHistory::default(),
+            last_evaluations: 0,
+            last_belief_ess: 0.0,
+            last_tree_nodes: 0,
             prior_samples: 0.0,
         }
     }
@@ -73,13 +91,37 @@ impl NeuralNetworkBot {
         self
     }
 
-    /// Expected money for each distinct legal move. All moves see the same deals
-    /// and random rollout streams, reducing variance in their differences.
+    /// Change the sample budget while preserving observations and random state.
+    pub fn with_samples(mut self, samples: usize) -> Self {
+        assert!(samples > 0);
+        self.config.samples = samples;
+        self
+    }
+
+    /// Sampled money for distinct legal moves. Ordinary search gives every move
+    /// the same deals and rollout streams. Experimental allocation returns only
+    /// surviving moves, which share the additional rounds allocated to them.
     pub fn evaluate(&mut self, bot: &BotState, state: &GameState) -> Vec<(Card, f32)> {
         self.search(bot, state).0
     }
 
+    pub fn last_search_evaluations(&self) -> usize {
+        self.last_evaluations
+    }
+    pub fn last_belief_ess(&self) -> f64 {
+        self.last_belief_ess
+    }
+    pub fn last_tree_nodes(&self) -> usize {
+        self.last_tree_nodes
+    }
+
     fn search(&mut self, bot: &BotState, state: &GameState) -> (Vec<(Card, f32)>, usize) {
+        self.last_evaluations = 0;
+        self.last_belief_ess = 0.0;
+        self.last_tree_nodes = 0;
+        if self.experiments.changes_play() {
+            return self.experimental_search(bot, state);
+        }
         let plays: Vec<_> = state
             .legal_plays(bot.post_pass_hand)
             .distinct_plays(state.played, state.current_trick)
@@ -93,6 +135,7 @@ impl NeuralNetworkBot {
         let start = Instant::now();
         let mut sampler = self.hand_maker.sampler(bot.void);
         let mut samples = 0;
+        let mut endgames = crate::endgame::EndgameSolver::new(self.experiments.canonical_endgames);
         for _ in 0..self.config.samples {
             if samples > 0
                 && self
@@ -114,7 +157,11 @@ impl NeuralNetworkBot {
                 let mut game = state.clone();
                 game.apply(&event);
                 let won = if exact {
-                    solve_endgame(&game, &hands)
+                    if self.experiments.cache_endgames {
+                        endgames.solve(&game, &hands)
+                    } else {
+                        solve_endgame(&game, &hands)
+                    }
                 } else {
                     rollout(
                         &mut game,
@@ -127,6 +174,7 @@ impl NeuralNetworkBot {
                     );
                     game.won
                 };
+                self.last_evaluations += 1;
                 totals[i] += won.scores(state.charges).money(bot.seat) as f32;
                 if try_moon {
                     let mut game = state.clone();
@@ -140,6 +188,7 @@ impl NeuralNetworkBot {
                         self.config.opponent_moon,
                         &mut StdRng::seed_from_u64(rollout_seed),
                     );
+                    self.last_evaluations += 1;
                     moon_totals[i] += game.scores().money(bot.seat) as f32;
                 }
             }
@@ -171,16 +220,29 @@ impl Default for NeuralNetworkBot {
 
 impl Algorithm for NeuralNetworkBot {
     fn pass(&mut self, bot: &BotState, state: &GameState) -> Cards {
-        HeuristicBot.pass(bot, state)
+        if self.experiments.pass_samples > 0
+            && state.phase.direction() != turbo_hearts_api::PassDirection::Keeper
+        {
+            self.search_pass(bot, state)
+        } else {
+            HeuristicBot.pass(bot, state)
+        }
     }
 
     fn charge(&mut self, bot: &BotState, state: &GameState) -> Cards {
-        HeuristicBot.charge_with_rng(bot, state, &mut self.charge_rng)
+        if self.experiments.charge_samples > 0 {
+            self.search_charge(bot, state)
+        } else {
+            HeuristicBot.charge_with_rng(bot, state, &mut self.charge_rng)
+        }
     }
 
     fn play(&mut self, bot: &BotState, state: &GameState) -> Card {
         let legal = state.legal_plays(bot.post_pass_hand);
         let distinct = legal.distinct_plays(state.played, state.current_trick);
+        self.last_evaluations = 0;
+        self.last_belief_ess = 0.0;
+        self.last_tree_nodes = 0;
         if distinct.len() == 1 {
             return distinct.max();
         }
@@ -204,10 +266,16 @@ impl Algorithm for NeuralNetworkBot {
 
     fn on_event(&mut self, _: &BotState, state: &GameState, event: &GameEvent) {
         self.hand_maker.on_event(state, event);
+        if self.experiments.opponent_model
+            || self.experiments.conservative_model
+            || self.experiments.belief_strength > 0.0
+        {
+            self.history.on_event(state, event);
+        }
     }
 }
 
-fn rollout<R: Rng + ?Sized>(
+pub(crate) fn rollout<R: Rng + ?Sized>(
     state: &mut GameState,
     mut void: VoidState,
     hands: [Cards; 4],
@@ -246,7 +314,7 @@ fn rollout<R: Rng + ?Sized>(
 
 // With a small number of cards per player a direct max-n search is cheaper than
 // constructing the legacy solver's 32,768-entry suit transposition tables.
-fn solve_endgame(state: &GameState, hands: &[Cards; 4]) -> WonState {
+pub(crate) fn solve_endgame(state: &GameState, hands: &[Cards; 4]) -> WonState {
     if state.played == Cards::ALL
         || (state.current_trick.is_empty() && state.played.contains_all(Cards::SCORING))
     {
@@ -275,6 +343,27 @@ fn solve_endgame(state: &GameState, hands: &[Cards; 4]) -> WonState {
 mod tests {
     use super::*;
     use turbo_hearts_api::{GamePhase, PassDirection, Suit, Suits, Trick};
+
+    #[test]
+    fn production_constructor_enables_only_confirmed_extensions() {
+        let bot = NeuralNetworkBot::with_seed(42);
+        assert!(bot.experiments.conservative_model && bot.experiments.dynamic_shooters);
+        assert_eq!(bot.experiments.style_confidence, 0.6);
+        assert!(
+            !bot.experiments.opponent_model
+                && !bot.experiments.allocate
+                && !bot.experiments.moon_consensus
+        );
+        assert_eq!(bot.experiments.moon_defense, 0.0);
+        assert_eq!(bot.experiments.belief_strength, 0.0);
+        assert_eq!(bot.experiments.pass_samples, 0);
+        assert_eq!(bot.experiments.charge_samples, 0);
+        assert_eq!(bot.experiments.tree_depth, 0);
+        assert!(!bot.experiments.cache_endgames);
+        assert_eq!(bot.config.samples, 128);
+        assert_eq!(bot.config.exact_cards, 12);
+        assert!(bot.policy.is_none());
+    }
 
     fn moon_position(can_finish: bool) -> ([Cards; 4], GameState) {
         // East has led KS. North can dump QS or win AS and keep the queen.
@@ -352,17 +441,52 @@ mod tests {
                 .iter()
                 .copied()
                 .find(|s| hands[s.idx()].contains(Card::TwoClubs));
-            while state.played.len() < 40 {
+            let mut void = VoidState::new();
+            while state.played.len() < if deal % 3 == 0 { 36 } else { 40 } {
                 let seat = state.next_actor.unwrap();
                 let legal = state.legal_plays(hands[seat.idx()]);
                 let card = legal
                     .into_iter()
                     .nth(rng.gen_range(0..legal.len()))
                     .unwrap();
-                state.apply(&GameEvent::Play { seat, card });
+                let event = GameEvent::Play { seat, card };
+                void = void.on_event(&state, &event);
+                state.apply(&event);
             }
             let expected = crate::BruteForce::new(hands).solve(&mut state.clone());
             assert_eq!(solve_endgame(&state, &hands), expected);
+            let mut cached = crate::endgame::EndgameSolver::default();
+            assert_eq!(cached.solve(&state, &hands), expected);
+            assert_eq!(cached.solve(&state, &hands), expected);
+            let mut canonical = crate::endgame::EndgameSolver::new(true);
+            assert_eq!(canonical.solve(&state, &hands), expected);
+            // Share the cache across hidden deals as real sampled search does.
+            let known: [Cards; 4] = std::array::from_fn(|i| {
+                if i == 0 {
+                    hands[i]
+                } else {
+                    hands[i] & (state.played | state.charges.all_charges())
+                }
+            });
+            let mut maker = HandMaker::new();
+            maker.on_event(
+                &GameState::new(),
+                &GameEvent::Deal {
+                    north: known[0],
+                    east: known[1],
+                    south: known[2],
+                    west: known[3],
+                    pass: PassDirection::Left,
+                },
+            );
+            let mut sampler = maker.sampler(void);
+            for _ in 0..16 {
+                let sampled = sampler.sample(&mut rng);
+                assert_eq!(
+                    canonical.solve(&state, &sampled),
+                    solve_endgame(&state, &sampled)
+                );
+            }
         }
     }
 

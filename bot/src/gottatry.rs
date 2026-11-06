@@ -14,9 +14,24 @@ impl GottaTryBot {
         if !game_state.won.can_run(bot_state.seat) {
             return DuckBot.play_with_rng(bot_state, game_state, rng);
         }
+        let legal = game_state.legal_plays(bot_state.post_pass_hand);
+        if legal.len() == 1 {
+            return legal.max();
+        }
+        let choices = self.choices(bot_state, game_state);
+        choices
+            .into_iter()
+            .nth(rng.gen_range(0..choices.len()))
+            .unwrap()
+    }
+
+    pub(crate) fn choices(&self, bot_state: &BotState, game_state: &GameState) -> Cards {
+        if !game_state.won.can_run(bot_state.seat) {
+            return DuckBot.choices(bot_state, game_state);
+        }
         let ours = game_state.legal_plays(bot_state.post_pass_hand);
         if ours.len() == 1 {
-            return ours.max();
+            return ours;
         }
         let theirs = Cards::ALL - bot_state.post_pass_hand - game_state.played;
         let good_plays = if game_state.current_trick.is_empty() {
@@ -26,8 +41,7 @@ impl GottaTryBot {
         } else {
             slough(ours, theirs, bot_state, game_state)
         };
-        let index = rng.gen_range(0..good_plays.len());
-        good_plays.into_iter().nth(index).unwrap()
+        good_plays
     }
 }
 

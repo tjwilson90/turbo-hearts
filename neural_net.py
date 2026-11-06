@@ -32,6 +32,19 @@ def export(path, params):
     return hashlib.sha256(data).hexdigest()
 
 
+def load(path):
+    data = Path(path).read_bytes()
+    expected = 12 + 4 * (FEATURES * HIDDEN + 2 * HIDDEN + 1)
+    if len(data) != expected or data[:12] != b"THP1" + struct.pack("<II", FEATURES, HIDDEN):
+        raise ValueError("incompatible network")
+    a = np.frombuffer(data[12:], dtype="<f4").copy()
+    if not np.isfinite(a).all():
+        raise ValueError("nonfinite network weights")
+    n = FEATURES * HIDDEN
+    return [a[:n].reshape(HIDDEN, FEATURES).T.copy(), a[n:n+HIDDEN].copy(),
+            a[n+HIDDEN:-1].reshape(HIDDEN, 1).copy(), a[-1:].copy()]
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("data", type=Path)
@@ -40,6 +53,7 @@ def main():
     parser.add_argument("--batch-size", type=int, default=1024)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--learning-rate", type=float, default=0.001)
+    parser.add_argument("--initial", type=Path, help="fine-tune an existing THP1 checkpoint")
     args = parser.parse_args()
     rows = np.fromfile(args.data, dtype="<f4").reshape(-1, FEATURES + 3)
     if not len(rows) or not np.isfinite(rows).all():
@@ -61,7 +75,7 @@ def main():
     valid_deals = len(np.unique(rows[valid, 0]))
     del rows
     rng = np.random.default_rng(args.seed)
-    params = [
+    params = load(args.initial) if args.initial else [
         (rng.standard_normal((FEATURES, HIDDEN)) * np.sqrt(2 / FEATURES)).astype(np.float32),
         np.zeros(HIDDEN, np.float32),
         (rng.standard_normal((HIDDEN, 1)) * 0.01).astype(np.float32),
@@ -108,6 +122,7 @@ def main():
                       "seed": args.seed, "batch_size": args.batch_size,
                       "first_deal": first_deal, "last_deal": last_deal,
                       "learning_rate": args.learning_rate,
+                      "initial": str(args.initial) if args.initial else None,
                       "train_deals": train_deals, "validation_deals": valid_deals,
                       "train_rows": len(x_train), "validation_rows": len(x_valid),
                       "validation_split": "deal_id % 10 == 0", "best": metric,

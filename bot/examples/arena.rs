@@ -7,7 +7,12 @@ fn main() {
     if args.iter().any(|a| a == "--help" || a == "-h") {
         println!("arena [CANDIDATE] [BASELINE] [OPPONENT] [DEALS] [SEED] [RULES]\n\
 Players: default, heuristic, duck, gottatry, random, search:SAMPLES:EXACT, moon:SAMPLES:EXACT, defend:SAMPLES:EXACT.\n\
+Experiments with the same :SAMPLES:EXACT suffix: model, belief, posterior, tree, modeltree, allocate, guided, preplay, pass, charge, combined, modelcharge, posteriorcharge.\n\
+Follow-ups: guard, cautious, cautiousguard, selective, consensus, guardconsensus, dynamic, dynamicguard, cautiousdynamic, dynamiccharge, cached, canonical.\n\
 Append :MODEL:PRIOR_SAMPLES to a search player to test a learned prior.\n\
+Allocation: append :MODEL:0:MIN_ROUNDS (use none for an unguided allocator; default MIN_ROUNDS=32).\n\
+After MIN_ROUNDS, append :DEFENDER_FRACTION:STYLE_SUPPORT for applicable follow-up profiles (defaults 1 and 0.9).\n\
+Direct networks: policy:MODEL:TEMPERATURE (0 selects the highest score).\n\
 OPPONENT also accepts mixed (heuristic, duck, gottatry). Each deal is replayed in all four seats.\n\
 Rules: classic, blind, bridge, blind_bridge, chain, blind_chain.");
         return;
@@ -35,6 +40,8 @@ Rules: classic, blind, bridge, blind_bridge, chain, blind_chain.");
     let mut opponent_moons = [0; 2];
     let mut near_moons = [0; 2];
     let mut micros = [0u128; 2];
+    let mut preplay_micros = [0u128; 2];
+    let mut root_evaluations = [0usize; 2];
     let mut max_micros = [0u128; 2];
     for deal in seed..seed + deals as u64 {
         let mut means = [0.0; 2];
@@ -74,6 +81,8 @@ Rules: classic, blind, bridge, blind_bridge, chain, blind_chain.");
                             .count() as f64;
                 }
                 micros[version] += game.play_micros[seat.idx()];
+                preplay_micros[version] += game.preplay_micros[seat.idx()];
+                root_evaluations[version] += game.root_evaluations[seat.idx()];
                 max_micros[version] = max_micros[version].max(game.max_play_micros[seat.idx()]);
             }
             sums[version] += means[version];
@@ -108,7 +117,9 @@ Rules: classic, blind, bridge, blind_bridge, chain, blind_chain.");
             "paired_difference": difference, "difference_ci95": [difference-ci,difference+ci],
             "moons": moons, "opponent_moons": opponent_moons, "queen_and_8_to_12_hearts": near_moons,
             "ms_per_hand": [micros[0] as f64/(n*4000.0),micros[1] as f64/(n*4000.0)],
-            "max_move_ms": [max_micros[0] as f64/1000.0,max_micros[1] as f64/1000.0]
+            "preplay_ms_per_hand": [preplay_micros[0] as f64/(n*4000.0),preplay_micros[1] as f64/(n*4000.0)],
+        "root_evaluations_per_hand": [root_evaluations[0] as f64/(n*4.0),root_evaluations[1] as f64/(n*4.0)],
+        "max_move_ms": [max_micros[0] as f64/1000.0,max_micros[1] as f64/1000.0]
         })
     );
 }

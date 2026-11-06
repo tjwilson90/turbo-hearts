@@ -4,6 +4,13 @@ The existing `neural_net` lobby strategy and `NeuralNetworkBot` API now use
 sampled search with explicit moon planning. They work without the four lost
 ONNX files. No model path or Python installation is needed to play.
 
+The [follow-up experiments](evaluation/round3/README.md) produced the current
+default: selective opponent modeling and continuations that recognize emerging
+moon attempts. Fresh matches improved money against mixed and heuristic bots;
+the full-strength search comparison remained inconclusive. The earlier
+[seven-direction exploration](evaluation/round2/README.md) and its trained
+standalone networks remain available as research variants.
+
 The defaults are 128 hidden deals per decision, exact search with at most 12
 cards remaining, and a one-second soft time limit. Most decisions finish much
 sooner. Every candidate sees the same deals and random rollout streams.
@@ -19,17 +26,25 @@ opponent has captured a heart or the queen, the shooting continuation stops.
 The bot reconsiders the plan at each real decision; it does not commit to a run
 just because it has already taken points.
 
-Opponent rollouts also include a possible shooter: when an opponent has all
-captured moon points and at least three hearts or the queen, half the rollouts
-use the shooting policy for that opponent. This lets search value taking a heart
-to break an opposing moon. This is an opponent-model assumption, not a claim
-that the opponent's intent is known. Rollout policies only see their own hand
-and public information. Sampled search still has the usual limitations of a
-fixed rollout policy and hidden-card determinization; it is not optimal play.
+Opponent modeling starts with a conservative prior: 90% heuristic, 5% duck,
+and 5% shooting. It adopts a non-heuristic style only after three informative
+observations and at least 60% support under that model. Otherwise, the original
+opposing-shooter mixture applies. In half the rollouts, an opponent can begin
+shooting once it alone holds captured moon points and has three hearts or the
+queen. This opportunity is reconsidered as the simulated hand develops, so a
+threat need not already exist at the initial position. The shooting continuation
+stops when another player wins a moon point.
+
+These are opponent-model assumptions, not known intentions. Inference uses a
+separate random stream and uniformly constrained deals; it does not bias hidden
+ownership by behavioral likelihood. Policies see their own hand and public
+information. Search still has the limitations of approximate continuations and
+hidden-card determinization; it is not optimal play.
 
 Passing and charging retain the existing heuristic. Searching all three-card
-passes did not improve the development matches reliably, so that experiment
-was removed. A larger play budget also failed to show a clear gain once moon
+passes in the first round did not improve development matches reliably, so
+that experiment was removed. The second round adds a different opt-in joint
+pass/charge planner, with results linked above. A larger play budget also failed to show a clear gain once moon
 planning was added. The learned prior remains opt-in until it earns its place
 in match results.
 
@@ -48,10 +63,20 @@ optional charging rules. `--help` lists the options. Profiles:
 - `default`: the production configuration with the time cap disabled for repeatability.
 - `search:N:E`: N samples, exact search at E remaining cards, ordinary rollouts.
 - `moon:N:E`: also compare the bot's shooting continuation.
-- `defend:N:E`: also model opposing moon threats; `defend:128:12` is the default.
+- `defend:N:E`: the frozen first-round opposing-shooter model. `defend:128:12`
+  remains the benchmark for the current default.
+- `cautiousdynamic:128:12:none:0:32:0:0.6`: the current production policy.
 - `heuristic`, `duck`, `gottatry`, `random`: comparison policies. The `random`
   profile randomizes plays and uses heuristic passes/charges.
 - `mixed` as the opponent: heuristic, duck, and GottaTry at the other three seats.
+
+The arena also exposes `model`, `belief`, `posterior`, `tree`, `modeltree`,
+`preplay`, `pass`, `charge`, `combined`, `modelcharge`, `posteriorcharge`,
+`allocate`, and `guided`, using the same `:N:E` suffix. Their definitions and
+reproduction commands are in the [round-two report](evaluation/round2/README.md).
+Direct network players use `policy:PATH:TEMPERATURE` (zero means greedy).
+Follow-up profiles and their additional parameters are documented in the
+[round-three report](evaluation/round3/README.md) and `arena --help`.
 
 Append `:MODEL:PRIOR_SAMPLES` to a search profile to test a learned prior.
 Every unique deal is replayed with the candidate in all four seats, then with
@@ -64,8 +89,9 @@ The main metric is average **money per hand**, higher is better. It includes
 charged moons and all other scoring through `WonState::scores`. Confidence
 intervals use paired differences clustered by original deal, not eight
 supposedly independent seat replays. Win shares split ties. JSON output goes to
-stdout; progress goes to stderr. Timing covers card decisions, excluding deal,
-pass, and model loading. `queen_and_8_to_12_hearts` is a near-miss proxy, not an
+stdout; progress goes to stderr. `ms_per_hand` covers card decisions;
+`preplay_ms_per_hand` separately covers passes and charges. Both exclude deal
+and model loading. `queen_and_8_to_12_hearts` is a near-miss proxy, not an
 observed count of deliberate failed attempts.
 
 See [evaluation/README.md](evaluation/README.md) for experiments and held-out
@@ -107,17 +133,30 @@ control. The old `trainer` binary and TFRecord converter remain available for
 historical perfect-information datasets; the current script consumes the new
 `policy_data` format directly and does not require TensorFlow or ONNX.
 
-For application code, use `NeuralNetworkBot::with_config(config, seed)` and,
-optionally, `.with_policy(PolicyNetwork::load(path)?, prior_samples)`.
+For production application code, use `NeuralNetworkBot::new()` or the seeded
+`NeuralNetworkBot::with_seed(seed)`. To customize budgets, use
+`NeuralNetworkBot::with_config(config, seed)` followed by
+`.with_experiments(SearchExperiments::production())`. `with_config` alone
+preserves the frozen baseline for reproducible experiments. A calibrated neural
+prior can optionally be supplied through `.with_policy(network, prior_samples)`.
 `evaluate` exposes sampled move values for further experiments. External model
 loading validates format, dimensions, length, and finite weights and returns an
 error for missing or invalid files.
+
+Use `.with_experiments(SearchExperiments { ... })` before the first deal to
+enable research variants. `SearchExperiments::default()` turns all extensions
+off; `production()` selects the confirmed subset. `.with_samples(n)` preserves
+observations when cloning a bot for a stronger teacher. Diagnostics expose the
+last search's terminal evaluations, belief effective sample size, and tree nodes.
+The standalone self-play checkpoints contain policy scores, so they should not
+be supplied as calibrated monetary priors through `with_policy`.
 
 ## Checks
 
 ```sh
 cargo test --locked --workspace --all-targets
 cargo bench --locked -p turbo-hearts-bot --bench inference
+OPENBLAS_NUM_THREADS=1 python3 -m unittest test_training
 ```
 
 Regression tests cover uniform constrained deals, private observations,

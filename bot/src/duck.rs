@@ -5,6 +5,28 @@ use turbo_hearts_api::{BotState, Card, Cards, GameEvent, GameState};
 pub struct DuckBot;
 
 impl DuckBot {
+    pub(crate) fn choices(&self, bot: &BotState, state: &GameState) -> Cards {
+        let cards = state.legal_plays(bot.post_pass_hand);
+        if state.current_trick.is_empty() {
+            return cards;
+        }
+        let suit = state.current_trick.suit();
+        let card = if !suit.cards().contains_any(cards) {
+            cards
+                .into_iter()
+                .max_by_key(|card| score(*card, bot.post_pass_hand - state.played))
+                .unwrap()
+        } else {
+            let winner = (state.current_trick.cards() & suit.cards()).max();
+            cards
+                .into_iter()
+                .filter(|card| *card < winner)
+                .max()
+                .unwrap_or_else(|| cards.max())
+        };
+        card.into()
+    }
+
     pub fn play_with_rng<R: Rng + ?Sized>(
         &self,
         bot_state: &BotState,
@@ -18,19 +40,7 @@ impl DuckBot {
                 .nth(rng.gen_range(0..cards.len()))
                 .unwrap();
         }
-        let suit = game_state.current_trick.suit();
-        if !suit.cards().contains_any(cards) {
-            return cards
-                .into_iter()
-                .max_by_key(|card| score(*card, bot_state.post_pass_hand - game_state.played))
-                .unwrap();
-        }
-        let winner = (game_state.current_trick.cards() & suit.cards()).max();
-        let duck = cards.into_iter().filter(|card| *card < winner).max();
-        match duck {
-            Some(card) => card,
-            _ => cards.into_iter().max().unwrap(),
-        }
+        self.choices(bot_state, game_state).max()
     }
 }
 

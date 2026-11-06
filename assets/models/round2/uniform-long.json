@@ -1,0 +1,22 @@
+{
+  "format": "THP1",
+  "features": 256,
+  "hidden": 64,
+  "seed": 42,
+  "batch_size": 1024,
+  "first_deal": 120000,
+  "last_deal": 121999,
+  "learning_rate": 0.0003,
+  "initial": "assets/models/policy-moon.thp",
+  "train_deals": 1800,
+  "validation_deals": 200,
+  "train_rows": 26712,
+  "validation_rows": 2979,
+  "validation_split": "deal_id % 10 == 0",
+  "best": {
+    "epoch": 45,
+    "validation_mse": 0.13502298295497894,
+    "validation_regret_money": 7.602270603179932
+  },
+  "sha256": "9938d18ebb7a5f32e6ceaecb47461c177cf81ccb0e754ebf50fbf2ac1b462377"
+}
