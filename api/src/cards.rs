@@ -411,7 +411,8 @@ impl Iterator for Powerset {
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
-        (self.index, Some(self.index))
+        let remaining = self.index.wrapping_add(1);
+        (remaining, Some(remaining))
     }
 }
 
@@ -535,6 +536,22 @@ mod test {
     #[test]
     fn test_below() {
         assert_eq!(c!(97H), c!(5S AQJT97H 3C).below(Card::TenHearts))
+    }
+
+    #[test]
+    fn test_powerset_size_hint_and_collect() {
+        let mut iter = c!(QS AH).powerset();
+        assert_eq!(iter.size_hint(), (4, Some(4)));
+        for remaining in (0..4).rev() {
+            assert!(iter.next().is_some());
+            assert_eq!(iter.size_hint(), (remaining, Some(remaining)));
+        }
+        assert!(iter.next().is_none());
+        assert_eq!(c!(QS AH TC).powerset().collect::<Vec<_>>().len(), 8);
+        assert_eq!(
+            Cards::NONE.powerset().collect::<Vec<_>>(),
+            vec![Cards::NONE]
+        );
     }
 
     #[test]

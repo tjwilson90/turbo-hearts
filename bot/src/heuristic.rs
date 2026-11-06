@@ -1,5 +1,5 @@
 use crate::Algorithm;
-use rand::Rng;
+use rand::RngExt;
 use turbo_hearts_api::{BotState, Card, Cards, GameEvent, GameState, Rank, Suit};
 
 macro_rules! check {
@@ -35,6 +35,82 @@ macro_rules! dont_play {
 pub struct HeuristicBot;
 
 impl HeuristicBot {
+    pub fn charge_with_rng<R: RngExt + ?Sized>(
+        &self,
+        bot_state: &BotState,
+        game_state: &GameState,
+        rng: &mut R,
+    ) -> Cards {
+        let hand = bot_state.post_pass_hand;
+        let chargeable = hand - game_state.charges.all_charges();
+        let mut charge = Cards::NONE;
+        if chargeable.contains(Card::QueenSpades) {
+            if should_real_charge_queen(hand) || should_fake_charge_queen(hand, rng) {
+                charge |= Card::QueenSpades;
+            }
+        }
+        if chargeable.contains(Card::TenClubs) {
+            if should_real_charge_ten(hand) || should_fake_charge_ten(hand, rng) {
+                charge |= Card::TenClubs;
+            }
+        }
+        if chargeable.contains(Card::AceHearts) {
+            if should_real_charge_ace(hand) || should_fake_charge_ace(hand, rng) {
+                charge |= Card::AceHearts;
+            }
+        }
+        if chargeable.contains(Card::JackDiamonds) {
+            let diamonds = hand & Cards::DIAMONDS;
+            let high_diamonds = diamonds.above(Card::JackDiamonds).len();
+            let high_cards = (hand - Cards::DIAMONDS)
+                .into_iter()
+                .filter(|c| *c == Card::QueenSpades || c.rank() > Rank::Queen)
+                .count();
+            if high_diamonds == 3
+                || (diamonds.len() >= 5 && high_diamonds == 2 && high_cards > 1)
+                || (diamonds.len() >= 6 && high_diamonds == 1 && high_cards > 2)
+            {
+                charge |= Card::JackDiamonds;
+            }
+        }
+        charge
+    }
+
+    pub fn play_with_rng<R: RngExt + ?Sized>(
+        &self,
+        bot_state: &BotState,
+        game_state: &GameState,
+        rng: &mut R,
+    ) -> Card {
+        let legal = game_state.legal_plays(bot_state.post_pass_hand);
+        if legal.len() == 1 {
+            return legal.max();
+        }
+        let choices = self.choices(bot_state, game_state);
+        choices
+            .into_iter()
+            .nth(rng.random_range(0..choices.len()))
+            .unwrap()
+    }
+
+    pub(crate) fn choices(&self, bot_state: &BotState, game_state: &GameState) -> Cards {
+        let ours = game_state.legal_plays(bot_state.post_pass_hand);
+
+        // If we only have one legal play, play it
+        if ours.len() == 1 {
+            return ours;
+        }
+        let theirs = Cards::ALL - bot_state.post_pass_hand - game_state.played;
+        let good_plays = if game_state.current_trick.is_empty() {
+            self.lead(ours, theirs, game_state)
+        } else if game_state.current_trick.suit().cards().contains_any(ours) {
+            self.follow(ours, theirs, bot_state, game_state)
+        } else {
+            self.slough(ours, theirs, bot_state, game_state)
+        };
+        good_plays
+    }
+
     fn lead(&self, mut ours: Cards, theirs: Cards, game_state: &GameState) -> Cards {
         let spades = ours & Cards::SPADES;
         if theirs.contains(Card::QueenSpades) && !spades.is_empty() {
@@ -398,58 +474,11 @@ impl Algorithm for HeuristicBot {
     }
 
     fn charge(&mut self, bot_state: &BotState, game_state: &GameState) -> Cards {
-        let hand = bot_state.post_pass_hand;
-        let chargeable = hand - game_state.charges.all_charges();
-        let mut charge = Cards::NONE;
-        if chargeable.contains(Card::QueenSpades) {
-            if should_real_charge_queen(hand) || should_fake_charge_queen(hand) {
-                charge |= Card::QueenSpades;
-            }
-        }
-        if chargeable.contains(Card::TenClubs) {
-            if should_real_charge_ten(hand) || should_fake_charge_ten(hand) {
-                charge |= Card::TenClubs;
-            }
-        }
-        if chargeable.contains(Card::AceHearts) {
-            if should_real_charge_ace(hand) || should_fake_charge_ace(hand) {
-                charge |= Card::AceHearts;
-            }
-        }
-        if chargeable.contains(Card::JackDiamonds) {
-            let diamonds = hand & Cards::DIAMONDS;
-            let high_diamonds = diamonds.above(Card::JackDiamonds).len();
-            let high_cards = (hand - Cards::DIAMONDS)
-                .into_iter()
-                .filter(|c| *c == Card::QueenSpades || c.rank() > Rank::Queen)
-                .count();
-            if high_diamonds == 3
-                || (diamonds.len() >= 5 && high_diamonds == 2 && high_cards > 1)
-                || (diamonds.len() >= 6 && high_diamonds == 1 && high_cards > 2)
-            {
-                charge |= Card::JackDiamonds;
-            }
-        }
-        charge
+        self.charge_with_rng(bot_state, game_state, &mut rand::rng())
     }
 
     fn play(&mut self, bot_state: &BotState, game_state: &GameState) -> Card {
-        let ours = game_state.legal_plays(bot_state.post_pass_hand);
-
-        // If we only have one legal play, play it
-        if ours.len() == 1 {
-            return ours.max();
-        }
-        let theirs = Cards::ALL - bot_state.post_pass_hand - game_state.played;
-        let good_plays = if game_state.current_trick.is_empty() {
-            self.lead(ours, theirs, game_state)
-        } else if game_state.current_trick.suit().cards().contains_any(ours) {
-            self.follow(ours, theirs, bot_state, game_state)
-        } else {
-            self.slough(ours, theirs, bot_state, game_state)
-        };
-        let index = rand::thread_rng().gen_range(0..good_plays.len());
-        good_plays.into_iter().nth(index).unwrap()
+        self.play_with_rng(bot_state, game_state, &mut rand::rng())
     }
 
     fn on_event(&mut self, _: &BotState, _: &GameState, _: &GameEvent) {}
@@ -468,7 +497,7 @@ fn should_real_charge_queen(hand: Cards) -> bool {
     }
 }
 
-fn should_fake_charge_queen(hand: Cards) -> bool {
+fn should_fake_charge_queen<R: RngExt + ?Sized>(hand: Cards, rng: &mut R) -> bool {
     let spades = hand & Cards::SPADES;
     if spades.len() > 2 {
         false
@@ -479,7 +508,7 @@ fn should_fake_charge_queen(hand: Cards) -> bool {
     {
         false
     } else {
-        rand::thread_rng().gen_bool(0.1)
+        rng.random_bool(0.1)
     }
 }
 
@@ -496,7 +525,7 @@ fn should_real_charge_ten(hand: Cards) -> bool {
     }
 }
 
-fn should_fake_charge_ten(hand: Cards) -> bool {
+fn should_fake_charge_ten<R: RngExt + ?Sized>(hand: Cards, rng: &mut R) -> bool {
     let clubs = hand & Cards::CLUBS;
     if clubs.len() > 2 {
         return false;
@@ -515,7 +544,7 @@ fn should_fake_charge_ten(hand: Cards) -> bool {
     if spades.below(Card::QueenSpades).len() <= 3 && !spades.above(Card::JackSpades).is_empty() {
         return false;
     }
-    rand::thread_rng().gen_bool(0.5)
+    rng.random_bool(0.5)
 }
 
 fn should_real_charge_ace(hand: Cards) -> bool {
@@ -523,14 +552,14 @@ fn should_real_charge_ace(hand: Cards) -> bool {
     hearts.below(Card::EightHearts).len() >= 3
 }
 
-fn should_fake_charge_ace(hand: Cards) -> bool {
+fn should_fake_charge_ace<R: RngExt + ?Sized>(hand: Cards, rng: &mut R) -> bool {
     if (hand & Cards::HEARTS).len() > 1 {
         false
     } else if (hand & Cards::CLUBS).len() <= 1
         || (hand & Cards::DIAMONDS - Card::NineDiamonds).is_empty()
         || (hand & Cards::SPADES - Card::NineSpades).is_empty()
     {
-        rand::thread_rng().gen_bool(0.25)
+        rng.random_bool(0.25)
     } else {
         false
     }

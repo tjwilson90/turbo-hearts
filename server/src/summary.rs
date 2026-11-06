@@ -73,7 +73,7 @@ fn leaderboard<'a>(db: infallible!(&'a Database)) -> reply!() {
             Ok(match game_id {
                 None => {
                     let mut stmt = tx.prepare_cached(SELECT_FIRST_PAGE_OF_GAME_EVENTS)?;
-                    let rows = stmt.query(&[page_size])?;
+                    let rows = stmt.query([page_size])?;
                     read_leaderboard(rows)?
                 }
                 Some(game_id) => {
@@ -155,7 +155,7 @@ fn game<'a>(db: infallible!(&'a Database)) -> reply!() {
     async fn handle(game_id: GameId, db: &Database) -> Result<impl Reply, Rejection> {
         let reply = db.run_read_only(|tx| {
             let mut stmt = tx.prepare_cached(SELECT_GAME_EVENTS)?;
-            let rows = stmt.query(&[game_id.sql()])?;
+            let rows = stmt.query([game_id.sql()])?;
             let mut games = read_games(rows)?;
             if let Some(game) = games.pop() {
                 Ok(game)
@@ -177,7 +177,7 @@ fn games<'a>(db: infallible!(&'a Database)) -> reply!() {
             Ok(match game_id {
                 None => {
                     let mut stmt = tx.prepare_cached(SELECT_FIRST_PAGE_OF_GAME_EVENTS)?;
-                    let rows = stmt.query(&[page_size])?;
+                    let rows = stmt.query([page_size])?;
                     read_games(rows)?
                 }
                 Some(game_id) => {

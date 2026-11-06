@@ -1,7 +1,7 @@
 use flate2::{read::GzDecoder, write::GzEncoder, Compression};
-use rand::Rng;
-use std::{error::Error, fs, fs::File};
-use tfrecord::{Example, ExampleWriter, Feature, RecordWriterInit};
+use rand::RngExt;
+use std::{collections::HashMap, error::Error, fs, fs::File};
+use tfrecord::{Example, ExampleWriter, Feature};
 use turbo_hearts_api::{Cards, GameState};
 use turbo_hearts_bot::Encoder;
 
@@ -16,34 +16,50 @@ fn main() -> Result<(), Box<dyn Error>> {
         };
         let mut decoder = GzDecoder::new(File::open(entry.path())?);
         loop {
-            let game_state: GameState = match bincode::deserialize_from(&mut decoder) {
-                Ok(game_state) => game_state,
-                _ => {
-                    break;
-                }
-            };
+            let game_state: GameState =
+                match bincode::serde::decode_from_std_read(&mut decoder, bincode::config::legacy())
+                {
+                    Ok(game_state) => game_state,
+                    _ => {
+                        break;
+                    }
+                };
             let north = Cards {
-                bits: bincode::deserialize_from(&mut decoder)?,
+                bits: bincode::serde::decode_from_std_read(
+                    &mut decoder,
+                    bincode::config::legacy(),
+                )?,
             };
             let east = Cards {
-                bits: bincode::deserialize_from(&mut decoder)?,
+                bits: bincode::serde::decode_from_std_read(
+                    &mut decoder,
+                    bincode::config::legacy(),
+                )?,
             };
             let south = Cards {
-                bits: bincode::deserialize_from(&mut decoder)?,
+                bits: bincode::serde::decode_from_std_read(
+                    &mut decoder,
+                    bincode::config::legacy(),
+                )?,
             };
             let west = Cards {
-                bits: bincode::deserialize_from(&mut decoder)?,
+                bits: bincode::serde::decode_from_std_read(
+                    &mut decoder,
+                    bincode::config::legacy(),
+                )?,
             };
-            let won = bincode::deserialize_from(&mut decoder)?;
-            let plays: Vec<i16> = bincode::deserialize_from(&mut decoder)?;
+            let won =
+                bincode::serde::decode_from_std_read(&mut decoder, bincode::config::legacy())?;
+            let plays: Vec<i16> =
+                bincode::serde::decode_from_std_read(&mut decoder, bincode::config::legacy())?;
 
             let seat = game_state.next_actor.unwrap();
             let hands = [north, east, south, west];
 
-            let mut record = Example::with_capacity(13);
+            let mut record = HashMap::with_capacity(13);
             record.insert(
                 "cards".to_string(),
-                Feature::FloatList(
+                Feature::from_f32_list(
                     Encoder::new(Encoder::CARDS_LEN)
                         .cards(seat, game_state.played, hands)
                         .into_inner(),
@@ -51,7 +67,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             );
             record.insert(
                 "won_queen".to_string(),
-                Feature::FloatList(
+                Feature::from_f32_list(
                     Encoder::new(Encoder::QUEEN_LEN)
                         .queen(seat, game_state.won)
                         .into_inner(),
@@ -59,7 +75,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             );
             record.insert(
                 "won_jack".to_string(),
-                Feature::FloatList(
+                Feature::from_f32_list(
                     Encoder::new(Encoder::JACK_LEN)
                         .jack(seat, game_state.won)
                         .into_inner(),
@@ -67,7 +83,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             );
             record.insert(
                 "won_ten".to_string(),
-                Feature::FloatList(
+                Feature::from_f32_list(
                     Encoder::new(Encoder::TEN_LEN)
                         .ten(seat, game_state.won)
                         .into_inner(),
@@ -75,7 +91,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             );
             record.insert(
                 "won_hearts".to_string(),
-                Feature::FloatList(
+                Feature::from_f32_list(
                     Encoder::new(Encoder::HEARTS_LEN)
                         .hearts(seat, game_state.won)
                         .into_inner(),
@@ -83,7 +99,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             );
             record.insert(
                 "charged".to_string(),
-                Feature::FloatList(
+                Feature::from_f32_list(
                     Encoder::new(Encoder::CHARGED_LEN)
                         .charged(game_state.charges)
                         .into_inner(),
@@ -91,7 +107,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             );
             record.insert(
                 "led".to_string(),
-                Feature::FloatList(
+                Feature::from_f32_list(
                     Encoder::new(Encoder::LED_LEN)
                         .led(game_state.led_suits)
                         .into_inner(),
@@ -100,7 +116,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             if !game_state.current_trick.is_empty() {
                 record.insert(
                     "trick".to_string(),
-                    Feature::FloatList(
+                    Feature::from_f32_list(
                         Encoder::new(Encoder::TRICK_LEN)
                             .trick(seat, game_state.played, game_state.current_trick)
                             .into_inner(),
@@ -112,12 +128,16 @@ fn main() -> Result<(), Box<dyn Error>> {
                 .into_inner();
             if !encoded_plays.is_empty() {
                 let mut record = record.clone();
-                record.insert("plays".to_string(), Feature::FloatList(encoded_plays));
-                writer.write(game_state.current_trick.is_empty(), true, record)?;
+                record.insert("plays".to_string(), Feature::from_f32_list(encoded_plays));
+                writer.write(
+                    game_state.current_trick.is_empty(),
+                    true,
+                    record.into_iter().collect(),
+                )?;
             }
             record.insert(
                 "win_queen".to_string(),
-                Feature::FloatList(
+                Feature::from_f32_list(
                     Encoder::new(Encoder::QUEEN_LEN)
                         .queen(seat, won)
                         .into_inner(),
@@ -125,21 +145,27 @@ fn main() -> Result<(), Box<dyn Error>> {
             );
             record.insert(
                 "win_jack".to_string(),
-                Feature::FloatList(Encoder::new(Encoder::JACK_LEN).jack(seat, won).into_inner()),
+                Feature::from_f32_list(
+                    Encoder::new(Encoder::JACK_LEN).jack(seat, won).into_inner(),
+                ),
             );
             record.insert(
                 "win_ten".to_string(),
-                Feature::FloatList(Encoder::new(Encoder::TEN_LEN).ten(seat, won).into_inner()),
+                Feature::from_f32_list(Encoder::new(Encoder::TEN_LEN).ten(seat, won).into_inner()),
             );
             record.insert(
                 "win_hearts".to_string(),
-                Feature::FloatList(
+                Feature::from_f32_list(
                     Encoder::new(Encoder::HEARTS_LEN)
                         .hearts(seat, won)
                         .into_inner(),
                 ),
             );
-            writer.write(game_state.current_trick.is_empty(), false, record)?;
+            writer.write(
+                game_state.current_trick.is_empty(),
+                false,
+                record.into_iter().collect(),
+            )?;
         }
     }
     Ok(())
@@ -159,7 +185,7 @@ struct Writer {
 fn writer(path: &str) -> Result<ExampleWriter<GzEncoder<File>>, Box<dyn Error>> {
     let writer = File::create(path)?;
     let encoder = GzEncoder::new(writer, Compression::default());
-    Ok(RecordWriterInit::from_writer(encoder)?)
+    Ok(ExampleWriter::from_writer(encoder)?)
 }
 
 impl Writer {
@@ -177,7 +203,7 @@ impl Writer {
     }
 
     fn write(&mut self, lead: bool, policy: bool, example: Example) -> Result<(), Box<dyn Error>> {
-        Ok(match (rand::thread_rng().gen_bool(0.9), lead, policy) {
+        Ok(match (rand::rng().random_bool(0.9), lead, policy) {
             (true, true, true) => self.train_lead_policy.send(example)?,
             (true, true, false) => self.train_lead_value.send(example)?,
             (true, false, true) => self.train_follow_policy.send(example)?,

@@ -1,0 +1,35 @@
+{
+  "objective": "clipped policy gradient on paired terminal money",
+  "role": "policy_scores",
+  "generation": 1,
+  "initial": "assets/models/policy-moon.thp",
+  "seed": 100000,
+  "hands": 4000,
+  "temperature": 20,
+  "epochs": 4,
+  "learning_rate": 0.0001,
+  "sha256": "c5f481aa9f8a4dd91a4d1e63d889b3197ce2cda729c95f1e37757540b78506e6",
+  "collection": {
+    "greedy_reference_money": 0.03725,
+    "hands": 4000,
+    "money": -11.57,
+    "population": [
+      "heuristic",
+      "duck",
+      "gottatry",
+      "defend:16:12",
+      "policy:assets/models/policy-moon.thp:0"
+    ],
+    "rows": 131500,
+    "seed": 100000
+  },
+  "command": [
+    "target/release/examples/self_play",
+    "data/round2/population/trajectories-1.bin",
+    "assets/models/policy-moon.thp",
+    "4000",
+    "100000",
+    "20",
+    "assets/models/policy-moon.thp"
+  ]
+}

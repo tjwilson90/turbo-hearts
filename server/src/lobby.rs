@@ -1,6 +1,6 @@
 use crate::{util, CardsError, Database, GetJson, GetStr, ToSqlJson, ToSqlStr};
 use log::info;
-use rusqlite::{OptionalExtension, ToSql, Transaction, NO_PARAMS};
+use rusqlite::{OptionalExtension, ToSql, Transaction};
 use std::collections::{HashMap, HashSet};
 use tokio::sync::{
     mpsc::{self, UnboundedReceiver, UnboundedSender},
@@ -36,14 +36,14 @@ impl Lobby {
             let rows = tx.execute(
                 "DELETE FROM game WHERE (started_time IS NULL AND last_updated_time < ?)
                     OR (completed_time IS NULL AND last_updated_time < ?)",
-                &[now - 24 * 60 * 60 * 1000, now - 21 * 24 * 60 * 60 * 1000],
+                [now - 24 * 60 * 60 * 1000, now - 21 * 24 * 60 * 60 * 1000],
             )?;
             if rows > 0 {
                 info!("Deleted {} stale game(s)", rows);
             }
             let rows = tx.execute(
                 "DELETE FROM game_player WHERE game_id NOT IN (SELECT game_id FROM game)",
-                NO_PARAMS,
+                [],
             )?;
             if rows > 0 {
                 info!("Deleted {} stale game player(s)", rows);
@@ -157,7 +157,7 @@ impl Lobby {
                 "SELECT user_id, strategy, rules, seat FROM game_player
                     WHERE game_id = ? ORDER BY random() LIMIT 4",
             )?;
-            let mut rows = stmt.query(&[game_id.sql()])?;
+            let mut rows = stmt.query([game_id.sql()])?;
             let mut players = Vec::with_capacity(4);
             while let Some(row) = rows.next()? {
                 let user_id = row.get_str(0)?;
@@ -186,7 +186,7 @@ impl Lobby {
             }
             let seed = tx.query_row(
                 "SELECT seed FROM game WHERE game_id = ?",
-                &[game_id.sql()],
+                [game_id.sql()],
                 |row| Ok(row.get_json(0)?),
             )?;
             Ok((players, seed))
@@ -274,7 +274,7 @@ fn load_recent_chat(tx: &Transaction) -> Result<Vec<LobbyChat>, CardsError> {
     let mut stmt = tx.prepare_cached(
         "SELECT timestamp, user_id, message FROM lobby_chat ORDER BY timestamp DESC LIMIT 500",
     )?;
-    let mut rows = stmt.query(NO_PARAMS)?;
+    let mut rows = stmt.query([])?;
     let mut messages = Vec::with_capacity(500);
     while let Some(row) = rows.next()? {
         messages.push(LobbyChat {
@@ -294,7 +294,7 @@ fn load_games(tx: &Transaction) -> Result<HashMap<GameId, LobbyGame>, CardsError
                 last_updated_time, last_updated_by, started_time
                 FROM game WHERE completed_time IS NULL AND last_updated_time > ?",
     )?;
-    let mut rows = stmt.query(&[util::timestamp() - 8 * 60 * 60 * 1000])?;
+    let mut rows = stmt.query([util::timestamp() - 8 * 60 * 60 * 1000])?;
     while let Some(row) = rows.next()? {
         games.insert(
             row.get_str(0)?,
@@ -314,7 +314,7 @@ fn load_games(tx: &Transaction) -> Result<HashMap<GameId, LobbyGame>, CardsError
             FROM game_player gp, game g
             WHERE gp.game_id = g.game_id AND g.completed_time IS NULL",
     )?;
-    let mut rows = stmt.query(NO_PARAMS)?;
+    let mut rows = stmt.query([])?;
     while let Some(row) = rows.next()? {
         let game_id = row.get_str(0)?;
         if let Some(game) = games.get_mut(&game_id) {
@@ -339,7 +339,7 @@ fn validate_game_unstarted(tx: &Transaction, game_id: GameId) -> Result<(), Card
     let started = tx
         .query_row(
             "SELECT started_time FROM game WHERE game_id = ?",
-            &[game_id.sql()],
+            [game_id.sql()],
             |row| Ok(row.get::<_, Option<i64>>(0)?.is_some()),
         )
         .optional()?;

@@ -1,5 +1,5 @@
 use crate::Algorithm;
-use rand::{seq::SliceRandom, Rng};
+use rand::{seq::SliceRandom, RngExt};
 use turbo_hearts_api::{BotState, Card, Cards, GameEvent, GameState};
 
 pub struct RandomBot {
@@ -15,8 +15,8 @@ impl RandomBot {
 impl Algorithm for RandomBot {
     fn pass(&mut self, bot_state: &BotState, _: &GameState) -> Cards {
         let mut hand = bot_state.pre_pass_hand.into_iter().collect::<Vec<_>>();
-        hand.partial_shuffle(&mut rand::thread_rng(), 3);
-        hand.into_iter().take(3).collect()
+        let (selected, _) = hand.partial_shuffle(&mut rand::rng(), 3);
+        selected.iter().copied().collect()
     }
 
     fn charge(&mut self, bot_state: &BotState, game_state: &GameState) -> Cards {
@@ -25,15 +25,12 @@ impl Algorithm for RandomBot {
         }
         let cards =
             (bot_state.post_pass_hand & Cards::CHARGEABLE) - game_state.charges.all_charges();
-        cards
-            .into_iter()
-            .filter(|_| rand::thread_rng().gen())
-            .collect()
+        cards.into_iter().filter(|_| rand::rng().random()).collect()
     }
 
     fn play(&mut self, bot_state: &BotState, game_state: &GameState) -> Card {
         let cards = game_state.legal_plays(bot_state.post_pass_hand);
-        let index = rand::thread_rng().gen_range(0..cards.len());
+        let index = rand::rng().random_range(0..cards.len());
         cards.into_iter().nth(index).unwrap()
     }
 

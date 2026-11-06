@@ -1,0 +1,43 @@
+{
+  "baseline": "default",
+  "candidate": "defend:128:12:assets/models/policy-moon.thp:16",
+  "deals": 1000,
+  "difference_ci95": [
+    -0.8724239101830567,
+    2.3579239101830565
+  ],
+  "hands_per_version": 4000,
+  "max_move_ms": [
+    58.92,
+    88.163
+  ],
+  "money": [
+    43.31275,
+    42.57
+  ],
+  "moons": [
+    281,
+    285
+  ],
+  "ms_per_hand": [
+    12.48037025,
+    12.22203
+  ],
+  "opponent": "heuristic",
+  "opponent_moons": [
+    85,
+    79
+  ],
+  "paired_difference": 0.74275,
+  "queen_and_8_to_12_hearts": [
+    123,
+    109
+  ],
+  "rules": "classic",
+  "seed": 1000,
+  "win_share": [
+    0.4002083333333332,
+    0.3990833333333332
+  ],
+  "model_sha256": "d883d380405c194f60fb49c9b77015da708825e3bc5219c4cf651251c528aeee"
+}

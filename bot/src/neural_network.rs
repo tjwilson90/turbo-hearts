@@ -1,502 +1,520 @@
-use crate::{Algorithm, Encoder, HandMaker, HeuristicBot};
-use log::debug;
-use once_cell::sync::Lazy;
-use rand::Rng;
-use std::{collections::HashMap, error::Error, sync::Arc, time::Instant};
-use tract_onnx::{
-    prelude::{
-        tract_ndarray::Array2, tvec, Datum, Framework, InferenceFact, InferenceModel,
-        InferenceModelExt, TVec, Tensor, TypedModel, TypedRunnableModel,
-    },
-    tract_hir::tract_core::downcast_rs::__std::cmp::Ordering,
-};
-use turbo_hearts_api::{
-    can_claim, BotState, Card, Cards, ChargeState, GameEvent, GameState, Rank, Seat, Suit,
-    VoidState, WonState,
-};
+use crate::{policy_features, Algorithm, GottaTryBot, HandMaker, HeuristicBot, PolicyNetwork};
+use rand::{RngExt, SeedableRng};
+use rand_chacha::ChaCha12Rng;
+use std::time::{Duration, Instant};
+use turbo_hearts_api::{BotState, Card, Cards, GameEvent, GameState, Seat, VoidState, WonState};
 
-static LEAD_POLICY: Lazy<TypedRunnableModel<TypedModel>> =
-    Lazy::new(|| load_model(true, true).unwrap());
-
-static LEAD_VALUE: Lazy<TypedRunnableModel<TypedModel>> =
-    Lazy::new(|| load_model(true, false).unwrap());
-
-static FOLLOW_POLICY: Lazy<TypedRunnableModel<TypedModel>> =
-    Lazy::new(|| load_model(false, true).unwrap());
-
-static FOLLOW_VALUE: Lazy<TypedRunnableModel<TypedModel>> =
-    Lazy::new(|| load_model(false, false).unwrap());
-
-fn load_model(lead: bool, policy: bool) -> Result<TypedRunnableModel<TypedModel>, Box<dyn Error>> {
-    let path = format!(
-        "assets/{}-{}.onnx",
-        if lead { "lead" } else { "follow" },
-        if policy { "policy" } else { "value" }
-    );
-    let mut model: InferenceModel = tract_onnx::onnx().model_for_path(&path)?;
-    model.set_input_fact(
-        0,
-        InferenceFact::dt_shape(f32::datum_type(), tvec![1, Encoder::CARDS_LEN]),
-    )?;
-    model.set_input_fact(
-        1,
-        InferenceFact::dt_shape(f32::datum_type(), tvec![1, Encoder::QUEEN_LEN]),
-    )?;
-    model.set_input_fact(
-        2,
-        InferenceFact::dt_shape(f32::datum_type(), tvec![1, Encoder::JACK_LEN]),
-    )?;
-    model.set_input_fact(
-        3,
-        InferenceFact::dt_shape(f32::datum_type(), tvec![1, Encoder::TEN_LEN]),
-    )?;
-    model.set_input_fact(
-        4,
-        InferenceFact::dt_shape(f32::datum_type(), tvec![1, Encoder::HEARTS_LEN]),
-    )?;
-    model.set_input_fact(
-        5,
-        InferenceFact::dt_shape(f32::datum_type(), tvec![1, Encoder::CHARGED_LEN]),
-    )?;
-    model.set_input_fact(
-        6,
-        InferenceFact::dt_shape(f32::datum_type(), tvec![1, Encoder::LED_LEN]),
-    )?;
-    if !lead {
-        model.set_input_fact(
-            7,
-            InferenceFact::dt_shape(f32::datum_type(), tvec![1, Encoder::TRICK_LEN]),
-        )?;
-    }
-    Ok(model.into_optimized()?.into_runnable()?)
+/// Search settings. Fixed samples and a seed make experiments reproducible.
+#[derive(Clone, Debug)]
+pub struct SearchConfig {
+    /// Maximum shared hidden deals per decision (must be nonzero).
+    pub samples: usize,
+    /// Compare point avoidance with a dedicated moon continuation.
+    pub moon: bool,
+    /// Mix in a shooting policy for opponents with an unbroken moon threat.
+    pub opponent_moon: bool,
+    /// Use full max-n search when at most this many cards remain (0 disables).
+    pub exact_cards: usize,
+    /// Soft budget: finish at least one complete batch of all candidates.
+    /// None gives reproducible fixed-sample evaluation.
+    pub time_limit: Option<Duration>,
 }
 
+impl Default for SearchConfig {
+    fn default() -> Self {
+        Self {
+            samples: 128,
+            moon: true,
+            opponent_moon: true,
+            exact_cards: 12,
+            time_limit: Some(Duration::from_millis(1000)),
+        }
+    }
+}
+
+/// The historical `neural_net` strategy, now able to play without external weights.
 #[derive(Clone)]
 pub struct NeuralNetworkBot {
-    hand_maker: HandMaker,
-    initial_state: GameState,
-    plays: Vec<Card>,
+    pub(crate) hand_maker: HandMaker,
+    // Search clones streams for paired continuations; rand 0.10's StdRng is
+    // no longer Clone. Name the ChaCha12 algorithm explicitly for replay.
+    pub(crate) rng: ChaCha12Rng,
+    charge_rng: ChaCha12Rng,
+    pub(crate) config: SearchConfig,
+    pub(crate) policy: Option<PolicyNetwork>,
+    pub(crate) experiments: crate::SearchExperiments,
+    pub(crate) history: crate::experimental::BehaviorHistory,
+    pub(crate) last_evaluations: usize,
+    pub(crate) last_belief_ess: f64,
+    pub(crate) last_tree_nodes: usize,
+    prior_samples: f32,
 }
 
 impl NeuralNetworkBot {
     pub fn new() -> Self {
-        Lazy::force(&LEAD_POLICY);
-        Lazy::force(&LEAD_VALUE);
-        Lazy::force(&FOLLOW_POLICY);
-        Lazy::force(&FOLLOW_VALUE);
+        Self::with_seed(rand::rng().random())
+    }
+
+    /// Production policy with a chosen random seed and the usual soft time cap.
+    pub fn with_seed(seed: u64) -> Self {
+        Self::with_config(SearchConfig::default(), seed)
+            .with_experiments(crate::SearchExperiments::production())
+    }
+
+    /// Budget-configured frozen baseline. Add `with_experiments` to select
+    /// production extensions or research variants explicitly.
+    pub fn with_config(config: SearchConfig, seed: u64) -> Self {
+        assert!(config.samples > 0, "search needs at least one sample");
+        assert!(
+            config.exact_cards <= 16,
+            "exact search is limited to small endgames"
+        );
         Self {
             hand_maker: HandMaker::new(),
-            initial_state: GameState::new(),
-            plays: Vec::with_capacity(52),
+            rng: ChaCha12Rng::seed_from_u64(seed),
+            charge_rng: ChaCha12Rng::seed_from_u64(seed),
+            config,
+            policy: None,
+            experiments: crate::SearchExperiments::default(),
+            history: crate::experimental::BehaviorHistory::default(),
+            last_evaluations: 0,
+            last_belief_ess: 0.0,
+            last_tree_nodes: 0,
+            prior_samples: 0.0,
         }
+    }
+
+    /// Experimental learned advantage prior, in units of additional samples.
+    /// Disabled by default: offline prediction accuracy alone is not evidence
+    /// that blending it into search improves actual games.
+    pub fn with_policy(mut self, policy: PolicyNetwork, prior_samples: f32) -> Self {
+        assert!(prior_samples.is_finite() && prior_samples >= 0.0);
+        self.policy = Some(policy);
+        self.prior_samples = prior_samples;
+        self
+    }
+
+    /// Change the sample budget while preserving observations and random state.
+    pub fn with_samples(mut self, samples: usize) -> Self {
+        assert!(samples > 0);
+        self.config.samples = samples;
+        self
+    }
+
+    /// Sampled money for distinct legal moves. Ordinary search gives every move
+    /// the same deals and rollout streams. Experimental allocation returns only
+    /// surviving moves, which share the additional rounds allocated to them.
+    pub fn evaluate(&mut self, bot: &BotState, state: &GameState) -> Vec<(Card, f32)> {
+        self.search(bot, state).0
+    }
+
+    pub fn last_search_evaluations(&self) -> usize {
+        self.last_evaluations
+    }
+    pub fn last_belief_ess(&self) -> f64 {
+        self.last_belief_ess
+    }
+    pub fn last_tree_nodes(&self) -> usize {
+        self.last_tree_nodes
+    }
+
+    fn search(&mut self, bot: &BotState, state: &GameState) -> (Vec<(Card, f32)>, usize) {
+        self.last_evaluations = 0;
+        self.last_belief_ess = 0.0;
+        self.last_tree_nodes = 0;
+        if self.experiments.changes_play() {
+            return self.experimental_search(bot, state);
+        }
+        let plays: Vec<_> = state
+            .legal_plays(bot.post_pass_hand)
+            .distinct_plays(state.played, state.current_trick)
+            .into_iter()
+            .collect();
+        let mut totals = vec![0.0; plays.len()];
+        let mut moon_totals = vec![0.0; plays.len()];
+        let try_moon = self.config.moon
+            && state.won.can_run(bot.seat)
+            && 52 - state.played.len() > self.config.exact_cards;
+        let start = Instant::now();
+        let mut sampler = self.hand_maker.sampler(bot.void);
+        let mut samples = 0;
+        let mut endgames = crate::endgame::EndgameSolver::new(self.experiments.canonical_endgames);
+        for _ in 0..self.config.samples {
+            if samples > 0
+                && self
+                    .config
+                    .time_limit
+                    .map_or(false, |limit| start.elapsed() >= limit)
+            {
+                break;
+            }
+            let hands = sampler.sample(&mut self.rng);
+            let rollout_seed = self.rng.random();
+            let exact = 52 - state.played.len() <= self.config.exact_cards;
+            for (i, &card) in plays.iter().enumerate() {
+                let event = GameEvent::Play {
+                    seat: bot.seat,
+                    card,
+                };
+                let void = bot.void.on_event(state, &event);
+                let mut game = state.clone();
+                game.apply(&event);
+                let won = if exact {
+                    if self.experiments.cache_endgames {
+                        endgames.solve(&game, &hands)
+                    } else {
+                        solve_endgame(&game, &hands)
+                    }
+                } else {
+                    rollout(
+                        &mut game,
+                        void,
+                        hands,
+                        bot.seat,
+                        None,
+                        self.config.opponent_moon,
+                        &mut ChaCha12Rng::seed_from_u64(rollout_seed),
+                    );
+                    game.won
+                };
+                self.last_evaluations += 1;
+                totals[i] += won.scores(state.charges).money(bot.seat) as f32;
+                if try_moon {
+                    let mut game = state.clone();
+                    game.apply(&event);
+                    rollout(
+                        &mut game,
+                        void,
+                        hands,
+                        bot.seat,
+                        Some(bot.seat),
+                        self.config.opponent_moon,
+                        &mut ChaCha12Rng::seed_from_u64(rollout_seed),
+                    );
+                    self.last_evaluations += 1;
+                    moon_totals[i] += game.scores().money(bot.seat) as f32;
+                }
+            }
+            samples += 1;
+        }
+        // Choose a continuation using its mean across the same hidden deals.
+        // Maximizing separately inside each deal would give the bot information
+        // it does not have and badly overestimate speculative moon attempts.
+        if try_moon {
+            for i in 0..totals.len() {
+                totals[i] = totals[i].max(moon_totals[i]);
+            }
+        }
+        (
+            plays
+                .into_iter()
+                .zip(totals.into_iter().map(|v| v / samples as f32))
+                .collect(),
+            samples,
+        )
+    }
+}
+
+impl Default for NeuralNetworkBot {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
 impl Algorithm for NeuralNetworkBot {
-    fn pass(&mut self, bot_state: &BotState, game_state: &GameState) -> Cards {
-        HeuristicBot.pass(bot_state, game_state)
-    }
-
-    fn charge(&mut self, bot_state: &BotState, game_state: &GameState) -> Cards {
-        HeuristicBot.charge(bot_state, game_state)
-    }
-
-    fn play(&mut self, bot_state: &BotState, game_state: &GameState) -> Card {
-        let legal_plays = game_state.legal_plays(bot_state.post_pass_hand);
-        let distinct_plays =
-            legal_plays.distinct_plays(game_state.played, game_state.current_trick);
-        if distinct_plays.len() == 1 {
-            return choose(bot_state, distinct_plays.max(), legal_plays, distinct_plays);
-        }
-        let mut money_counts = HashMap::new();
-        let mut iters = 0;
-        let now = Instant::now();
-        while now.elapsed().as_millis() < 4500 {
-            iters += 1;
-            let hands = self.hand_maker.make(bot_state.void);
-            let brute_force = ShallowBruteForce::new(hands);
-            for card in distinct_plays {
-                let mut game = game_state.clone();
-                game.apply(&GameEvent::Play {
-                    seat: bot_state.seat,
-                    card,
-                });
-                let scores = brute_force.solve(&mut game);
-                *money_counts.entry(card).or_default() += scores.money(bot_state.seat);
-            }
-        }
-        if log::log_enabled!(log::Level::Debug) {
-            debug!(
-                "{} iterations, {:?}",
-                iters,
-                money_counts
-                    .iter()
-                    .map(|(k, v)| (k, *v / iters as f32))
-                    .collect::<HashMap<_, _>>()
-            );
-        }
-        let mut best_card = Card::TwoClubs;
-        let mut best_money = f32::MIN;
-        for (card, money) in money_counts.into_iter() {
-            if money > best_money {
-                best_money = money;
-                best_card = card;
-            }
-        }
-        choose(bot_state, best_card, legal_plays, distinct_plays)
-    }
-
-    fn on_event(&mut self, _: &BotState, game_state: &GameState, event: &GameEvent) {
-        self.hand_maker.on_event(game_state, event);
-        match event {
-            GameEvent::StartTrick { leader } if self.plays.is_empty() => {
-                self.initial_state = game_state.clone();
-                self.initial_state.next_actor = Some(*leader);
-            }
-            GameEvent::Play { card, .. } => self.plays.push(*card),
-            GameEvent::HandComplete { .. } => self.plays.clear(),
-            _ => {}
-        }
-    }
-}
-
-struct ShallowBruteForce {
-    hands: [Cards; 4],
-}
-
-impl ShallowBruteForce {
-    fn new(hands: [Cards; 4]) -> Self {
-        Self { hands }
-    }
-
-    fn solve(&self, state: &mut GameState) -> ApproximateScores {
-        if state.played.len() >= 48 {
-            while state.played != Cards::ALL {
-                let seat = state.next_actor.unwrap();
-                let card = (self.hands[seat.idx()] - state.played).max();
-                state.apply(&GameEvent::Play { seat, card });
-            }
-            return ApproximateScores::from_won(state.charges, state.won);
-        }
-        let seat = state.next_actor.unwrap();
-        if state.current_trick.is_empty()
-            && state.won.can_run(seat)
-            && can_claim(state, VoidState::new(), seat, self.hands[seat.idx()])
+    fn pass(&mut self, bot: &BotState, state: &GameState) -> Cards {
+        if self.experiments.pass_samples > 0
+            && state.phase.direction() != turbo_hearts_api::PassDirection::Keeper
         {
-            return ApproximateScores::from_won(state.charges, state.won.claim(seat));
+            self.search_pass(bot, state)
+        } else {
+            HeuristicBot.pass(bot, state)
         }
-        if state.current_trick.is_empty() && state.played.len() < 36 {
-            return self.generate_value(state);
-        }
-        let plays = self.generate_policy(state);
-        if plays.len() == 1 {
-            state.apply(&GameEvent::Play {
-                seat,
-                card: plays.max(),
-            });
-            return self.solve(state);
-        }
-        let mut best_scores = ApproximateScores::empty();
-        let mut best_money = f32::MIN;
-        for card in plays {
-            let mut state = state.clone();
-            state.apply(&GameEvent::Play { seat, card });
-            let scores = self.solve(&mut state);
-            let money = scores.money(seat);
-            if money > best_money {
-                best_scores = scores;
-                best_money = money;
-            }
-        }
-        best_scores
     }
 
-    fn generate_policy(&self, game_state: &GameState) -> Cards {
-        let seat = game_state.next_actor.unwrap();
-        let legal = game_state.legal_plays(self.hands[seat.idx()]);
-        let distinct = legal.distinct_plays(game_state.played, game_state.current_trick);
-        if distinct.len() <= 3 {
-            return distinct;
-        }
-        let input = self.model_input(game_state);
-        let model = if game_state.current_trick.is_empty() {
-            Lazy::force(&LEAD_POLICY)
+    fn charge(&mut self, bot: &BotState, state: &GameState) -> Cards {
+        if self.experiments.charge_samples > 0 {
+            self.search_charge(bot, state)
         } else {
-            Lazy::force(&FOLLOW_POLICY)
-        };
-        let output = model.run(input).unwrap();
-        let mut output = output[0].as_slice::<f32>().unwrap().into_iter().cloned();
+            HeuristicBot.charge_with_rng(bot, state, &mut self.charge_rng)
+        }
+    }
 
-        let mut policies = Vec::new();
-        for &suit in &Suit::VALUES {
-            let chargeable = (suit.cards() & Cards::CHARGEABLE).max();
-            let nine = suit.with_rank(Rank::Nine);
-            let high = chargeable.above();
-            let middle = nine.above() - high - chargeable;
-            let low = nine.below();
-
-            let mut cards = (high & legal).into_iter();
-            for _ in 0..high.len() {
-                let value = output.next().unwrap();
-                if let Some(card) = cards.next() {
-                    policies.push((card, value));
-                }
-            }
-            let value = output.next().unwrap();
-            if legal.contains(chargeable) {
-                policies.push((chargeable, value));
-            }
-
-            let mut cards = (middle & legal).into_iter();
-            for _ in 0..middle.len() {
-                let value = output.next().unwrap();
-                if let Some(card) = cards.next() {
-                    policies.push((card, value));
-                }
-            }
-            let value = output.next().unwrap();
-            if legal.contains(nine) {
-                policies.push((nine, value));
-            }
-
-            let mut cards = (low & legal).into_iter();
-            for _ in 0..low.len() {
-                let value = output.next().unwrap();
-                if let Some(card) = cards.next() {
-                    policies.push((card, value));
+    fn play(&mut self, bot: &BotState, state: &GameState) -> Card {
+        let legal = state.legal_plays(bot.post_pass_hand);
+        let distinct = legal.distinct_plays(state.played, state.current_trick);
+        self.last_evaluations = 0;
+        self.last_belief_ess = 0.0;
+        self.last_tree_nodes = 0;
+        if distinct.len() == 1 {
+            return distinct.max();
+        }
+        let (mut values, samples) = self.search(bot, state);
+        if let Some(policy) = &self.policy {
+            if 52 - state.played.len() > self.config.exact_cards {
+                for (card, value) in &mut values {
+                    let prediction = policy.predict(&policy_features(bot, state, *card));
+                    if prediction.is_finite() {
+                        *value += self.prior_samples / samples as f32 * prediction;
+                    }
                 }
             }
         }
-        policies.sort_unstable_by(|p1, p2| {
-            if p1.1 < p2.1 {
-                Ordering::Less
-            } else {
-                Ordering::Greater
-            }
-        });
-        let mut plays = Cards::NONE;
-        while plays.len() < 3 {
-            let card = policies.pop().unwrap().0;
-            plays |= if distinct.contains(card) {
-                card
-            } else {
-                (card.above() & distinct).min()
-            };
-        }
-        plays
+        values
+            .into_iter()
+            .max_by(|a, b| a.1.partial_cmp(&b.1).unwrap())
+            .unwrap()
+            .0
     }
 
-    fn generate_value(&self, game_state: &mut GameState) -> ApproximateScores {
-        let input = self.model_input(game_state);
-        let model = if game_state.current_trick.is_empty() {
-            Lazy::force(&LEAD_VALUE)
-        } else {
-            Lazy::force(&FOLLOW_VALUE)
-        };
-        let output = model.run(input).unwrap();
-        ApproximateScores::from_model(&game_state, output)
-    }
-
-    fn model_input(&self, game_state: &GameState) -> TVec<Tensor> {
-        let seat = game_state.next_actor.unwrap();
-        let mut input = TVec::with_capacity(8);
-        input.push(
-            Array2::from_shape_vec(
-                (1, Encoder::CARDS_LEN),
-                Encoder::new(Encoder::CARDS_LEN)
-                    .cards(seat, game_state.played, self.hands)
-                    .into_inner(),
-            )
-            .unwrap()
-            .into(),
-        );
-        input.push(
-            Array2::from_shape_vec(
-                (1, Encoder::QUEEN_LEN),
-                Encoder::new(Encoder::QUEEN_LEN)
-                    .queen(seat, game_state.won)
-                    .into_inner(),
-            )
-            .unwrap()
-            .into(),
-        );
-        input.push(
-            Array2::from_shape_vec(
-                (1, Encoder::JACK_LEN),
-                Encoder::new(Encoder::JACK_LEN)
-                    .jack(seat, game_state.won)
-                    .into_inner(),
-            )
-            .unwrap()
-            .into(),
-        );
-        input.push(
-            Array2::from_shape_vec(
-                (1, Encoder::TEN_LEN),
-                Encoder::new(Encoder::TEN_LEN)
-                    .ten(seat, game_state.won)
-                    .into_inner(),
-            )
-            .unwrap()
-            .into(),
-        );
-        input.push(
-            Array2::from_shape_vec(
-                (1, Encoder::HEARTS_LEN),
-                Encoder::new(Encoder::HEARTS_LEN)
-                    .hearts(seat, game_state.won)
-                    .into_inner(),
-            )
-            .unwrap()
-            .into(),
-        );
-        input.push(
-            Array2::from_shape_vec(
-                (1, Encoder::CHARGED_LEN),
-                Encoder::new(Encoder::CHARGED_LEN)
-                    .charged(game_state.charges)
-                    .into_inner(),
-            )
-            .unwrap()
-            .into(),
-        );
-        input.push(
-            Array2::from_shape_vec(
-                (1, Encoder::LED_LEN),
-                Encoder::new(Encoder::LED_LEN)
-                    .led(game_state.led_suits)
-                    .into_inner(),
-            )
-            .unwrap()
-            .into(),
-        );
-        if !game_state.current_trick.is_empty() {
-            input.push(
-                Array2::from_shape_vec(
-                    (1, Encoder::TRICK_LEN),
-                    Encoder::new(Encoder::TRICK_LEN)
-                        .trick(seat, game_state.played, game_state.current_trick)
-                        .into_inner(),
-                )
-                .unwrap()
-                .into(),
-            );
+    fn on_event(&mut self, _: &BotState, state: &GameState, event: &GameEvent) {
+        self.hand_maker.on_event(state, event);
+        if self.experiments.opponent_model
+            || self.experiments.conservative_model
+            || self.experiments.belief_strength > 0.0
+        {
+            self.history.on_event(state, event);
         }
-        input
     }
 }
 
-#[derive(Debug)]
-struct ApproximateScores {
-    scores: [f32; 4],
-}
-
-impl ApproximateScores {
-    fn empty() -> Self {
-        Self { scores: [0.0; 4] }
-    }
-
-    fn from_won(charges: ChargeState, won: WonState) -> Self {
-        let scores = won.scores(charges);
-        Self {
-            scores: [
-                scores.score(Seat::North) as f32,
-                scores.score(Seat::East) as f32,
-                scores.score(Seat::South) as f32,
-                scores.score(Seat::West) as f32,
-            ],
-        }
-    }
-
-    fn from_model(state: &GameState, output: TVec<Arc<Tensor>>) -> Self {
-        let seat = state.next_actor.unwrap();
-        let north = (4 - seat.idx()) % 4;
-        let east = (5 - seat.idx()) % 4;
-        let south = (6 - seat.idx()) % 4;
-        let west = 3 - seat.idx();
-
-        let mut hearts = {
-            let hearts = output[3].as_slice::<f32>().unwrap();
-            [hearts[north], hearts[east], hearts[south], hearts[west]]
-        };
-        let mut queen = if let Some(s) = state.won.queen_winner() {
-            let mut queen = [0.0; 4];
-            queen[s.idx()] = 1.0;
-            queen
-        } else {
-            let queen = output[0].as_slice::<f32>().unwrap();
-            [queen[north], queen[east], queen[south], queen[west]]
-        };
-        for i in 0..4 {
-            if hearts[i] >= 0.97 && queen[i] >= 0.9 {
-                hearts[i] *= -1.0;
-                queen[i] *= -1.0;
-            }
-        }
-        let qf = if state.charges.is_charged(Card::QueenSpades) {
-            26.0
-        } else {
-            13.0
-        };
-        let hf = if state.charges.is_charged(Card::AceHearts) {
-            26.0
-        } else {
-            13.0
-        };
-        let mut scores = [
-            qf * queen[0] + hf * hearts[0],
-            qf * queen[1] + hf * hearts[1],
-            qf * queen[2] + hf * hearts[2],
-            qf * queen[3] + hf * hearts[3],
-        ];
-        let jf = if state.charges.is_charged(Card::JackDiamonds) {
-            -20.0
-        } else {
-            -10.0
-        };
-        if let Some(s) = state.won.jack_winner() {
-            scores[s.idx()] += jf;
-        } else {
-            let jack = output[1].as_slice::<f32>().unwrap();
-            scores[0] += jf * jack[north];
-            scores[1] += jf * jack[east];
-            scores[2] += jf * jack[south];
-            scores[3] += jf * jack[west];
-        };
-        let tf = if state.charges.is_charged(Card::TenClubs) {
-            3.0
-        } else {
-            1.0
-        };
-        if let Some(s) = state.won.ten_winner() {
-            scores[s.idx()] *= 1.0 + tf;
-        } else {
-            let ten = output[2].as_slice::<f32>().unwrap();
-            scores[0] *= 1.0 + tf * ten[north];
-            scores[1] *= 1.0 + tf * ten[east];
-            scores[2] *= 1.0 + tf * ten[south];
-            scores[3] *= 1.0 + tf * ten[west];
-        };
-        Self { scores }
-    }
-
-    fn money(&self, seat: Seat) -> f32 {
-        self.scores[0] + self.scores[1] + self.scores[2] + self.scores[3]
-            - 4.0 * self.scores[seat.idx()]
-    }
-}
-
-fn choose(bot_state: &BotState, card: Card, legal_plays: Cards, distinct_plays: Cards) -> Card {
-    let other_plays = distinct_plays.below(card);
-    let mut cards = if other_plays.is_empty() {
-        legal_plays.below(card) | card
+pub(crate) fn rollout<R: RngExt + ?Sized>(
+    state: &mut GameState,
+    mut void: VoidState,
+    hands: [Cards; 4],
+    root_seat: Seat,
+    moon_seat: Option<Seat>,
+    model_opponent_moon: bool,
+    rng: &mut R,
+) {
+    let opponent_moon = if model_opponent_moon && rng.random_bool(0.5) {
+        Seat::VALUES.iter().copied().find(|s| {
+            *s != root_seat
+                && state.won.can_run(*s)
+                && (state.won.hearts(*s) >= 3 || state.won.queen(*s))
+        })
     } else {
-        legal_plays.below(card).above(other_plays.max()) | card
+        None
     };
-    let passed = cards & (bot_state.post_pass_hand - bot_state.pre_pass_hand);
-    if !passed.is_empty() {
-        cards = passed;
+    while state.played != Cards::ALL {
+        if state.current_trick.is_empty() && state.played.contains_all(Cards::SCORING) {
+            break;
+        }
+        let seat = state.next_actor.unwrap();
+        let bot = BotState::with_void(seat, hands[seat.idx()], void);
+        let card = if (moon_seat == Some(seat) || opponent_moon == Some(seat))
+            && state.won.can_run(seat)
+        {
+            GottaTryBot.play_with_rng(&bot, state, rng)
+        } else {
+            HeuristicBot.play_with_rng(&bot, state, rng)
+        };
+        let event = GameEvent::Play { seat, card };
+        void = void.on_event(state, &event);
+        state.apply(&event);
     }
-    let index = rand::thread_rng().gen_range(0..cards.len());
-    cards.into_iter().nth(index).unwrap()
+}
+
+// With a small number of cards per player a direct max-n search is cheaper than
+// constructing the legacy solver's 32,768-entry suit transposition tables.
+pub(crate) fn solve_endgame(state: &GameState, hands: &[Cards; 4]) -> WonState {
+    if state.played == Cards::ALL
+        || (state.current_trick.is_empty() && state.played.contains_all(Cards::SCORING))
+    {
+        return state.won;
+    }
+    let seat = state.next_actor.unwrap();
+    let mut best = state.won;
+    let mut best_money = i16::MIN;
+    for card in state
+        .legal_plays(hands[seat.idx()])
+        .distinct_plays(state.played, state.current_trick)
+    {
+        let mut child = state.clone();
+        child.apply(&GameEvent::Play { seat, card });
+        let won = solve_endgame(&child, hands);
+        let money = won.scores(state.charges).money(seat);
+        if money > best_money {
+            best = won;
+            best_money = money;
+        }
+    }
+    best
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use turbo_hearts_api::{GamePhase, PassDirection, Suit, Suits, Trick};
+
+    #[test]
+    fn production_constructor_enables_only_confirmed_extensions() {
+        let bot = NeuralNetworkBot::with_seed(42);
+        assert!(bot.experiments.conservative_model && bot.experiments.dynamic_shooters);
+        assert_eq!(bot.experiments.style_confidence, 0.6);
+        assert!(
+            !bot.experiments.opponent_model
+                && !bot.experiments.allocate
+                && !bot.experiments.moon_consensus
+        );
+        assert_eq!(bot.experiments.moon_defense, 0.0);
+        assert_eq!(bot.experiments.belief_strength, 0.0);
+        assert_eq!(bot.experiments.pass_samples, 0);
+        assert_eq!(bot.experiments.charge_samples, 0);
+        assert_eq!(bot.experiments.tree_depth, 0);
+        assert!(!bot.experiments.cache_endgames);
+        assert_eq!(bot.config.samples, 128);
+        assert_eq!(bot.config.exact_cards, 12);
+        assert!(bot.policy.is_none());
+    }
+
+    fn moon_position(can_finish: bool) -> ([Cards; 4], GameState) {
+        // East has led KS. North can dump QS or win AS and keep the queen.
+        // AH guarantees the remaining tricks; 2H guarantees a failed moon.
+        let remaining: [Cards; 4] = if can_finish {
+            ["AQS AH", "KS KH 2C", "2S QH 3C", "3S JH 4C"]
+        } else {
+            ["AQS 2H", "K2S AH", "3S KH 3C", "4S QH 4C"]
+        }
+        .map(|s| s.parse().unwrap());
+        let all_remaining = remaining.iter().fold(Cards::NONE, |all, h| all | *h);
+        let previous = Cards::ALL - all_remaining;
+        let mut cards = previous.into_iter();
+        let hands =
+            std::array::from_fn(|i| remaining[i] | cards.by_ref().take(10).collect::<Cards>());
+        let mut state = GameState::new();
+        state.phase = GamePhase::PlayLeft;
+        state.current_trick = Trick::new()
+            .push(Card::KingSpades)
+            .push((remaining[2] & Cards::SPADES).max())
+            .push((remaining[3] & Cards::SPADES).max());
+        state.played = previous | state.current_trick.cards();
+        state.next_actor = Some(Seat::North);
+        state.won = WonState::new()
+            .win(Seat::North, previous & Cards::HEARTS)
+            .win(Seat::East, Cards::JACK_DIAMONDS | Card::TenClubs);
+        state.led_suits = Suits::NONE | Suit::Clubs | Suit::Diamonds | Suit::Spades | Suit::Hearts;
+        (hands, state)
+    }
+
+    fn configured(hands: [Cards; 4], moon: bool) -> NeuralNetworkBot {
+        let mut bot = NeuralNetworkBot::with_config(
+            SearchConfig {
+                samples: 32,
+                exact_cards: 0,
+                moon,
+                opponent_moon: false,
+                time_limit: None,
+                ..SearchConfig::default()
+            },
+            123,
+        );
+        bot.hand_maker.on_event(
+            &GameState::new(),
+            &GameEvent::Deal {
+                north: hands[0],
+                east: hands[1],
+                south: hands[2],
+                west: hands[3],
+                pass: PassDirection::Left,
+            },
+        );
+        bot
+    }
+
+    #[test]
+    fn endgames_match_the_existing_full_solver() {
+        use rand::seq::SliceRandom;
+        let mut rng = ChaCha12Rng::seed_from_u64(82);
+        for deal in 0..12 {
+            let mut deck: Vec<_> = Cards::ALL.into_iter().collect();
+            deck.shuffle(&mut rng);
+            let hands: [Cards; 4] =
+                std::array::from_fn(|i| deck[13 * i..13 * (i + 1)].iter().copied().collect());
+            let mut state = GameState::new();
+            state.phase = GamePhase::PlayLeft;
+            if deal % 2 == 0 {
+                for seat in Seat::VALUES {
+                    state.charges = state
+                        .charges
+                        .charge(seat, hands[seat.idx()] & Cards::CHARGEABLE);
+                }
+            }
+            state.next_actor = Seat::VALUES
+                .iter()
+                .copied()
+                .find(|s| hands[s.idx()].contains(Card::TwoClubs));
+            let mut void = VoidState::new();
+            while state.played.len() < if deal % 3 == 0 { 36 } else { 40 } {
+                let seat = state.next_actor.unwrap();
+                let legal = state.legal_plays(hands[seat.idx()]);
+                let card = legal
+                    .into_iter()
+                    .nth(rng.random_range(0..legal.len()))
+                    .unwrap();
+                let event = GameEvent::Play { seat, card };
+                void = void.on_event(&state, &event);
+                state.apply(&event);
+            }
+            let expected = crate::BruteForce::new(hands).solve(&mut state.clone());
+            assert_eq!(solve_endgame(&state, &hands), expected);
+            let mut cached = crate::endgame::EndgameSolver::default();
+            assert_eq!(cached.solve(&state, &hands), expected);
+            assert_eq!(cached.solve(&state, &hands), expected);
+            let mut canonical = crate::endgame::EndgameSolver::new(true);
+            assert_eq!(canonical.solve(&state, &hands), expected);
+            // Share the cache across hidden deals as real sampled search does.
+            let known: [Cards; 4] = std::array::from_fn(|i| {
+                if i == 0 {
+                    hands[i]
+                } else {
+                    hands[i] & (state.played | state.charges.all_charges())
+                }
+            });
+            let mut maker = HandMaker::new();
+            maker.on_event(
+                &GameState::new(),
+                &GameEvent::Deal {
+                    north: known[0],
+                    east: known[1],
+                    south: known[2],
+                    west: known[3],
+                    pass: PassDirection::Left,
+                },
+            );
+            let mut sampler = maker.sampler(void);
+            for _ in 0..16 {
+                let sampled = sampler.sample(&mut rng);
+                assert_eq!(
+                    canonical.solve(&state, &sampled),
+                    solve_endgame(&state, &sampled)
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn shoots_a_certain_moon_but_dumps_the_queen_when_it_cannot_finish() {
+        for (can_finish, expected) in [(true, Card::AceSpades), (false, Card::QueenSpades)] {
+            let (hands, state) = moon_position(can_finish);
+            let bot_state = BotState::new(Seat::North, hands[0]);
+            assert!(state.won.can_run(Seat::North));
+            assert_eq!(configured(hands, true).play(&bot_state, &state), expected);
+        }
+    }
+
+    #[test]
+    fn stops_considering_moons_after_an_opponent_wins_a_heart() {
+        let (hands, mut state) = moon_position(true);
+        let hearts = state.played & Cards::HEARTS;
+        state.won = WonState::new()
+            .win(Seat::North, hearts - Card::TwoHearts)
+            .win(Seat::East, Card::TwoHearts.into());
+        let bot_state = BotState::new(Seat::North, hands[0]);
+        assert!(!state.won.can_run(Seat::North));
+        assert_eq!(
+            configured(hands, true).evaluate(&bot_state, &state),
+            configured(hands, false).evaluate(&bot_state, &state)
+        );
+    }
 }

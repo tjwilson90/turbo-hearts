@@ -1,6 +1,6 @@
 use once_cell::sync::Lazy;
 use serde::Deserialize;
-use std::{fs::File, io::BufReader, path::Path};
+use std::{collections::BTreeMap, fs::File, io::BufReader, path::Path};
 
 pub static CONFIG: Lazy<Config> = Lazy::new(|| {
     Config::load(
@@ -17,6 +17,8 @@ pub struct Config {
     pub fusion: OAuthCredentials,
     pub github: OAuthCredentials,
     pub google: OAuthCredentials,
+    #[serde(default)]
+    pub oidc: BTreeMap<String, crate::auth_endpoints::oidc::ProviderConfig>,
     pub port: u16,
 }
 

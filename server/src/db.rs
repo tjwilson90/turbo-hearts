@@ -3,7 +3,7 @@ use r2d2::{CustomizeConnection, Pool};
 use r2d2_sqlite::SqliteConnectionManager;
 use rusqlite::{
     types::{FromSqlError, ToSqlOutput, Value, ValueRef},
-    Connection, DropBehavior, Row, ToSql, Transaction, TransactionBehavior, NO_PARAMS,
+    Connection, DropBehavior, Row, ToSql, Transaction, TransactionBehavior,
 };
 use serde::{de::DeserializeOwned, Serialize};
 use std::{fmt::Debug, path::Path, str::FromStr, time::Duration};
@@ -24,7 +24,7 @@ impl Database {
             .build(manager)
             .unwrap();
         let conn = pool.get().unwrap();
-        let version = conn.query_row("PRAGMA user_version", NO_PARAMS, |row| {
+        let version = conn.query_row("PRAGMA user_version", [], |row| {
             Ok(row.get::<_, i64>(0)? as usize)
         })?;
         if version < SQL.len() {
@@ -142,7 +142,7 @@ impl<'stmt> GetStr for Row<'stmt> {
         T: FromStr + ToSqlStr,
         <T as FromStr>::Err: Debug,
     {
-        let value = self.get_raw_checked(idx)?;
+        let value = self.get_ref(idx)?;
         Ok(value.as_str()?.parse().unwrap())
     }
 
@@ -151,7 +151,7 @@ impl<'stmt> GetStr for Row<'stmt> {
         T: FromStr + ToSqlStr,
         <T as FromStr>::Err: Debug,
     {
-        match self.get_raw_checked(idx)? {
+        match self.get_ref(idx)? {
             ValueRef::Null => Ok(None),
             ValueRef::Text(t) => {
                 let str = std::str::from_utf8(t).unwrap();
@@ -209,7 +209,7 @@ impl<'stmt> GetJson for Row<'stmt> {
     where
         T: DeserializeOwned + ToSqlJson,
     {
-        let value = self.get_raw_checked(idx)?;
+        let value = self.get_ref(idx)?;
         Ok(serde_json::from_str(value.as_str()?).unwrap())
     }
 
@@ -217,7 +217,7 @@ impl<'stmt> GetJson for Row<'stmt> {
     where
         T: DeserializeOwned + ToSqlJson,
     {
-        match self.get_raw_checked(idx)? {
+        match self.get_ref(idx)? {
             ValueRef::Null => Ok(None),
             ValueRef::Text(t) => {
                 let str = std::str::from_utf8(t).unwrap();

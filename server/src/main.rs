@@ -1,4 +1,3 @@
-use crate::CardsError;
 use http::header;
 use reqwest::Client;
 use tokio::{time, time::Duration};
@@ -73,6 +72,10 @@ fn start_background_pings(lobby: &'static Lobby, games: &'static Games) {
 async fn main() -> Result<(), CardsError> {
     env_logger::init();
 
+    let oidc = std::sync::Arc::new(
+        auth_endpoints::oidc::Oidc::new(&CONFIG.oidc, &CONFIG.external_uri)
+            .map_err(CardsError::Configuration)?,
+    );
     let db = Database::new(&CONFIG.db_path)?;
     let db = &*Box::leak(Box::new(db));
 
@@ -103,7 +106,7 @@ async fn main() -> Result<(), CardsError> {
         .or(asset_endpoints::router())
         .or(game_endpoints::router(lobby, games, user_id.clone()))
         .or(lobby_endpoints::router(lobby, games, user_id))
-        .or(auth_endpoints::router(users, http_client))
+        .or(auth_endpoints::router(users, http_client, oidc))
         .or(user_endpoints::router(users))
         .or(summary::router(db))
         .with(

@@ -1,6 +1,6 @@
 use crate::{Cards, GameEvent, PassDirection, Seat};
 use log::info;
-use rand::{seq::SliceRandom, SeedableRng};
+use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha20Rng;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -57,7 +57,7 @@ impl HashedSeed {
         let mut rng = ChaCha20Rng::from_seed(self.seed);
         rng.set_stream(pass as u64);
         let mut deck = Cards::ALL.into_iter().collect::<Vec<_>>();
-        deck.shuffle(&mut rng);
+        shuffle_deal(&mut deck, &mut rng);
         let north = deck[0..13].iter().cloned().collect();
         let east = deck[13..26].iter().cloned().collect();
         let south = deck[26..39].iter().cloned().collect();
@@ -81,7 +81,7 @@ impl HashedSeed {
         let cards =
             Cards::ALL - partial_hands[0] - partial_hands[1] - partial_hands[2] - partial_hands[3];
         let mut passes: Vec<_> = cards.into_iter().collect();
-        passes.shuffle(&mut rng);
+        shuffle_deal(&mut passes, &mut rng);
         let mut passes = passes.into_iter();
         [
             GameEvent::RecvPass {
@@ -110,6 +110,23 @@ impl HashedSeed {
                 cards: passes.collect(),
             },
         ]
+    }
+}
+
+/// The historical deal format uses rand 0.8's Fisher–Yates shuffle and u32
+/// rejection sampler. Keep this algorithm stable across rand upgrades so stored
+/// seeds reproduce the same games, including keeper passes, on every platform.
+fn shuffle_deal<T>(cards: &mut [T], rng: &mut ChaCha20Rng) {
+    for i in (1..cards.len()).rev() {
+        let range = (i + 1) as u32;
+        let zone = (range << range.leading_zeros()).wrapping_sub(1);
+        let index = loop {
+            let product = u64::from(rng.next_u32()) * u64::from(range);
+            if product as u32 <= zone {
+                break (product >> 32) as usize;
+            }
+        };
+        cards.swap(i, index);
     }
 }
 

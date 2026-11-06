@@ -8,6 +8,8 @@ use warp::{reject::Reject, Rejection, Reply};
 
 #[derive(Debug, Error)]
 pub enum CardsError {
+    #[error("invalid configuration: {0}")]
+    Configuration(String),
     #[error("game {0} has already started")]
     GameHasStarted(GameId),
     #[error("Game {0} hasn't completed yet")]
@@ -55,9 +57,15 @@ pub async fn handle_rejection(err: Rejection) -> Result<impl Reply, Infallible> 
             .header(header::LOCATION, format!("{}/auth", &CONFIG.external_uri))
             .body(String::new())
             .unwrap()
+    } else if let Some(error) = err.find::<crate::auth_endpoints::oidc::LoginError>() {
+        Response::builder()
+            .status(error.status())
+            .header(header::CACHE_CONTROL, "no-store")
+            .body(error.to_string())
+            .unwrap()
     } else if let Some(error) = err.find::<CardsError>() {
         let status = match error {
-            CardsError::Serde { .. } | CardsError::Sqlite { .. } => {
+            CardsError::Configuration(_) | CardsError::Serde { .. } | CardsError::Sqlite { .. } => {
                 StatusCode::INTERNAL_SERVER_ERROR
             }
             CardsError::UnknownGame { .. } => StatusCode::NOT_FOUND,

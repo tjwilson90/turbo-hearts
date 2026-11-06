@@ -124,7 +124,7 @@ impl Users {
                 tx.prepare_cached("SELECT name, realm, external_id FROM user WHERE user_id = ?")?;
             for id in &ids {
                 let user = stmt
-                    .query_row(&[id.sql()], |row| {
+                    .query_row([id.sql()], |row| {
                         Ok(User {
                             id: *id,
                             name: row.get_unwrap::<_, String>(0),

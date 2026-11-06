@@ -7,3 +7,6 @@ target/
 assets/game/
 assets/lobby/
 *.log
+.venv/
+__pycache__/
+data/
