@@ -5,7 +5,9 @@ use crate::{policy_features, DuckBot, GottaTryBot, HeuristicBot, NeuralNetworkBo
 use rand::{RngExt, SeedableRng};
 use rand_chacha::ChaCha12Rng;
 use std::{collections::HashMap, time::Instant};
-use turbo_hearts_api::{BotState, Card, Cards, GameEvent, GameState, Seat, VoidState, WonState};
+use turbo_hearts_api::{
+    BotState, Card, Cards, GameEvent, GameState, Rank, Seat, Suit, VoidState, WonState,
+};
 
 /// Search extensions. `default()` disables all extensions for frozen-baseline
 /// experiments; `production()` selects the subset confirmed in fresh matches.
@@ -25,6 +27,31 @@ pub struct SearchExperiments {
     pub moon_consensus: bool,
     /// Reassess emerging opponent moon threats during a continuation.
     pub dynamic_shooters: bool,
+    /// Compare a separate own continuation that preserves and uses moon stoppers.
+    pub defensive_plan: bool,
+    /// Recognize provable claims at trick boundaries during continuations.
+    pub claim_rollouts: bool,
+    /// Allow the fallback shooter mixture after the first captured heart.
+    pub early_shooters: bool,
+    /// Maximum modeled money sacrificed to retain a supported master heart.
+    pub stopper_margin: f32,
+    /// Fraction of opponent continuations sampled from the fitted human model.
+    pub human_rollouts: f64,
+    /// Use the successful-human model for the fitted fraction of continuations.
+    pub skilled_model: bool,
+    /// Use the direct successful-human conditional move model.
+    pub action_model: bool,
+    /// Treat the fitted human policy as a fallback: retain an inferred duck or
+    /// shooter style, including sampled early shooting evidence.
+    pub human_model_fallback: bool,
+    /// Tempered first-opportunity human charging likelihood, all four cards.
+    pub charge_belief_strength: f64,
+    /// Soft early shooting evidence from declining safe high-card disposal.
+    pub early_intent: bool,
+    /// Add an own continuation which distributes hearts and removes nines.
+    pub disruptive_plan: bool,
+    /// Compare a separate own continuation from the successful-human move model.
+    pub learned_plan: bool,
     pub cache_endgames: bool,
     pub canonical_endgames: bool,
     /// Power applied to the behavioral likelihood; zero keeps uniform deals.
@@ -48,6 +75,18 @@ impl Default for SearchExperiments {
             moon_defense: 0.0,
             moon_consensus: false,
             dynamic_shooters: false,
+            defensive_plan: false,
+            claim_rollouts: false,
+            early_shooters: false,
+            stopper_margin: 0.0,
+            human_rollouts: 0.0,
+            skilled_model: false,
+            action_model: false,
+            human_model_fallback: false,
+            charge_belief_strength: 0.0,
+            early_intent: false,
+            disruptive_plan: false,
+            learned_plan: false,
             cache_endgames: false,
             canonical_endgames: false,
             belief_strength: 0.0,
@@ -61,8 +100,26 @@ impl Default for SearchExperiments {
 }
 
 impl SearchExperiments {
-    /// Confirmed continuation model, with all speculative search features off.
+    /// Default play settings selected by human-focused evaluations.
     pub fn production() -> Self {
+        Self {
+            human_rollouts: 1.0,
+            skilled_model: true,
+            human_model_fallback: true,
+            ..Self::round_four()
+        }
+    }
+
+    /// Frozen supported-stopper policy, before successful-human modeling.
+    pub fn round_four() -> Self {
+        Self {
+            stopper_margin: 8.0,
+            ..Self::round_three()
+        }
+    }
+
+    /// Frozen November round-three baseline for reproducible comparisons.
+    pub fn round_three() -> Self {
         Self {
             conservative_model: true,
             style_confidence: 0.6,
@@ -77,6 +134,14 @@ impl SearchExperiments {
             || self.moon_defense > 0.0
             || self.moon_consensus
             || self.dynamic_shooters
+            || self.defensive_plan
+            || self.claim_rollouts
+            || self.early_shooters
+            || self.human_rollouts > 0.0
+            || self.charge_belief_strength > 0.0
+            || self.early_intent
+            || self.disruptive_plan
+            || self.learned_plan
             || self.belief_strength > 0.0
             || self.tree_depth > 0
             || self.allocate
@@ -107,6 +172,24 @@ impl Default for BehaviorHistory {
 }
 
 impl BehaviorHistory {
+    fn early_runner_probability(&self, hands: [Cards; 4], seat: Seat) -> f64 {
+        let mut evidence = 0.0;
+        let mut opportunities = 0;
+        for obs in self.plays.iter().filter(|o| o.seat == seat) {
+            let bot = BotState::with_void(seat, hands[seat.idx()], obs.void);
+            if let Some(log_ratio) = control_signal(&bot, &obs.state, obs.card) {
+                evidence += log_ratio;
+                opportunities += 1;
+            }
+        }
+        if opportunities == 0 {
+            return 0.0;
+        }
+        // Heuristic likelihood, not a fitted probability of human intent.
+        // Temper correlated observations and retain uncertainty in either direction.
+        let log_odds = (0.1_f64 / 0.9).ln() + 0.5 * evidence;
+        (1.0 / (1.0 + (-log_odds).exp())).min(0.75)
+    }
     fn could_adapt(&self, root: Seat) -> bool {
         Seat::VALUES
             .iter()
@@ -166,6 +249,48 @@ impl BehaviorHistory {
     }
 }
 
+/// Compare low-preserving-control and high-unloading-card rank distributions
+/// only at early, non-forced follow-suit opportunities with a legal K/A.
+fn control_signal(bot: &BotState, state: &GameState, played: Card) -> Option<f64> {
+    let trick = state.current_trick;
+    if trick.is_empty()
+        || state.played.len() > 24
+        || !state.won.can_run(bot.seat)
+        || trick.cards().contains_any(Cards::POINTS | Card::TenClubs)
+        || trick.suit() == Suit::Hearts
+        || trick.cards().contains(trick.suit().with_rank(Rank::Nine))
+    {
+        return None;
+    }
+    let legal = state.legal_plays(bot.post_pass_hand);
+    if legal.len() < 2
+        || !trick.suit().cards().contains_all(legal)
+        || legal.max().rank() < Rank::King
+        || legal.min().rank() >= Rank::King
+    {
+        return None;
+    }
+    let safe = trick.cards().contains(Card::TwoClubs)
+        || trick.len() == 3
+        || (trick.suit() == Suit::Spades
+            && state.charges.is_charged(Card::QueenSpades)
+            && !state.led_suits.contains(Suit::Spades));
+    if !safe {
+        return None;
+    }
+    let cards: Vec<_> = legal.into_iter().collect();
+    let index = cards.iter().position(|&c| c == played)?;
+    // Cards iterate from high to low. Normalize both distributions over the
+    // actor's legal alternatives; forced lows supply no evidence.
+    let low: Vec<_> = (0..cards.len())
+        .map(|i| (2.0 * i as f64 / (cards.len() - 1) as f64).exp())
+        .collect();
+    let high: Vec<_> = low.iter().rev().copied().collect();
+    let probability =
+        |w: &[f64]| 0.25 / cards.len() as f64 + 0.75 * w[index] / w.iter().sum::<f64>();
+    Some((probability(&low) / probability(&high)).ln())
+}
+
 fn posterior_with_prior(logs: [f64; 3], prior: [f64; 3]) -> ([f64; 3], f64) {
     let values: [f64; 3] = std::array::from_fn(|i| prior[i].ln() + 0.5 * logs[i]);
     let max = values.iter().copied().fold(f64::NEG_INFINITY, f64::max);
@@ -194,16 +319,26 @@ struct World {
     hands: [Cards; 4],
     styles: [[f64; 3]; 4],
     log_weight: f64,
+    charge_log_weight: f64,
+    runners: [f64; 4],
 }
 
 impl NeuralNetworkBot {
-    /// Select experiments before the first Deal event so behavioral inference
-    /// receives a complete within-hand observation history.
+    /// Select experiments before replaying game history, including Sit, so
+    /// inference receives public player types and the complete hand history.
     pub fn with_experiments(mut self, settings: SearchExperiments) -> Self {
+        assert!(
+            settings.charge_belief_strength.is_finite()
+                && (0.0..=1.0).contains(&settings.charge_belief_strength)
+        );
         assert!(
             settings.belief_strength.is_finite() && (0.0..=1.0).contains(&settings.belief_strength)
         );
         assert!(settings.tree_depth <= 4);
+        assert!(
+            settings.human_rollouts.is_finite() && (0.0..=1.0).contains(&settings.human_rollouts)
+        );
+        assert!(settings.stopper_margin.is_finite() && settings.stopper_margin >= 0.0);
         assert!(settings.moon_defense.is_finite() && (0.0..=1.0).contains(&settings.moon_defense));
         assert!(
             settings.style_confidence.is_finite()
@@ -227,9 +362,13 @@ impl NeuralNetworkBot {
         let mut sampler = self.hand_maker.sampler(bot.void);
         let conservative = self.experiments.conservative_model;
         let exact = 52 - state.played.len() <= self.config.exact_cards;
+        let charge_beliefs = self.experiments.charge_belief_strength > 0.0
+            && self.charge_history.has_evidence(bot.seat);
         let infer = self.experiments.opponent_model
             || (conservative && !exact && self.history.could_adapt(bot.seat))
-            || self.experiments.belief_strength > 0.0;
+            || self.experiments.belief_strength > 0.0
+            || charge_beliefs
+            || (self.experiments.early_intent && !self.history.plays.is_empty());
         let mut inference_rng = self.rng.clone();
         let mut pool = Vec::new();
         if infer {
@@ -249,6 +388,18 @@ impl NeuralNetworkBot {
                 });
                 pool.push(World {
                     hands,
+                    charge_log_weight: if charge_beliefs {
+                        self.charge_history.log_likelihood(hands, bot.seat)
+                    } else {
+                        0.0
+                    },
+                    runners: Seat::VALUES.map(|s| {
+                        if self.experiments.early_intent && s != bot.seat {
+                            self.history.early_runner_probability(hands, s)
+                        } else {
+                            0.0
+                        }
+                    }),
                     styles: results.map(|r| r.0),
                     log_weight: results
                         .iter()
@@ -259,23 +410,40 @@ impl NeuralNetworkBot {
                 });
             }
         }
+        let log_weight = |w: &World| {
+            w.log_weight * self.experiments.belief_strength
+                + w.charge_log_weight * self.experiments.charge_belief_strength
+        };
         let max_log = pool
             .iter()
-            .map(|w| w.log_weight)
+            .map(&log_weight)
             .fold(f64::NEG_INFINITY, f64::max);
         let weights: Vec<_> = pool
             .iter()
-            .map(|w| ((w.log_weight - max_log) * self.experiments.belief_strength).exp())
+            .map(|w| (log_weight(w) - max_log).exp())
             .collect();
         if !weights.is_empty() {
             let sum: f64 = weights.iter().sum();
             self.last_belief_ess = sum * sum / weights.iter().map(|w| w * w).sum::<f64>();
         }
         let mut global_styles = [[0.0; 3]; 4];
-        for world in &pool {
+        let mut runner_probabilities = [0.0; 4];
+        let weight_sum: f64 = weights.iter().sum();
+        for (index, world) in pool.iter().enumerate() {
+            let weight = if charge_beliefs {
+                weights[index] / weight_sum
+            } else {
+                1.0 / pool.len() as f64
+            };
             for s in 0..4 {
+                runner_probabilities[s] += weight * world.runners[s];
                 for p in 0..3 {
-                    global_styles[s][p] += world.styles[s][p] / pool.len() as f64;
+                    // Retain baseline arithmetic/random streams when disabled.
+                    global_styles[s][p] += if charge_beliefs {
+                        weight * world.styles[s][p]
+                    } else {
+                        world.styles[s][p] / pool.len() as f64
+                    };
                 }
             }
         }
@@ -307,7 +475,16 @@ impl NeuralNetworkBot {
             }
         });
         let moon = self.config.moon && state.won.can_run(bot.seat) && !exact;
-        let mut totals = vec![[0.0; 2]; plays.len()];
+        let defense = (self.experiments.defensive_plan
+            || self.experiments.disruptive_plan
+            || self.experiments.learned_plan)
+            && !exact;
+        let modes: Vec<usize> = [0, 1, 2]
+            .iter()
+            .copied()
+            .filter(|m| *m == 0 || (*m == 1 && moon) || (*m == 2 && defense))
+            .collect();
+        let mut totals = vec![[0.0; 3]; plays.len()];
         let mut half_differences = vec![[0.0; 2]; plays.len()];
         let mut counts = vec![0usize; plays.len()];
         let mut active: Vec<usize> = (0..plays.len()).collect();
@@ -326,7 +503,12 @@ impl NeuralNetworkBot {
             {
                 break;
             }
-            let (hands, style_prob) = if conservative {
+            let (hands, style_prob) = if charge_beliefs {
+                (
+                    pool[choose_weighted(&weights, &mut self.rng)].hands,
+                    global_styles,
+                )
+            } else if conservative {
                 (sampler.sample(&mut self.rng), global_styles)
             } else if infer {
                 let world = &pool[choose_weighted(&weights, &mut self.rng)];
@@ -342,7 +524,7 @@ impl NeuralNetworkBot {
                 (sampler.sample(&mut self.rng), [[0.6, 0.2, 0.2]; 4])
             };
             let seed: u64 = self.rng.random();
-            let styles = if conservative {
+            let mut styles = if conservative {
                 Some(conservative_styles)
             } else if self.experiments.opponent_model {
                 let mut rng = ChaCha12Rng::seed_from_u64(seed ^ 0x5354594c45);
@@ -350,6 +532,45 @@ impl NeuralNetworkBot {
             } else {
                 None
             };
+            if self.experiments.early_intent {
+                let mut intent_rng = ChaCha12Rng::seed_from_u64(seed ^ 0x494e54454e54);
+                let mut selected = styles.unwrap_or([3; 4]);
+                for seat in Seat::VALUES {
+                    if seat != bot.seat
+                        // When adapting a human-policy fallback, scope the
+                        // extra evidence to the same public human seats.
+                        && (!self.experiments.human_model_fallback || self.human_seats[seat.idx()])
+                        && selected[seat.idx()] == 3
+                        && state.won.can_run(seat)
+                        && runner_probabilities[seat.idx()] > 0.0
+                        && intent_rng.random_bool(runner_probabilities[seat.idx()])
+                    {
+                        selected[seat.idx()] = 2;
+                    }
+                }
+                styles = Some(selected);
+            }
+            if self.experiments.human_rollouts > 0.0 {
+                let mut human_rng = ChaCha12Rng::seed_from_u64(seed ^ 0x48554d414e);
+                let mut selected = styles.unwrap_or([3; 4]);
+                for seat in Seat::VALUES {
+                    if seat != bot.seat
+                        && (!self.experiments.human_model_fallback || selected[seat.idx()] == 3)
+                        && (!(self.experiments.skilled_model || self.experiments.action_model)
+                            || self.human_seats[seat.idx()])
+                        && human_rng.random_bool(self.experiments.human_rollouts)
+                    {
+                        selected[seat.idx()] = if self.experiments.action_model {
+                            6
+                        } else if self.experiments.skilled_model {
+                            5
+                        } else {
+                            4
+                        };
+                    }
+                }
+                styles = Some(selected);
+            }
             let mut defense_rng = ChaCha12Rng::seed_from_u64(seed ^ 0x444546454e44);
             let defenders = std::array::from_fn(|s| {
                 self.experiments.moon_defense > 0.0
@@ -357,7 +578,7 @@ impl NeuralNetworkBot {
                     && defense_rng.random_bool(self.experiments.moon_defense)
             });
             for &i in &active {
-                for mode in 0..=moon as usize {
+                for &mode in &modes {
                     let mut game = state.clone();
                     let event = GameEvent::Play {
                         seat: bot.seat,
@@ -382,6 +603,11 @@ impl NeuralNetworkBot {
                             styles,
                             defenders,
                             self.experiments.dynamic_shooters,
+                            mode == 2,
+                            self.experiments.disruptive_plan,
+                            self.experiments.learned_plan,
+                            self.experiments.claim_rollouts,
+                            self.experiments.early_shooters,
                             self.experiments.tree_depth,
                             if self.experiments.tree_depth > 0 {
                                 vec![plays[i]]
@@ -394,7 +620,9 @@ impl NeuralNetworkBot {
                     };
                     let value = won.scores(state.charges).money(bot.seat) as f64;
                     totals[i][mode] += value;
-                    half_differences[i][rounds % 2] += if mode == 0 { -value } else { value };
+                    if mode < 2 {
+                        half_differences[i][rounds % 2] += if mode == 0 { -value } else { value };
+                    }
                     self.last_evaluations += 1;
                 }
                 counts[i] += 1;
@@ -406,7 +634,7 @@ impl NeuralNetworkBot {
                 let mut values: Vec<_> = active
                     .iter()
                     .map(|&i| {
-                        let mean = if moon
+                        let mut mean = if moon
                             && (!self.experiments.moon_consensus
                                 || agrees_to_shoot(half_differences[i], counts[i]))
                         {
@@ -414,6 +642,9 @@ impl NeuralNetworkBot {
                         } else {
                             totals[i][0]
                         } / counts[i] as f64;
+                        if defense {
+                            mean = mean.max(totals[i][2] / counts[i] as f64);
+                        }
                         let prior = self.policy.as_ref().map_or(0.0, |p| {
                             p.predict(&policy_features(bot, state, plays[i])) as f64
                         });
@@ -443,6 +674,11 @@ impl NeuralNetworkBot {
                             totals[i][0].max(totals[i][1])
                         } else {
                             totals[i][0]
+                        })
+                        .max(if defense {
+                            totals[i][2]
+                        } else {
+                            f64::NEG_INFINITY
                         }) as f32
                             / counts[i] as f32,
                     )
@@ -466,6 +702,7 @@ struct NodeKey {
     winning: bool,
     trick_len: u8,
     moon: bool,
+    defense: bool,
 }
 
 #[derive(Default)]
@@ -485,11 +722,23 @@ impl SearchTree {
         styles: Option<[usize; 4]>,
         defenders: [bool; 4],
         dynamic_shooters: bool,
+        own_defense: bool,
+        disruptive_plan: bool,
+        learned_plan: bool,
+        claim_rollouts: bool,
+        early_shooters: bool,
         depth: usize,
         mut own_plays: Vec<Card>,
         rng: &mut R,
     ) {
-        if depth == 0 && styles.is_none() && !defenders.iter().any(|d| *d) && !dynamic_shooters {
+        if depth == 0
+            && styles.is_none()
+            && !defenders.iter().any(|d| *d)
+            && !dynamic_shooters
+            && !own_defense
+            && !claim_rollouts
+            && !early_shooters
+        {
             rollout(
                 state,
                 void,
@@ -504,11 +753,12 @@ impl SearchTree {
         let consider_shooting = (styles.is_none() || styles.unwrap().contains(&3))
             && model_moon
             && rng.random_bool(0.5);
+        let heart_threshold = if early_shooters { 1 } else { 3 };
         let opponent_moon = if consider_shooting {
             Seat::VALUES.iter().copied().find(|s| {
                 *s != root
                     && state.won.can_run(*s)
-                    && (state.won.hearts(*s) >= 3 || state.won.queen(*s))
+                    && (state.won.hearts(*s) >= heart_threshold || state.won.queen(*s))
             })
         } else {
             None
@@ -521,14 +771,31 @@ impl SearchTree {
             }
             let seat = state.next_actor.unwrap();
             let bot = BotState::with_void(seat, hands[seat.idx()], void);
+            // Each actor sees only its own hand and public state. Only test at
+            // the start of a trick: the public claim solver is cheap there.
+            if claim_rollouts
+                && state.current_trick.is_empty()
+                && turbo_hearts_api::should_claim(state, void, seat, hands[seat.idx()])
+            {
+                state.won = state.won.win(seat, Cards::ALL - state.played);
+                break;
+            }
             let shooting = state.won.can_run(seat)
                 && ((seat == root && moon)
                     || opponent_moon == Some(seat)
                     || (dynamic_shooters
                         && consider_shooting
                         && seat != root
-                        && (state.won.hearts(seat) >= 3 || state.won.queen(seat))));
-            let defense = if defenders[seat.idx()] && !shooting {
+                        && (state.won.hearts(seat) >= heart_threshold || state.won.queen(seat))));
+            let defense = if seat == root && own_defense {
+                if learned_plan {
+                    Some(crate::HumanActionPolicy::play_with_rng(&bot, state, rng))
+                } else if disruptive_plan {
+                    crate::moon_defense::disruptive_play(&bot, state)
+                } else {
+                    crate::moon_defense::planned_play(&bot, state)
+                }
+            } else if defenders[seat.idx()] && !shooting {
                 crate::moon_defense::defensive_play(&bot, state)
             } else {
                 None
@@ -552,6 +819,7 @@ impl SearchTree {
                         && state.current_trick.winning_seat(root) == root,
                     trick_len: state.current_trick.len() as u8,
                     moon,
+                    defense: own_defense,
                 };
                 let preferred = if shooting {
                     GottaTryBot.choices(&bot, state)
@@ -609,6 +877,9 @@ pub(crate) fn style_play<R: RngExt + ?Sized>(
     match style {
         1 => DuckBot.play_with_rng(bot, state, rng),
         2 => GottaTryBot.play_with_rng(bot, state, rng),
+        4 => crate::HumanPolicy::play_with_rng(bot, state, rng),
+        5 => crate::SkilledPolicy::play_with_rng(bot, state, rng),
+        6 => crate::HumanActionPolicy::play_with_rng(bot, state, rng),
         _ => HeuristicBot.play_with_rng(bot, state, rng),
     }
 }
@@ -623,7 +894,7 @@ pub(crate) fn simulate_style<R: RngExt + ?Sized>(
     experiments: &SearchExperiments,
     rng: &mut R,
 ) {
-    let styles = styles.map(|s| {
+    let mut styles = styles.map(|s| {
         s.map(|p| {
             if experiments.dynamic_shooters && p == 0 {
                 3
@@ -632,6 +903,24 @@ pub(crate) fn simulate_style<R: RngExt + ?Sized>(
             }
         })
     });
+    if experiments.human_rollouts > 0.0 {
+        let mut selected = styles.unwrap_or([3; 4]);
+        for seat in Seat::VALUES {
+            if seat != root
+                && (!experiments.human_model_fallback || selected[seat.idx()] == 3)
+                && rng.random_bool(experiments.human_rollouts)
+            {
+                selected[seat.idx()] = if experiments.action_model {
+                    6
+                } else if experiments.skilled_model {
+                    5
+                } else {
+                    4
+                };
+            }
+        }
+        styles = Some(selected);
+    }
     let defenders = std::array::from_fn(|s| {
         experiments.moon_defense > 0.0
             && !styles.map_or(false, |p| p[s] == 1 || p[s] == 2)
@@ -647,6 +936,11 @@ pub(crate) fn simulate_style<R: RngExt + ?Sized>(
         styles,
         defenders,
         experiments.dynamic_shooters,
+        false,
+        false,
+        false,
+        experiments.claim_rollouts,
+        experiments.early_shooters,
         0,
         Vec::new(),
         rng,
@@ -658,6 +952,73 @@ mod tests {
     use super::*;
     use rand::seq::SliceRandom;
     use turbo_hearts_api::{GamePhase, PassDirection};
+
+    #[test]
+    fn safe_low_follow_is_soft_shooting_evidence_but_forced_or_dangerous_play_is_not() {
+        use turbo_hearts_api::{ChargeState, Trick};
+        let mut state = GameState::new();
+        state.phase = GamePhase::PlayLeft;
+        state.played = "2C 4S".parse().unwrap();
+        state.current_trick = Trick::new().push(Card::FourSpades);
+        state.charges = ChargeState::new().charge(Seat::North, Card::QueenSpades.into());
+        let mut bot = BotState::new(Seat::East, "AK2S 2D".parse().unwrap());
+        assert!(control_signal(&bot, &state, Card::TwoSpades).unwrap() > 0.0);
+        assert!(control_signal(&bot, &state, Card::AceSpades).unwrap() < 0.0);
+        let mut history = BehaviorHistory::default();
+        history.on_event(
+            &state,
+            &GameEvent::Play {
+                seat: Seat::East,
+                card: Card::TwoSpades,
+            },
+        );
+        let mut hands = [Cards::NONE; 4];
+        hands[1] = bot.post_pass_hand;
+        assert!(history.early_runner_probability(hands, Seat::East) > 0.1);
+        assert_eq!(history.early_runner_probability(hands, Seat::West), 0.0);
+        bot.post_pass_hand = "2S 2D".parse().unwrap();
+        assert_eq!(control_signal(&bot, &state, Card::TwoSpades), None);
+        bot.post_pass_hand = "AK2S 2D".parse().unwrap();
+        state.charges = ChargeState::new();
+        assert_eq!(control_signal(&bot, &state, Card::TwoSpades), None);
+        state.current_trick = state.current_trick.push(Card::QueenSpades);
+        assert_eq!(control_signal(&bot, &state, Card::TwoSpades), None);
+    }
+
+    #[test]
+    fn claim_continuation_finishes_a_provable_moon_before_three_hearts() {
+        // Actual remaining hands immediately after South's reported AH slough.
+        let remaining: [Cards; 4] = ["T52H JT65D", "4S 73H Q983D", "J964H 742D", "QS KQ8H AKD 9C"]
+            .map(|s| s.parse().unwrap());
+        let mut state = GameState::new();
+        state.phase = GamePhase::PlayLeft;
+        state.played = Cards::ALL - remaining.iter().fold(Cards::NONE, |a, h| a | *h);
+        state.won = state.won.win(Seat::West, "AH TC".parse().unwrap());
+        state.next_actor = Some(Seat::West);
+        let mut rng = ChaCha12Rng::seed_from_u64(3);
+        SearchTree::default().simulate(
+            &mut state,
+            VoidState::new(),
+            remaining,
+            Seat::South,
+            false,
+            true,
+            Some([1; 4]),
+            [false; 4],
+            false,
+            false,
+            false,
+            false,
+            true,
+            false,
+            0,
+            Vec::new(),
+            &mut rng,
+        );
+        assert_eq!(state.won.hearts(Seat::West), 13);
+        assert!(state.won.queen(Seat::West));
+        assert_eq!(state.scores().score(Seat::West), -72);
+    }
 
     #[test]
     fn recognizes_a_moon_that_emerges_after_the_rollout_starts() {
@@ -688,6 +1049,11 @@ mod tests {
                 None,
                 [false; 4],
                 enabled,
+                false,
+                false,
+                false,
+                false,
+                false,
                 0,
                 Vec::new(),
                 &mut ChaCha12Rng::seed_from_u64(339),

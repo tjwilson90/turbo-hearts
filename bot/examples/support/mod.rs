@@ -5,6 +5,7 @@ use std::time::Instant;
 use turbo_hearts_api::*;
 use turbo_hearts_bot::*;
 
+#[derive(Clone)]
 pub struct Player {
     pub search: Option<NeuralNetworkBot>,
     kind: String,
@@ -28,7 +29,7 @@ impl Player {
         };
         let search = if network.is_some() {
             None
-        } else if kind == "default" {
+        } else if ["default", "round4", "skilledhybrid", "actionhybrid"].contains(&kind) {
             Some(NeuralNetworkBot::with_config(
                 SearchConfig {
                     time_limit: None,
@@ -65,6 +66,34 @@ impl Player {
             "canonical",
             "cautiousdynamic",
             "dynamiccharge",
+            "plan",
+            "claims",
+            "early",
+            "preserve",
+            "humanlike",
+            "planclaims",
+            "earlyclaims",
+            "humanmodel",
+            "humanmix",
+            "safemix",
+            "safeclaims",
+            "safeearly",
+            "safe",
+            "chargebelief",
+            "intent",
+            "disrupt",
+            "humanaware",
+            "skilledmix",
+            "skilledmodel",
+            "skilledintent",
+            "skilledclaims",
+            "skilledfallback",
+            "skilledadaptive",
+            "actionmix",
+            "actionmodel",
+            "actionintent",
+            "actionclaims",
+            "actionplan",
         ]
         .contains(&parts[0])
         {
@@ -84,7 +113,19 @@ impl Player {
             ))
         } else {
             assert!(
-                ["heuristic", "duck", "random", "gottatry"].contains(&kind),
+                [
+                    "heuristic",
+                    "duck",
+                    "random",
+                    "gottatry",
+                    "human",
+                    "humanclaim",
+                    "skilled",
+                    "skilledclaim",
+                    "action",
+                    "actionclaim"
+                ]
+                .contains(&kind),
                 "unknown player: {}",
                 kind
             );
@@ -94,7 +135,124 @@ impl Player {
             if kind == "default" {
                 return search.with_experiments(SearchExperiments::production());
             }
+            if ["round4", "skilledhybrid", "actionhybrid"].contains(&kind) {
+                return search.with_experiments(SearchExperiments::round_four());
+            }
+            if [
+                "actionmix",
+                "actionmodel",
+                "actionintent",
+                "actionclaims",
+                "actionplan",
+            ]
+            .contains(&parts[0])
+            {
+                return search.with_experiments(SearchExperiments {
+                    action_model: true,
+                    human_rollouts: if parts[0] == "actionmodel" { 1.0 } else { 0.5 },
+                    early_intent: parts[0] == "actionintent",
+                    claim_rollouts: parts[0] == "actionclaims",
+                    learned_plan: parts[0] == "actionplan",
+                    ..SearchExperiments::round_four()
+                });
+            }
+            if [
+                "skilledmix",
+                "skilledmodel",
+                "skilledintent",
+                "skilledclaims",
+                "skilledfallback",
+                "skilledadaptive",
+            ]
+            .contains(&parts[0])
+            {
+                return search.with_experiments(SearchExperiments {
+                    skilled_model: true,
+                    human_rollouts: if ["skilledmodel", "skilledfallback", "skilledadaptive"]
+                        .contains(&parts[0])
+                    {
+                        1.0
+                    } else {
+                        0.5
+                    },
+                    human_model_fallback: ["skilledfallback", "skilledadaptive"]
+                        .contains(&parts[0]),
+                    early_intent: ["skilledintent", "skilledadaptive"].contains(&parts[0]),
+                    claim_rollouts: parts[0] == "skilledclaims",
+                    ..SearchExperiments::round_four()
+                });
+            }
+            if ["chargebelief", "intent", "disrupt", "humanaware"].contains(&parts[0]) {
+                return search.with_experiments(SearchExperiments {
+                    charge_belief_strength: if ["chargebelief", "humanaware"].contains(&parts[0]) {
+                        parts.get(6).map_or(0.5, |s| s.parse().unwrap())
+                    } else {
+                        0.0
+                    },
+                    early_intent: ["intent", "humanaware"].contains(&parts[0]),
+                    disruptive_plan: ["disrupt", "humanaware"].contains(&parts[0]),
+                    ..SearchExperiments::round_four()
+                });
+            }
+            if [
+                "plan",
+                "claims",
+                "early",
+                "preserve",
+                "humanlike",
+                "planclaims",
+                "earlyclaims",
+                "humanmodel",
+                "humanmix",
+                "safemix",
+                "safeclaims",
+                "safeearly",
+                "safe",
+            ]
+            .contains(&parts[0])
+            {
+                return search.with_experiments(SearchExperiments {
+                    defensive_plan: ["plan", "humanlike", "planclaims"].contains(&parts[0]),
+                    claim_rollouts: [
+                        "claims",
+                        "humanlike",
+                        "planclaims",
+                        "earlyclaims",
+                        "safeclaims",
+                        "safeearly",
+                        "safemix",
+                    ]
+                    .contains(&parts[0]),
+                    early_shooters: ["early", "humanlike", "earlyclaims", "safeearly", "safe"]
+                        .contains(&parts[0]),
+                    stopper_margin: if ["preserve", "safeclaims", "safeearly", "safemix", "safe"]
+                        .contains(&parts[0])
+                    {
+                        parts.get(6).map_or(4.0, |s| s.parse().unwrap())
+                    } else {
+                        0.0
+                    },
+                    human_rollouts: match parts[0] {
+                        "humanmodel" => 1.0,
+                        "humanmix" | "safemix" => 0.5,
+                        _ => 0.0,
+                    },
+                    ..SearchExperiments::round_three()
+                });
+            }
             search.with_experiments(SearchExperiments {
+                learned_plan: false,
+                human_model_fallback: false,
+                action_model: false,
+                skilled_model: false,
+                charge_belief_strength: 0.0,
+                early_intent: false,
+                disruptive_plan: false,
+                defensive_plan: false,
+                claim_rollouts: false,
+                early_shooters: false,
+                stopper_margin: 0.0,
+                human_rollouts: 0.0,
                 conservative_model: ["cautious", "cautiousguard", "selective", "cautiousdynamic"]
                     .contains(&parts[0]),
                 style_confidence: parts
@@ -261,6 +419,18 @@ impl Algorithm for Player {
         }
     }
     fn play(&mut self, bot: &BotState, state: &GameState) -> Card {
+        if self.kind == "action"
+            || self.kind == "actionclaim"
+            || (self.kind == "actionhybrid" && self.rng.random_bool(0.5))
+        {
+            return HumanActionPolicy::play_with_rng(bot, state, &mut self.rng);
+        }
+        if self.kind == "skilled"
+            || self.kind == "skilledclaim"
+            || (self.kind == "skilledhybrid" && self.rng.random_bool(0.5))
+        {
+            return SkilledPolicy::play_with_rng(bot, state, &mut self.rng);
+        }
         if self.network.is_some() {
             let distribution = self.policy_distribution(bot, state);
             let mut target = self.rng.random::<f64>();
@@ -274,6 +444,9 @@ impl Algorithm for Player {
         }
         if let Some(search) = &mut self.search {
             return search.play(bot, state);
+        }
+        if self.kind == "human" || self.kind == "humanclaim" {
+            return HumanPolicy::play_with_rng(bot, state, &mut self.rng);
         }
         if self.kind == "gottatry" {
             return GottaTryBot.play_with_rng(bot, state, &mut self.rng);
@@ -457,6 +630,35 @@ impl Match {
 
     pub fn play_one(&mut self) {
         let seat = self.game.state.next_actor.unwrap();
+        if [
+            "humanclaim",
+            "skilledclaim",
+            "skilledhybrid",
+            "actionclaim",
+            "actionhybrid",
+        ]
+        .contains(&self.players[seat.idx()].kind.as_str())
+            && should_claim(
+                &self.observations[seat.idx()],
+                self.states[seat.idx()].void,
+                seat,
+                self.states[seat.idx()].post_pass_hand,
+            )
+        {
+            self.apply(GameEvent::Claim {
+                seat,
+                hand: self.states[seat.idx()].post_pass_hand - self.game.state.played,
+            });
+            for acceptor in Seat::VALUES {
+                if acceptor != seat {
+                    self.apply(GameEvent::AcceptClaim {
+                        claimer: seat,
+                        acceptor,
+                    });
+                }
+            }
+            return;
+        }
         let start = Instant::now();
         let card =
             self.players[seat.idx()].play(&self.states[seat.idx()], &self.observations[seat.idx()]);

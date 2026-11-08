@@ -1,0 +1,144 @@
+[
+  {
+    "card": "8H",
+    "seat": "west",
+    "type": "play"
+  },
+  {
+    "card": "JC",
+    "seat": "north",
+    "type": "play"
+  },
+  {
+    "card": "AC",
+    "seat": "east",
+    "type": "play"
+  },
+  {
+    "card": "TC",
+    "seat": "south",
+    "type": "play"
+  },
+  {
+    "card": "9D",
+    "seat": "west",
+    "type": "play"
+  },
+  {
+    "card": "QH",
+    "seat": "north",
+    "type": "play"
+  },
+  {
+    "card": "3C",
+    "seat": "east",
+    "type": "play"
+  },
+  {
+    "card": "8S",
+    "seat": "east",
+    "type": "play"
+  },
+  {
+    "card": "7S",
+    "seat": "south",
+    "type": "play"
+  },
+  {
+    "card": "TS",
+    "seat": "west",
+    "type": "play"
+  },
+  {
+    "card": "KS",
+    "seat": "north",
+    "type": "play"
+  },
+  {
+    "card": "3D",
+    "seat": "north",
+    "type": "play"
+  },
+  {
+    "card": "5S",
+    "seat": "east",
+    "type": "play"
+  },
+  {
+    "card": "6D",
+    "seat": "south",
+    "type": "play"
+  },
+  {
+    "card": "JD",
+    "seat": "west",
+    "type": "play"
+  },
+  {
+    "card": "2D",
+    "seat": "west",
+    "type": "play"
+  },
+  {
+    "card": "8D",
+    "seat": "north",
+    "type": "play"
+  },
+  {
+    "card": "4S",
+    "seat": "east",
+    "type": "play"
+  },
+  {
+    "card": "5D",
+    "seat": "south",
+    "type": "play"
+  },
+  {
+    "card": "JS",
+    "seat": "north",
+    "type": "play"
+  },
+  {
+    "card": "QS",
+    "seat": "east",
+    "type": "play"
+  },
+  {
+    "card": "3S",
+    "seat": "south",
+    "type": "play"
+  },
+  {
+    "card": "6S",
+    "seat": "west",
+    "type": "play"
+  },
+  {
+    "hand": [
+      "AS",
+      "9S",
+      "KH",
+      "KC",
+      "8C",
+      "5C"
+    ],
+    "seat": "east",
+    "type": "claim"
+  },
+  {
+    "acceptor": "north",
+    "claimer": "east",
+    "type": "accept_claim"
+  },
+  {
+    "acceptor": "south",
+    "claimer": "east",
+    "type": "accept_claim"
+  },
+  {
+    "acceptor": "west",
+    "claimer": "east",
+    "type": "accept_claim"
+  }
+]

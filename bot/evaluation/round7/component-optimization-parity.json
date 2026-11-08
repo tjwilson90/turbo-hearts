@@ -1,0 +1,10 @@
+{
+  "profile": "skilledmodel",
+  "seeds_per_position": 100,
+  "positions": [
+    "original-ace",
+    "dan-ace",
+    "1210"
+  ],
+  "identical_choices_and_values": true
+}

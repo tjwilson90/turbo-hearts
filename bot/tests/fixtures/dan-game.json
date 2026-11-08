@@ -1,0 +1,1651 @@
+[
+  {
+    "type": "sit",
+    "north": {
+      "type": "bot",
+      "user_id": "00000000-0000-0000-0000-000000000001",
+      "strategy": "neural_net"
+    },
+    "east": {
+      "type": "human",
+      "user_id": "00000000-0000-0000-0000-000000000002"
+    },
+    "south": {
+      "type": "bot",
+      "user_id": "00000000-0000-0000-0000-000000000003",
+      "strategy": "neural_net"
+    },
+    "west": {
+      "type": "bot",
+      "user_id": "00000000-0000-0000-0000-000000000004",
+      "strategy": "neural_net"
+    },
+    "rules": "classic",
+    "seed": {
+      "type": "chosen",
+      "value": "historical-replay"
+    }
+  },
+  {
+    "type": "deal",
+    "north": [
+      "AS",
+      "KS",
+      "2S",
+      "KH",
+      "5H",
+      "2H",
+      "QD",
+      "TD",
+      "8D",
+      "TC",
+      "8C",
+      "4C",
+      "3C"
+    ],
+    "east": [
+      "TS",
+      "AH",
+      "9H",
+      "7H",
+      "4H",
+      "3H",
+      "JD",
+      "4D",
+      "2D",
+      "AC",
+      "9C",
+      "7C",
+      "2C"
+    ],
+    "south": [
+      "JS",
+      "9S",
+      "8S",
+      "7S",
+      "6S",
+      "5S",
+      "QH",
+      "TH",
+      "8H",
+      "6H",
+      "AD",
+      "6D",
+      "KC"
+    ],
+    "west": [
+      "QS",
+      "4S",
+      "3S",
+      "JH",
+      "KD",
+      "9D",
+      "7D",
+      "5D",
+      "3D",
+      "QC",
+      "JC",
+      "6C",
+      "5C"
+    ],
+    "pass": "left"
+  },
+  {
+    "type": "send_pass",
+    "from": "south",
+    "cards": [
+      "TH",
+      "AD",
+      "KC"
+    ]
+  },
+  {
+    "type": "send_pass",
+    "from": "north",
+    "cards": [
+      "AS",
+      "KS",
+      "5H"
+    ]
+  },
+  {
+    "type": "send_pass",
+    "from": "west",
+    "cards": [
+      "QS",
+      "JH",
+      "QC"
+    ]
+  },
+  {
+    "type": "recv_pass",
+    "to": "west",
+    "cards": [
+      "TH",
+      "AD",
+      "KC"
+    ]
+  },
+  {
+    "type": "recv_pass",
+    "to": "north",
+    "cards": [
+      "QS",
+      "JH",
+      "QC"
+    ]
+  },
+  {
+    "type": "send_pass",
+    "from": "east",
+    "cards": [
+      "TS",
+      "7H",
+      "2C"
+    ]
+  },
+  {
+    "type": "recv_pass",
+    "to": "east",
+    "cards": [
+      "AS",
+      "KS",
+      "5H"
+    ]
+  },
+  {
+    "type": "recv_pass",
+    "to": "south",
+    "cards": [
+      "TS",
+      "7H",
+      "2C"
+    ]
+  },
+  {
+    "type": "charge",
+    "seat": "north",
+    "cards": []
+  },
+  {
+    "type": "charge",
+    "seat": "south",
+    "cards": []
+  },
+  {
+    "type": "charge",
+    "seat": "west",
+    "cards": []
+  },
+  {
+    "type": "charge",
+    "seat": "east",
+    "cards": [
+      "AH"
+    ]
+  },
+  {
+    "type": "charge",
+    "seat": "south",
+    "cards": []
+  },
+  {
+    "type": "charge",
+    "seat": "north",
+    "cards": []
+  },
+  {
+    "type": "charge",
+    "seat": "west",
+    "cards": []
+  },
+  {
+    "type": "play",
+    "seat": "south",
+    "card": "2C"
+  },
+  {
+    "type": "play",
+    "seat": "west",
+    "card": "6C"
+  },
+  {
+    "type": "play",
+    "seat": "north",
+    "card": "QC"
+  },
+  {
+    "type": "play",
+    "seat": "east",
+    "card": "9C"
+  },
+  {
+    "type": "play",
+    "seat": "south",
+    "card": "9S"
+  },
+  {
+    "type": "play",
+    "seat": "west",
+    "card": "JC"
+  },
+  {
+    "type": "play",
+    "seat": "north",
+    "card": "4C"
+  },
+  {
+    "type": "play",
+    "seat": "east",
+    "card": "AC"
+  },
+  {
+    "type": "play",
+    "seat": "east",
+    "card": "7C"
+  },
+  {
+    "type": "play",
+    "seat": "south",
+    "card": "QH"
+  },
+  {
+    "type": "play",
+    "seat": "west",
+    "card": "KC"
+  },
+  {
+    "type": "play",
+    "seat": "north",
+    "card": "8C"
+  },
+  {
+    "type": "play",
+    "seat": "west",
+    "card": "5C"
+  },
+  {
+    "type": "play",
+    "seat": "north",
+    "card": "3C"
+  },
+  {
+    "type": "play",
+    "seat": "east",
+    "card": "AS"
+  },
+  {
+    "type": "play",
+    "seat": "south",
+    "card": "8H"
+  },
+  {
+    "type": "play",
+    "seat": "west",
+    "card": "4S"
+  },
+  {
+    "type": "play",
+    "seat": "north",
+    "card": "2S"
+  },
+  {
+    "type": "play",
+    "seat": "east",
+    "card": "KS"
+  },
+  {
+    "type": "play",
+    "seat": "south",
+    "card": "JS"
+  },
+  {
+    "type": "play",
+    "seat": "east",
+    "card": "5H"
+  },
+  {
+    "type": "play",
+    "seat": "south",
+    "card": "7H"
+  },
+  {
+    "type": "play",
+    "seat": "west",
+    "card": "TH"
+  },
+  {
+    "type": "play",
+    "seat": "north",
+    "card": "2H"
+  },
+  {
+    "type": "play",
+    "seat": "west",
+    "card": "3S"
+  },
+  {
+    "type": "play",
+    "seat": "north",
+    "card": "QS"
+  },
+  {
+    "type": "play",
+    "seat": "east",
+    "card": "AH"
+  },
+  {
+    "type": "play",
+    "seat": "south",
+    "card": "TS"
+  },
+  {
+    "type": "play",
+    "seat": "north",
+    "card": "TD"
+  },
+  {
+    "type": "play",
+    "seat": "east",
+    "card": "4D"
+  },
+  {
+    "type": "play",
+    "seat": "south",
+    "card": "6D"
+  },
+  {
+    "type": "play",
+    "seat": "west",
+    "card": "7D"
+  },
+  {
+    "type": "play",
+    "seat": "north",
+    "card": "8D"
+  },
+  {
+    "type": "play",
+    "seat": "east",
+    "card": "2D"
+  },
+  {
+    "type": "play",
+    "seat": "south",
+    "card": "6H"
+  },
+  {
+    "type": "play",
+    "seat": "west",
+    "card": "5D"
+  },
+  {
+    "type": "play",
+    "seat": "north",
+    "card": "QD"
+  },
+  {
+    "type": "play",
+    "seat": "east",
+    "card": "JD"
+  },
+  {
+    "type": "play",
+    "seat": "south",
+    "card": "8S"
+  },
+  {
+    "type": "play",
+    "seat": "west",
+    "card": "3D"
+  },
+  {
+    "type": "claim",
+    "seat": "north",
+    "hand": [
+      "KH",
+      "JH",
+      "TC"
+    ]
+  },
+  {
+    "type": "accept_claim",
+    "claimer": "north",
+    "acceptor": "south"
+  },
+  {
+    "type": "play",
+    "seat": "north",
+    "card": "TC"
+  },
+  {
+    "type": "accept_claim",
+    "claimer": "north",
+    "acceptor": "west"
+  },
+  {
+    "type": "accept_claim",
+    "claimer": "north",
+    "acceptor": "east"
+  },
+  {
+    "type": "deal",
+    "north": [
+      "KH",
+      "TH",
+      "8H",
+      "4H",
+      "QD",
+      "9D",
+      "8D",
+      "2D",
+      "AC",
+      "7C",
+      "6C",
+      "5C",
+      "4C"
+    ],
+    "east": [
+      "AS",
+      "JS",
+      "9S",
+      "5S",
+      "2S",
+      "9H",
+      "7H",
+      "3H",
+      "4D",
+      "KC",
+      "9C",
+      "8C",
+      "3C"
+    ],
+    "south": [
+      "KS",
+      "QS",
+      "TS",
+      "7S",
+      "AH",
+      "QH",
+      "5H",
+      "AD",
+      "JD",
+      "7D",
+      "5D",
+      "QC",
+      "JC"
+    ],
+    "west": [
+      "8S",
+      "6S",
+      "4S",
+      "3S",
+      "JH",
+      "6H",
+      "2H",
+      "KD",
+      "TD",
+      "6D",
+      "3D",
+      "TC",
+      "2C"
+    ],
+    "pass": "right"
+  },
+  {
+    "type": "send_pass",
+    "from": "south",
+    "cards": [
+      "QH",
+      "QC",
+      "JC"
+    ]
+  },
+  {
+    "type": "send_pass",
+    "from": "north",
+    "cards": [
+      "KH",
+      "TH",
+      "8H"
+    ]
+  },
+  {
+    "type": "send_pass",
+    "from": "west",
+    "cards": [
+      "6H",
+      "TC",
+      "2C"
+    ]
+  },
+  {
+    "type": "recv_pass",
+    "to": "west",
+    "cards": [
+      "KH",
+      "TH",
+      "8H"
+    ]
+  },
+  {
+    "type": "recv_pass",
+    "to": "south",
+    "cards": [
+      "6H",
+      "TC",
+      "2C"
+    ]
+  },
+  {
+    "type": "send_pass",
+    "from": "east",
+    "cards": [
+      "9H",
+      "7H",
+      "4D"
+    ]
+  },
+  {
+    "type": "recv_pass",
+    "to": "east",
+    "cards": [
+      "QH",
+      "QC",
+      "JC"
+    ]
+  },
+  {
+    "type": "recv_pass",
+    "to": "north",
+    "cards": [
+      "9H",
+      "7H",
+      "4D"
+    ]
+  },
+  {
+    "type": "charge",
+    "seat": "west",
+    "cards": []
+  },
+  {
+    "type": "charge",
+    "seat": "north",
+    "cards": []
+  },
+  {
+    "type": "charge",
+    "seat": "south",
+    "cards": []
+  },
+  {
+    "type": "charge",
+    "seat": "east",
+    "cards": []
+  },
+  {
+    "type": "play",
+    "seat": "south",
+    "card": "2C"
+  },
+  {
+    "type": "play",
+    "seat": "west",
+    "card": "TD"
+  },
+  {
+    "type": "play",
+    "seat": "north",
+    "card": "7C"
+  },
+  {
+    "type": "play",
+    "seat": "east",
+    "card": "KC"
+  },
+  {
+    "type": "play",
+    "seat": "east",
+    "card": "JS"
+  },
+  {
+    "type": "play",
+    "seat": "south",
+    "card": "7S"
+  },
+  {
+    "type": "play",
+    "seat": "west",
+    "card": "4S"
+  },
+  {
+    "type": "play",
+    "seat": "north",
+    "card": "6C"
+  },
+  {
+    "type": "play",
+    "seat": "east",
+    "card": "9C"
+  },
+  {
+    "type": "play",
+    "seat": "south",
+    "card": "TC"
+  },
+  {
+    "type": "play",
+    "seat": "west",
+    "card": "KH"
+  },
+  {
+    "type": "play",
+    "seat": "north",
+    "card": "5C"
+  },
+  {
+    "type": "play",
+    "seat": "east",
+    "card": "8C"
+  },
+  {
+    "type": "play",
+    "seat": "south",
+    "card": "6H"
+  },
+  {
+    "type": "play",
+    "seat": "west",
+    "card": "6D"
+  },
+  {
+    "type": "play",
+    "seat": "north",
+    "card": "4C"
+  },
+  {
+    "type": "play",
+    "seat": "south",
+    "card": "7D"
+  },
+  {
+    "type": "play",
+    "seat": "west",
+    "card": "3D"
+  },
+  {
+    "type": "play",
+    "seat": "north",
+    "card": "9D"
+  },
+  {
+    "type": "play",
+    "seat": "east",
+    "card": "QH"
+  },
+  {
+    "type": "play",
+    "seat": "south",
+    "card": "AD"
+  },
+  {
+    "type": "play",
+    "seat": "west",
+    "card": "KD"
+  },
+  {
+    "type": "play",
+    "seat": "north",
+    "card": "8D"
+  },
+  {
+    "type": "play",
+    "seat": "east",
+    "card": "QC"
+  },
+  {
+    "type": "play",
+    "seat": "south",
+    "card": "5D"
+  },
+  {
+    "type": "play",
+    "seat": "west",
+    "card": "JH"
+  },
+  {
+    "type": "play",
+    "seat": "north",
+    "card": "4D"
+  },
+  {
+    "type": "play",
+    "seat": "east",
+    "card": "3H"
+  },
+  {
+    "type": "play",
+    "seat": "south",
+    "card": "AH"
+  },
+  {
+    "type": "play",
+    "seat": "west",
+    "card": "2H"
+  },
+  {
+    "type": "play",
+    "seat": "north",
+    "card": "4H"
+  },
+  {
+    "type": "play",
+    "seat": "east",
+    "card": "9S"
+  },
+  {
+    "type": "play",
+    "seat": "south",
+    "card": "5H"
+  },
+  {
+    "type": "play",
+    "seat": "west",
+    "card": "8H"
+  },
+  {
+    "type": "play",
+    "seat": "north",
+    "card": "7H"
+  },
+  {
+    "type": "play",
+    "seat": "east",
+    "card": "JC"
+  },
+  {
+    "type": "play",
+    "seat": "west",
+    "card": "8S"
+  },
+  {
+    "type": "play",
+    "seat": "north",
+    "card": "AC"
+  },
+  {
+    "type": "play",
+    "seat": "east",
+    "card": "5S"
+  },
+  {
+    "type": "play",
+    "seat": "south",
+    "card": "TS"
+  },
+  {
+    "type": "play",
+    "seat": "south",
+    "card": "JD"
+  },
+  {
+    "type": "play",
+    "seat": "west",
+    "card": "TH"
+  },
+  {
+    "type": "play",
+    "seat": "north",
+    "card": "2D"
+  },
+  {
+    "type": "play",
+    "seat": "east",
+    "card": "AS"
+  },
+  {
+    "type": "claim",
+    "seat": "south",
+    "hand": [
+      "KS",
+      "QS"
+    ]
+  },
+  {
+    "type": "play",
+    "seat": "south",
+    "card": "QS"
+  },
+  {
+    "type": "accept_claim",
+    "claimer": "south",
+    "acceptor": "east"
+  },
+  {
+    "type": "accept_claim",
+    "claimer": "south",
+    "acceptor": "north"
+  },
+  {
+    "type": "accept_claim",
+    "claimer": "south",
+    "acceptor": "west"
+  },
+  {
+    "type": "deal",
+    "north": [
+      "JS",
+      "2S",
+      "QH",
+      "TH",
+      "5H",
+      "3H",
+      "KD",
+      "8D",
+      "7D",
+      "3D",
+      "QC",
+      "TC",
+      "7C"
+    ],
+    "east": [
+      "AS",
+      "QS",
+      "9S",
+      "8S",
+      "5S",
+      "4S",
+      "6H",
+      "9D",
+      "2D",
+      "AC",
+      "8C",
+      "6C",
+      "3C"
+    ],
+    "south": [
+      "KS",
+      "7S",
+      "3S",
+      "JH",
+      "9H",
+      "7H",
+      "4H",
+      "6D",
+      "5D",
+      "4D",
+      "JC",
+      "9C",
+      "4C"
+    ],
+    "west": [
+      "TS",
+      "6S",
+      "AH",
+      "KH",
+      "8H",
+      "2H",
+      "AD",
+      "QD",
+      "JD",
+      "TD",
+      "KC",
+      "5C",
+      "2C"
+    ],
+    "pass": "across"
+  },
+  {
+    "type": "send_pass",
+    "from": "south",
+    "cards": [
+      "KS",
+      "9H",
+      "JC"
+    ]
+  },
+  {
+    "type": "send_pass",
+    "from": "north",
+    "cards": [
+      "TH",
+      "QC",
+      "TC"
+    ]
+  },
+  {
+    "type": "recv_pass",
+    "to": "north",
+    "cards": [
+      "KS",
+      "9H",
+      "JC"
+    ]
+  },
+  {
+    "type": "recv_pass",
+    "to": "south",
+    "cards": [
+      "TH",
+      "QC",
+      "TC"
+    ]
+  },
+  {
+    "type": "send_pass",
+    "from": "west",
+    "cards": [
+      "KH",
+      "KC",
+      "5C"
+    ]
+  },
+  {
+    "type": "send_pass",
+    "from": "east",
+    "cards": [
+      "6H",
+      "9D",
+      "2D"
+    ]
+  },
+  {
+    "type": "recv_pass",
+    "to": "east",
+    "cards": [
+      "KH",
+      "KC",
+      "5C"
+    ]
+  },
+  {
+    "type": "recv_pass",
+    "to": "west",
+    "cards": [
+      "6H",
+      "9D",
+      "2D"
+    ]
+  },
+  {
+    "type": "charge",
+    "seat": "north",
+    "cards": []
+  },
+  {
+    "type": "charge",
+    "seat": "west",
+    "cards": []
+  },
+  {
+    "type": "charge",
+    "seat": "south",
+    "cards": []
+  },
+  {
+    "type": "charge",
+    "seat": "east",
+    "cards": [
+      "QS"
+    ]
+  },
+  {
+    "type": "charge",
+    "seat": "west",
+    "cards": []
+  },
+  {
+    "type": "charge",
+    "seat": "north",
+    "cards": []
+  },
+  {
+    "type": "charge",
+    "seat": "south",
+    "cards": []
+  },
+  {
+    "type": "play",
+    "seat": "west",
+    "card": "2C"
+  },
+  {
+    "type": "play",
+    "seat": "north",
+    "card": "7C"
+  },
+  {
+    "type": "play",
+    "seat": "east",
+    "card": "6C"
+  },
+  {
+    "type": "play",
+    "seat": "south",
+    "card": "QC"
+  },
+  {
+    "type": "play",
+    "seat": "south",
+    "card": "9C"
+  },
+  {
+    "type": "play",
+    "seat": "west",
+    "card": "AH"
+  },
+  {
+    "type": "play",
+    "seat": "north",
+    "card": "JC"
+  },
+  {
+    "type": "play",
+    "seat": "east",
+    "card": "8C"
+  },
+  {
+    "type": "play",
+    "seat": "south",
+    "card": "TC"
+  },
+  {
+    "type": "play",
+    "seat": "west",
+    "card": "9D"
+  },
+  {
+    "type": "play",
+    "seat": "north",
+    "card": "KS"
+  },
+  {
+    "type": "play",
+    "seat": "east",
+    "card": "AC"
+  },
+  {
+    "type": "play",
+    "seat": "east",
+    "card": "KC"
+  },
+  {
+    "type": "play",
+    "seat": "south",
+    "card": "4C"
+  },
+  {
+    "type": "play",
+    "seat": "west",
+    "card": "QD"
+  },
+  {
+    "type": "play",
+    "seat": "north",
+    "card": "JS"
+  },
+  {
+    "type": "play",
+    "seat": "east",
+    "card": "5C"
+  },
+  {
+    "type": "play",
+    "seat": "south",
+    "card": "3S"
+  },
+  {
+    "type": "play",
+    "seat": "west",
+    "card": "AD"
+  },
+  {
+    "type": "play",
+    "seat": "north",
+    "card": "QH"
+  },
+  {
+    "type": "play",
+    "seat": "east",
+    "card": "3C"
+  },
+  {
+    "type": "play",
+    "seat": "south",
+    "card": "JH"
+  },
+  {
+    "type": "play",
+    "seat": "west",
+    "card": "2D"
+  },
+  {
+    "type": "play",
+    "seat": "north",
+    "card": "9H"
+  },
+  {
+    "type": "play",
+    "seat": "east",
+    "card": "KH"
+  },
+  {
+    "type": "play",
+    "seat": "south",
+    "card": "7H"
+  },
+  {
+    "type": "play",
+    "seat": "west",
+    "card": "2H"
+  },
+  {
+    "type": "play",
+    "seat": "north",
+    "card": "5H"
+  },
+  {
+    "type": "play",
+    "seat": "east",
+    "card": "AS"
+  },
+  {
+    "type": "play",
+    "seat": "south",
+    "card": "7S"
+  },
+  {
+    "type": "play",
+    "seat": "west",
+    "card": "TS"
+  },
+  {
+    "type": "play",
+    "seat": "north",
+    "card": "2S"
+  },
+  {
+    "type": "play",
+    "seat": "east",
+    "card": "9S"
+  },
+  {
+    "type": "play",
+    "seat": "south",
+    "card": "TH"
+  },
+  {
+    "type": "play",
+    "seat": "west",
+    "card": "6S"
+  },
+  {
+    "type": "play",
+    "seat": "north",
+    "card": "3H"
+  },
+  {
+    "type": "play",
+    "seat": "east",
+    "card": "4S"
+  },
+  {
+    "type": "play",
+    "seat": "south",
+    "card": "4H"
+  },
+  {
+    "type": "play",
+    "seat": "west",
+    "card": "TD"
+  },
+  {
+    "type": "play",
+    "seat": "north",
+    "card": "3D"
+  },
+  {
+    "type": "claim",
+    "seat": "east",
+    "hand": [
+      "QS",
+      "8S",
+      "5S"
+    ]
+  },
+  {
+    "type": "accept_claim",
+    "claimer": "east",
+    "acceptor": "north"
+  },
+  {
+    "type": "accept_claim",
+    "claimer": "east",
+    "acceptor": "west"
+  },
+  {
+    "type": "accept_claim",
+    "claimer": "east",
+    "acceptor": "south"
+  },
+  {
+    "type": "deal",
+    "north": [
+      "AS",
+      "9S",
+      "KH",
+      "QH",
+      "TH",
+      "7H",
+      "4H",
+      "AD",
+      "QD",
+      "4D",
+      "QC",
+      "JC",
+      "9C"
+    ],
+    "east": [
+      "KS",
+      "8S",
+      "4S",
+      "3S",
+      "2S",
+      "8H",
+      "2H",
+      "TD",
+      "8D",
+      "3D",
+      "KC",
+      "TC",
+      "4C"
+    ],
+    "south": [
+      "QS",
+      "JS",
+      "7S",
+      "5S",
+      "AH",
+      "9H",
+      "6H",
+      "5H",
+      "JD",
+      "7D",
+      "2D",
+      "7C",
+      "5C"
+    ],
+    "west": [
+      "TS",
+      "6S",
+      "JH",
+      "3H",
+      "KD",
+      "9D",
+      "6D",
+      "5D",
+      "AC",
+      "8C",
+      "6C",
+      "3C",
+      "2C"
+    ],
+    "pass": "keeper"
+  },
+  {
+    "type": "charge",
+    "seat": "north",
+    "cards": []
+  },
+  {
+    "type": "charge",
+    "seat": "south",
+    "cards": []
+  },
+  {
+    "type": "charge",
+    "seat": "west",
+    "cards": []
+  },
+  {
+    "type": "charge",
+    "seat": "east",
+    "cards": []
+  },
+  {
+    "type": "send_pass",
+    "from": "north",
+    "cards": [
+      "AS",
+      "QH",
+      "QC"
+    ]
+  },
+  {
+    "type": "send_pass",
+    "from": "west",
+    "cards": [
+      "JH",
+      "3H",
+      "AC"
+    ]
+  },
+  {
+    "type": "send_pass",
+    "from": "south",
+    "cards": [
+      "QS",
+      "9H",
+      "7C"
+    ]
+  },
+  {
+    "type": "send_pass",
+    "from": "east",
+    "cards": [
+      "8H",
+      "KC",
+      "TC"
+    ]
+  },
+  {
+    "type": "recv_pass",
+    "to": "north",
+    "cards": [
+      "8H",
+      "3H",
+      "7C"
+    ]
+  },
+  {
+    "type": "recv_pass",
+    "to": "east",
+    "cards": [
+      "QH",
+      "JH",
+      "AC"
+    ]
+  },
+  {
+    "type": "recv_pass",
+    "to": "south",
+    "cards": [
+      "QS",
+      "KC",
+      "QC"
+    ]
+  },
+  {
+    "type": "recv_pass",
+    "to": "west",
+    "cards": [
+      "AS",
+      "9H",
+      "TC"
+    ]
+  },
+  {
+    "type": "charge",
+    "seat": "south",
+    "cards": []
+  },
+  {
+    "type": "charge",
+    "seat": "west",
+    "cards": []
+  },
+  {
+    "type": "charge",
+    "seat": "north",
+    "cards": []
+  },
+  {
+    "type": "charge",
+    "seat": "east",
+    "cards": []
+  },
+  {
+    "type": "play",
+    "seat": "west",
+    "card": "2C"
+  },
+  {
+    "type": "play",
+    "seat": "north",
+    "card": "9C"
+  },
+  {
+    "type": "play",
+    "seat": "east",
+    "card": "4C"
+  },
+  {
+    "type": "play",
+    "seat": "south",
+    "card": "5C"
+  },
+  {
+    "type": "play",
+    "seat": "west",
+    "card": "6C"
+  },
+  {
+    "type": "play",
+    "seat": "north",
+    "card": "7C"
+  },
+  {
+    "type": "play",
+    "seat": "east",
+    "card": "AC"
+  },
+  {
+    "type": "play",
+    "seat": "south",
+    "card": "KC"
+  },
+  {
+    "type": "play",
+    "seat": "east",
+    "card": "4S"
+  },
+  {
+    "type": "play",
+    "seat": "south",
+    "card": "JS"
+  },
+  {
+    "type": "play",
+    "seat": "west",
+    "card": "AS"
+  },
+  {
+    "type": "play",
+    "seat": "north",
+    "card": "9S"
+  },
+  {
+    "type": "play",
+    "seat": "east",
+    "card": "3S"
+  },
+  {
+    "type": "play",
+    "seat": "south",
+    "card": "QS"
+  },
+  {
+    "type": "play",
+    "seat": "west",
+    "card": "6S"
+  },
+  {
+    "type": "play",
+    "seat": "north",
+    "card": "KH"
+  },
+  {
+    "type": "play",
+    "seat": "west",
+    "card": "TS"
+  },
+  {
+    "type": "play",
+    "seat": "north",
+    "card": "4D"
+  },
+  {
+    "type": "play",
+    "seat": "east",
+    "card": "8S"
+  },
+  {
+    "type": "play",
+    "seat": "south",
+    "card": "7S"
+  },
+  {
+    "type": "play",
+    "seat": "west",
+    "card": "6D"
+  },
+  {
+    "type": "play",
+    "seat": "north",
+    "card": "QD"
+  },
+  {
+    "type": "play",
+    "seat": "east",
+    "card": "TD"
+  },
+  {
+    "type": "play",
+    "seat": "south",
+    "card": "7D"
+  },
+  {
+    "type": "play",
+    "seat": "north",
+    "card": "4H"
+  },
+  {
+    "type": "play",
+    "seat": "east",
+    "card": "JH"
+  },
+  {
+    "type": "play",
+    "seat": "south",
+    "card": "6H"
+  },
+  {
+    "type": "play",
+    "seat": "west",
+    "card": "9H"
+  },
+  {
+    "type": "play",
+    "seat": "north",
+    "card": "3H"
+  },
+  {
+    "type": "play",
+    "seat": "east",
+    "card": "QH"
+  },
+  {
+    "type": "play",
+    "seat": "south",
+    "card": "5H"
+  },
+  {
+    "type": "play",
+    "seat": "west",
+    "card": "TC"
+  },
+  {
+    "type": "play",
+    "seat": "east",
+    "card": "2H"
+  },
+  {
+    "type": "play",
+    "seat": "south",
+    "card": "AH"
+  },
+  {
+    "type": "play",
+    "seat": "west",
+    "card": "9D"
+  },
+  {
+    "type": "play",
+    "seat": "north",
+    "card": "TH"
+  },
+  {
+    "type": "play",
+    "seat": "south",
+    "card": "2D"
+  },
+  {
+    "type": "play",
+    "seat": "west",
+    "card": "5D"
+  },
+  {
+    "type": "play",
+    "seat": "north",
+    "card": "AD"
+  },
+  {
+    "type": "play",
+    "seat": "east",
+    "card": "8D"
+  },
+  {
+    "type": "play",
+    "seat": "north",
+    "card": "8H"
+  },
+  {
+    "type": "play",
+    "seat": "east",
+    "card": "3D"
+  },
+  {
+    "type": "play",
+    "seat": "south",
+    "card": "QC"
+  },
+  {
+    "type": "play",
+    "seat": "west",
+    "card": "8C"
+  },
+  {
+    "type": "claim",
+    "seat": "north",
+    "hand": [
+      "7H",
+      "JC"
+    ]
+  },
+  {
+    "type": "accept_claim",
+    "claimer": "north",
+    "acceptor": "south"
+  },
+  {
+    "type": "accept_claim",
+    "claimer": "north",
+    "acceptor": "east"
+  },
+  {
+    "type": "accept_claim",
+    "claimer": "north",
+    "acceptor": "west"
+  }
+]

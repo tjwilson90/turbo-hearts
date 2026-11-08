@@ -1,0 +1,247 @@
+[
+  {
+    "choices": {
+      "2D": 12,
+      "4D": 2,
+      "7D": 15,
+      "9H": 4,
+      "AH": 65,
+      "JH": 2
+    },
+    "event_index": 37,
+    "mean_values": {
+      "2D": 3.9809374999999996,
+      "4D": 3.9708593750000003,
+      "4H": -4.501953125000001,
+      "6H": -3.7039062499999997,
+      "7D": 4.06,
+      "9H": 2.951093750000001,
+      "AH": 6.2914062500000005,
+      "JH": 2.391875
+    },
+    "opponent_can_claim_with_actual_hand": {
+      "2D": false,
+      "4D": false,
+      "4H": false,
+      "6H": false,
+      "7D": false,
+      "9H": false,
+      "AH": true,
+      "JH": false
+    },
+    "profile": "claims:128:12",
+    "recorded": "AH",
+    "seat": "south",
+    "seeds": 100
+  },
+  {
+    "choices": {
+      "2D": 25,
+      "4D": 9,
+      "7D": 29,
+      "9H": 22,
+      "AH": 2,
+      "JH": 13
+    },
+    "event_index": 37,
+    "mean_values": {
+      "2D": 4.730468749999998,
+      "4D": 4.7231250000000005,
+      "4H": -3.3553124999999993,
+      "6H": -2.553515625,
+      "7D": 4.826249999999999,
+      "9H": 3.5050781250000016,
+      "AH": 2.3585156249999994,
+      "JH": 2.790625
+    },
+    "opponent_can_claim_with_actual_hand": {
+      "2D": false,
+      "4D": false,
+      "4H": false,
+      "6H": false,
+      "7D": false,
+      "9H": false,
+      "AH": true,
+      "JH": false
+    },
+    "profile": "safeearly:128:12",
+    "recorded": "AH",
+    "seat": "south",
+    "seeds": 100
+  },
+  {
+    "choices": {
+      "2D": 19,
+      "4D": 7,
+      "7D": 24,
+      "9H": 16,
+      "AH": 21,
+      "JH": 13
+    },
+    "event_index": 37,
+    "mean_values": {
+      "2D": 4.750390624999999,
+      "4D": 4.751484375,
+      "4H": -2.7046874999999995,
+      "6H": -1.8556249999999992,
+      "7D": 4.855312499999999,
+      "9H": 3.6473437500000014,
+      "AH": 2.9944531249999993,
+      "JH": 3.5003125
+    },
+    "opponent_can_claim_with_actual_hand": {
+      "2D": false,
+      "4D": false,
+      "4H": false,
+      "6H": false,
+      "7D": false,
+      "9H": false,
+      "AH": true,
+      "JH": false
+    },
+    "profile": "humanlike:128:12",
+    "recorded": "AH",
+    "seat": "south",
+    "seeds": 100
+  },
+  {
+    "choices": {
+      "2D": 11,
+      "4D": 3,
+      "7D": 13,
+      "9H": 4,
+      "AH": 67,
+      "JH": 2
+    },
+    "event_index": 37,
+    "mean_values": {
+      "2D": 4.036953125,
+      "4D": 4.022890625,
+      "4H": -2.9645312499999994,
+      "6H": -2.1893749999999996,
+      "7D": 4.122421875,
+      "9H": 3.243828125000001,
+      "AH": 6.639453125000001,
+      "JH": 3.2951562500000007
+    },
+    "opponent_can_claim_with_actual_hand": {
+      "2D": false,
+      "4D": false,
+      "4H": false,
+      "6H": false,
+      "7D": false,
+      "9H": false,
+      "AH": true,
+      "JH": false
+    },
+    "profile": "planclaims:128:12",
+    "recorded": "AH",
+    "seat": "south",
+    "seeds": 100
+  },
+  {
+    "choices": {
+      "2D": 22,
+      "4D": 8,
+      "7D": 25,
+      "9H": 16,
+      "AH": 20,
+      "JH": 9
+    },
+    "event_index": 37,
+    "mean_values": {
+      "2D": 4.730468749999998,
+      "4D": 4.7231250000000005,
+      "4H": -3.3553124999999993,
+      "6H": -2.553515625,
+      "7D": 4.826249999999999,
+      "9H": 3.5050781250000016,
+      "AH": 2.3585156249999994,
+      "JH": 2.790625
+    },
+    "opponent_can_claim_with_actual_hand": {
+      "2D": false,
+      "4D": false,
+      "4H": false,
+      "6H": false,
+      "7D": false,
+      "9H": false,
+      "AH": true,
+      "JH": false
+    },
+    "profile": "earlyclaims:128:12",
+    "recorded": "AH",
+    "seat": "south",
+    "seeds": 100
+  },
+  {
+    "choices": {
+      "2D": 20,
+      "4D": 5,
+      "7D": 23,
+      "9H": 20,
+      "AH": 16,
+      "JH": 16
+    },
+    "event_index": 37,
+    "mean_values": {
+      "2D": 3.9809374999999996,
+      "4D": 3.9708593750000003,
+      "4H": -4.501953125000001,
+      "6H": -3.7039062499999997,
+      "7D": 4.06,
+      "9H": 2.951093750000001,
+      "AH": 6.2914062500000005,
+      "JH": 2.391875
+    },
+    "opponent_can_claim_with_actual_hand": {
+      "2D": false,
+      "4D": false,
+      "4H": false,
+      "6H": false,
+      "7D": false,
+      "9H": false,
+      "AH": true,
+      "JH": false
+    },
+    "profile": "safeclaims:128:12",
+    "recorded": "AH",
+    "seat": "south",
+    "seeds": 100
+  },
+  {
+    "choices": {
+      "2D": 12,
+      "4D": 7,
+      "7D": 17,
+      "9H": 32,
+      "AH": 20,
+      "JH": 12
+    },
+    "event_index": 37,
+    "mean_values": {
+      "2D": 3.373593749999999,
+      "4D": 3.3787499999999997,
+      "4H": -4.236562500000001,
+      "6H": -3.445390624999999,
+      "7D": 3.4049999999999994,
+      "9H": 3.2053125000000002,
+      "AH": 6.0035156249999995,
+      "JH": 2.7142187500000006
+    },
+    "opponent_can_claim_with_actual_hand": {
+      "2D": false,
+      "4D": false,
+      "4H": false,
+      "6H": false,
+      "7D": false,
+      "9H": false,
+      "AH": true,
+      "JH": false
+    },
+    "profile": "safemix:128:12",
+    "recorded": "AH",
+    "seat": "south",
+    "seeds": 100
+  }
+]

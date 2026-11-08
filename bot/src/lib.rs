@@ -1,4 +1,5 @@
 mod brute_force;
+mod charge_belief;
 mod duck;
 mod encoder;
 mod endgame;
@@ -6,12 +7,15 @@ mod experimental;
 mod gottatry;
 mod hand_maker;
 mod heuristic;
+mod human;
+mod human_action;
 mod moon_defense;
 mod neural_network;
 mod policy;
 mod preplay;
 mod random;
 mod simulate;
+mod skilled;
 mod transposition_table;
 
 pub use brute_force::*;
@@ -21,10 +25,13 @@ pub use experimental::*;
 pub use gottatry::*;
 pub use hand_maker::*;
 pub use heuristic::*;
+pub use human::*;
+pub use human_action::*;
 pub use neural_network::*;
 pub use policy::*;
 pub use random::*;
 pub use simulate::*;
+pub use skilled::*;
 pub use transposition_table::*;
 use turbo_hearts_api::{BotState, Card, Cards, GameEvent, GameState};
 

@@ -4,7 +4,15 @@ This page records the first improvement round. The subsequent
 [seven-direction exploration](round2/README.md) includes implementations,
 training checkpoints, paired matches, failures to generalize, and fresh-deal
 confirmation. The [third-round follow-up](round3/README.md) then improved the
-continuation model and became the current production default.
+continuation model. The [human-play follow-up](round4/README.md) adds the current
+production preference for preserving supported master hearts.
+The [Dan game investigation](round5/README.md) checks that change against a newer
+human game, including adaptive continuations and remaining nine-assisted moons.
+The [early-signal experiments](round6/README.md) extend that investigation to
+charging in every suit, early control retention, and preventive heart/nine plays.
+The [successful-human update](round7/README.md) fits policies to consistently
+successful players, compares human/bot decisions with responsive continuations,
+and enables the fitted human fallback while retaining inferred runner styles.
 
 The original four ONNX weight files were absent, so it was impossible to measure
 the historical neural bot's playing strength. All comparisons below are against

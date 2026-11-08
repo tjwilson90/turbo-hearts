@@ -4,12 +4,19 @@ The existing `neural_net` lobby strategy and `NeuralNetworkBot` API now use
 sampled search with explicit moon planning. They work without the four lost
 ONNX files. No model path or Python installation is needed to play.
 
-The [follow-up experiments](evaluation/round3/README.md) produced the current
-default: selective opponent modeling and continuations that recognize emerging
-moon attempts. Fresh matches improved money against mixed and heuristic bots;
-the full-strength search comparison remained inconclusive. The earlier
-[seven-direction exploration](evaluation/round2/README.md) and its trained
-standalone networks remain available as research variants.
+The [successful-human update](evaluation/round7/README.md) enables a contextual
+opponent policy fitted to consistently successful human players. It models
+publicly identified human seats while retaining confident inferred styles,
+including runners. The [supported-master-heart preference](evaluation/round4/README.md),
+[selective style inference](evaluation/round3/README.md), and emerging-shooter
+continuations remain. The report includes paired matches, uncertainty against
+stronger responders, and comparisons of actual human decisions to bot choices.
+These offline results use simulated responses, not live-human counterfactuals.
+The [seven-direction exploration](evaluation/round2/README.md) and its standalone
+networks remain available for research.
+The [early-signal experiments](evaluation/round6/README.md) add an all-suit human
+charging model, early control-retention evidence, and preventive heart/nine
+discard continuations as separately selectable research profiles.
 
 The defaults are 128 hidden deals per decision, exact search with at most 12
 cards remaining, and a one-second soft time limit. Most decisions finish much
@@ -26,7 +33,7 @@ opponent has captured a heart or the queen, the shooting continuation stops.
 The bot reconsiders the plan at each real decision; it does not commit to a run
 just because it has already taken points.
 
-Opponent modeling starts with a conservative prior: 90% heuristic, 5% duck,
+Style inference starts with a conservative prior: 90% heuristic, 5% duck,
 and 5% shooting. It adopts a non-heuristic style only after three informative
 observations and at least 60% support under that model. Otherwise, the original
 opposing-shooter mixture applies. In half the rollouts, an opponent can begin
@@ -35,11 +42,25 @@ queen. This opportunity is reconsidered as the simulated hand develops, so a
 threat need not already exist at the initial position. The shooting continuation
 stops when another player wins a moon point.
 
+For a publicly identified human without a confident inferred style, the default
+uses the fitted successful-human continuation policy instead of that fallback
+mixture. Context includes suit support, masters, nines, voids, moon viability,
+and charges. It does not infer a person's skill from their identity. Bot seats
+retain the previous continuation model. Models and trainers for a more detailed
+direct action predictor are also available, but that predictor is not the default.
+
 These are opponent-model assumptions, not known intentions. Inference uses a
 separate random stream and uniformly constrained deals; it does not bias hidden
 ownership by behavioral likelihood. Policies see their own hand and public
 information. Search still has the limitations of approximate continuations and
 hidden-card determinization; it is not optimal play.
+
+When sloughing onto another player's trick, the bot prefers to keep its current
+highest heart if it beats all unseen hearts, has at least two supporting hearts,
+and an opponent can still moon. It accepts at most 8 money less in modeled value
+than the best move. This bounded preference preserves inexpensive control before
+captured points reveal a threat; a sufficiently better discard still wins.
+`evaluate` exposes unmodified search values; `play` applies the preference.
 
 Passing and charging retain the existing heuristic. Searching all three-card
 passes in the first round did not improve development matches reliably, so
@@ -65,7 +86,27 @@ optional charging rules. `--help` lists the options. Profiles:
 - `moon:N:E`: also compare the bot's shooting continuation.
 - `defend:N:E`: the frozen first-round opposing-shooter model. `defend:128:12`
   remains the benchmark for the current default.
-- `cautiousdynamic:128:12:none:0:32:0:0.6`: the current production policy.
+- `skilledfallback`: the current production policy, with the time cap disabled.
+- `round4` or `preserve:128:12:none:0:32:8`: the frozen supported-stopper policy.
+- `cautiousdynamic:128:12:none:0:32:0:0.6`: the frozen round-three default.
+- `human`, `humanclaim`: the fitted human action model, without/with provable
+  claims. These are simulated opponents, not real human players.
+- `chargebelief`, `intent`, `disrupt`, `humanaware`: experimental additions to
+  frozen round4, with the usual `:N:E` sample/endgame suffix. Respectively enable
+  learned charge-conditioned hidden hands, soft early shooting inference, a
+  preventive continuation, or all three. Charging inference is human-only,
+  Classic non-keeper; its likelihood power defaults to 0.5 and can be set with
+  `chargebelief:128:12:none:0:32:POWER`.
+- `skilledmix`, `skilledmodel`, `skilledintent`, `skilledclaims`, `skilledfallback`,
+  `skilledadaptive`: successful-human continuation variants. Respectively use a
+  half mixture, full mixture, half plus early intent, half plus claims, full
+  fallback retaining inferred styles, or that fallback plus human early intent.
+- `actionmix`, `actionmodel`, `actionintent`, `actionclaims`, `actionplan`:
+  direct human move-model variants, with half/full human continuations, early
+  intent, claims, or an additional own learned continuation.
+- `skilled`, `action`: fitted policies used directly as simulated players.
+  Their `claim` variants can make provable claims. `skilledhybrid` and
+  `actionhybrid` mix each policy with frozen round4 search at every decision.
 - `heuristic`, `duck`, `gottatry`, `random`: comparison policies. The `random`
   profile randomizes plays and uses heuristic passes/charges.
 - `mixed` as the opponent: heuristic, duck, and GottaTry at the other three seats.
@@ -76,7 +117,8 @@ The arena also exposes `model`, `belief`, `posterior`, `tree`, `modeltree`,
 reproduction commands are in the [round-two report](evaluation/round2/README.md).
 Direct network players use `policy:PATH:TEMPERATURE` (zero means greedy).
 Follow-up profiles and their additional parameters are documented in the
-[round-three report](evaluation/round3/README.md) and `arena --help`.
+[round-three report](evaluation/round3/README.md), the
+[human-play report](evaluation/round4/README.md), and `arena --help`.
 
 Append `:MODEL:PRIOR_SAMPLES` to a search profile to test a learned prior.
 Every unique deal is replayed with the candidate in all four seats, then with
@@ -143,9 +185,11 @@ prior can optionally be supplied through `.with_policy(network, prior_samples)`.
 loading validates format, dimensions, length, and finite weights and returns an
 error for missing or invalid files.
 
-Use `.with_experiments(SearchExperiments { ... })` before the first deal to
+Use `.with_experiments(SearchExperiments { ... })` before replaying history
+(including `Sit`, which supplies public human/bot player types) to
 enable research variants. `SearchExperiments::default()` turns all extensions
-off; `production()` selects the confirmed subset. `.with_samples(n)` preserves
+off; `production()` selects the default subset. `round_four()` and `round_three()`
+preserve earlier defaults. `.with_samples(n)` preserves
 observations when cloning a bot for a stronger teacher. Diagnostics expose the
 last search's terminal evaluations, belief effective sample size, and tree nodes.
 The standalone self-play checkpoints contain policy scores, so they should not

@@ -1,0 +1,271 @@
+{
+  "baseline": "round4",
+  "candidate": "skilledmodel",
+  "results": [
+    {
+      "mode": "all",
+      "responder": "actionclaim",
+      "baseline_disagreements": 185,
+      "candidate_disagreements": 192,
+      "human_minus_baseline": {
+        "decisions": 386,
+        "games": 60,
+        "mean": -2.940738341968912,
+        "ci95": [
+          -9.650155136264505,
+          3.768678452326682
+        ]
+      },
+      "human_minus_candidate": {
+        "decisions": 386,
+        "games": 60,
+        "mean": -7.760362694300518,
+        "ci95": [
+          -17.88564696243756,
+          2.364921573836522
+        ]
+      },
+      "candidate_minus_baseline": {
+        "decisions": 386,
+        "games": 60,
+        "mean": 4.819624352331606,
+        "ci95": [
+          -0.16794903459322263,
+          9.807197739256434
+        ]
+      }
+    },
+    {
+      "mode": "all",
+      "responder": "round4",
+      "baseline_disagreements": 185,
+      "candidate_disagreements": 192,
+      "human_minus_baseline": {
+        "decisions": 386,
+        "games": 60,
+        "mean": 5.106541450777202,
+        "ci95": [
+          0.04677266154919657,
+          10.166310240005208
+        ]
+      },
+      "human_minus_candidate": {
+        "decisions": 386,
+        "games": 60,
+        "mean": 6.100064766839378,
+        "ci95": [
+          1.7304163787210358,
+          10.46971315495772
+        ]
+      },
+      "candidate_minus_baseline": {
+        "decisions": 386,
+        "games": 60,
+        "mean": -0.9935233160621761,
+        "ci95": [
+          -5.104330052906257,
+          3.117283420781905
+        ]
+      }
+    },
+    {
+      "mode": "lead",
+      "responder": "actionclaim",
+      "baseline_disagreements": 56,
+      "candidate_disagreements": 50,
+      "human_minus_baseline": {
+        "decisions": 82,
+        "games": 46,
+        "mean": -3.875,
+        "ci95": [
+          -20.743842630897802,
+          12.993842630897802
+        ]
+      },
+      "human_minus_candidate": {
+        "decisions": 82,
+        "games": 46,
+        "mean": -31.567073170731707,
+        "ci95": [
+          -59.34253044575746,
+          -3.791615895705956
+        ]
+      },
+      "candidate_minus_baseline": {
+        "decisions": 82,
+        "games": 46,
+        "mean": 27.692073170731707,
+        "ci95": [
+          7.106367479200671,
+          48.27777886226274
+        ]
+      }
+    },
+    {
+      "mode": "lead",
+      "responder": "round4",
+      "baseline_disagreements": 56,
+      "candidate_disagreements": 50,
+      "human_minus_baseline": {
+        "decisions": 82,
+        "games": 46,
+        "mean": 6.245426829268292,
+        "ci95": [
+          -6.618397616843828,
+          19.109251275380412
+        ]
+      },
+      "human_minus_candidate": {
+        "decisions": 82,
+        "games": 46,
+        "mean": 11.815548780487806,
+        "ci95": [
+          -1.1631959458376162,
+          24.794293506813226
+        ]
+      },
+      "candidate_minus_baseline": {
+        "decisions": 82,
+        "games": 46,
+        "mean": -5.570121951219512,
+        "ci95": [
+          -18.994783460362477,
+          7.8545395579234505
+        ]
+      }
+    },
+    {
+      "mode": "follow",
+      "responder": "actionclaim",
+      "baseline_disagreements": 64,
+      "candidate_disagreements": 75,
+      "human_minus_baseline": {
+        "decisions": 185,
+        "games": 58,
+        "mean": 0.6148648648648649,
+        "ci95": [
+          -3.5731337173298785,
+          4.802863447059608
+        ]
+      },
+      "human_minus_candidate": {
+        "decisions": 185,
+        "games": 58,
+        "mean": 2.5236486486486487,
+        "ci95": [
+          -2.2013972208502275,
+          7.248694518147525
+        ]
+      },
+      "candidate_minus_baseline": {
+        "decisions": 185,
+        "games": 58,
+        "mean": -1.9087837837837838,
+        "ci95": [
+          -6.746215522360176,
+          2.928647954792608
+        ]
+      }
+    },
+    {
+      "mode": "follow",
+      "responder": "round4",
+      "baseline_disagreements": 64,
+      "candidate_disagreements": 75,
+      "human_minus_baseline": {
+        "decisions": 185,
+        "games": 58,
+        "mean": 5.1087837837837835,
+        "ci95": [
+          -1.0568938166136883,
+          11.274461384181254
+        ]
+      },
+      "human_minus_candidate": {
+        "decisions": 185,
+        "games": 58,
+        "mean": 4.949324324324325,
+        "ci95": [
+          -0.4336031859522995,
+          10.33225183460095
+        ]
+      },
+      "candidate_minus_baseline": {
+        "decisions": 185,
+        "games": 58,
+        "mean": 0.15945945945945947,
+        "ci95": [
+          -5.58211444788333,
+          5.90103336680225
+        ]
+      }
+    },
+    {
+      "mode": "slough",
+      "responder": "actionclaim",
+      "baseline_disagreements": 65,
+      "candidate_disagreements": 67,
+      "human_minus_baseline": {
+        "decisions": 119,
+        "games": 56,
+        "mean": -7.824579831932773,
+        "ci95": [
+          -23.061938719699484,
+          7.412779055833935
+        ]
+      },
+      "human_minus_candidate": {
+        "decisions": 119,
+        "games": 56,
+        "mean": -7.343487394957983,
+        "ci95": [
+          -25.98606450713052,
+          11.299089717214557
+        ]
+      },
+      "candidate_minus_baseline": {
+        "decisions": 119,
+        "games": 56,
+        "mean": -0.4810924369747899,
+        "ci95": [
+          -7.2496238875602135,
+          6.2874390136106335
+        ]
+      }
+    },
+    {
+      "mode": "slough",
+      "responder": "round4",
+      "baseline_disagreements": 65,
+      "candidate_disagreements": 67,
+      "human_minus_baseline": {
+        "decisions": 119,
+        "games": 56,
+        "mean": 4.31827731092437,
+        "ci95": [
+          -5.640695769738502,
+          14.277250391587241
+        ]
+      },
+      "human_minus_candidate": {
+        "decisions": 119,
+        "games": 56,
+        "mean": 3.9506302521008405,
+        "ci95": [
+          -8.437872608947309,
+          16.33913311314899
+        ]
+      },
+      "candidate_minus_baseline": {
+        "decisions": 119,
+        "games": 56,
+        "mean": 0.36764705882352944,
+        "ci95": [
+          -4.25549741422383,
+          4.99079153187089
+        ]
+      }
+    }
+  ],
+  "interpretation": "Actual hands with responsive simulated continuations; equivalent moves have zero gap. Intervals cluster by game, not move or continuation seed. Recorded final scores are not causal action labels."
+}
