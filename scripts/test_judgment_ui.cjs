@@ -81,6 +81,48 @@ test('all starter positions render without missing history or card fields',async
       assert.ok(!h.$('players').textContent.includes('undefined'));
       assert.ok(!h.$('preplay-history').textContent.includes('undefined'));
       assert.equal(h.$('save').disabled,true);
+      assert.equal(h.$('remaining-panel').hidden,c.view.kind!=='play');
+      if(c.view.kind==='play') {
+        const tracker=h.$('remaining-cards');
+        assert.equal(tracker.querySelectorAll('.remaining-card').length,52);
+        assert.equal(tracker.querySelectorAll('.in-hand').length,c.view.hand.length);
+        assert.equal(tracker.querySelectorAll('.played').length,c.view.played.length);
+        for(const card of c.view.hand)assert.ok(tracker.querySelector(`[data-card="${card}"]`).classList.contains('in-hand'));
+        for(const p of c.view.trick)assert.ok(tracker.querySelector(`[data-card="${p.card}"]`).classList.contains('played'));
+      }
     }
+  } finally {h.dom.window.close();}
+});
+
+test('remaining cards and compass tricks preserve an extended trick and a non-North lead',async()=>{
+  const h=await setup('play');
+  try {
+    const previous=[['east','9C'],['south','TC'],['west','JC'],['north','QC'],['east','KC'],['south','AC'],['west','8C'],['north','7C']]
+      .map(([seat,card])=>({type:'play',seat,card}));
+    const trick=[['west','2S'],['north','3S'],['east','4S'],['south','9S'],['west','5S'],['north','6S']]
+      .map(([seat,card])=>({seat,card}));
+    const view={...h.question.view,seat:'south',hand:['AH','2H','QS'],legal_cards:['QS'],trick,
+      played:previous.map(p=>p.card),history:[...previous,{type:'end_trick',winner:'south'}]};
+    h.w.renderFixture({id:'extended-trick',view,revision:0,annotation:null});
+    const tracker=h.$('remaining-cards');
+    assert.equal(tracker.querySelectorAll('.played').length,14,'Current-trick cards also count as played');
+    assert.equal(tracker.querySelectorAll('.in-hand').length,3);
+    assert.equal(tracker.querySelectorAll('.elsewhere').length,35);
+    assert.equal(h.$('remaining-count').textContent,'38 unplayed · 35 elsewhere');
+    assert.ok(tracker.querySelector('[data-card=AD]').classList.contains('elsewhere'));
+    const table=h.$('players'),history=h.$('trick-history');
+    assert.equal(table.querySelector('.lead-badge').closest('[data-seat]').dataset.seat,'west');
+    assert.equal(table.querySelector('.lead-card').closest('[data-card]').dataset.card,'2S');
+    assert.equal(history.querySelector('.lead-badge').closest('[data-seat]').dataset.seat,'east');
+    assert.equal(history.querySelectorAll('.lead-card').length,1,'Only the first of eight cards is the lead');
+    assert.equal(history.querySelector('.lead-card').closest('[data-card]').dataset.card,'9C');
+    assert.equal(history.querySelector('.winner').dataset.seat,'south');
+    for(const seat of ['north','east','south','west'])assert.equal(history.querySelectorAll(`[data-seat=${seat}] .trick-card`).length,2);
+    assert.deepEqual(Array.from(history.querySelectorAll('[data-seat=west] .play-number'),e=>e.textContent),['3','7']);
+    assert.deepEqual(Array.from(table.querySelectorAll('[data-seat=north] .play-number'),e=>e.textContent),['2','6']);
+    view.trick=[];
+    h.w.renderFixture({id:'new-trick',view,revision:0,annotation:null});
+    assert.equal(table.querySelector('.lead-badge').textContent,'Leads');
+    assert.equal(table.querySelector('.lead-badge').closest('[data-seat]').dataset.seat,'south');
   } finally {h.dom.window.close();}
 });
