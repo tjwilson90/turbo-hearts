@@ -44,6 +44,8 @@ pub struct NeuralNetworkBot {
     pub(crate) policy: Option<PolicyNetwork>,
     pub(crate) experiments: crate::SearchExperiments,
     pub(crate) history: crate::experimental::BehaviorHistory,
+    pub(crate) charge_history: crate::charge_belief::ChargeHistory,
+    pub(crate) human_seats: [bool; 4],
     pub(crate) last_evaluations: usize,
     pub(crate) last_belief_ess: f64,
     pub(crate) last_tree_nodes: usize,
@@ -77,6 +79,8 @@ impl NeuralNetworkBot {
             policy: None,
             experiments: crate::SearchExperiments::default(),
             history: crate::experimental::BehaviorHistory::default(),
+            charge_history: crate::charge_belief::ChargeHistory::default(),
+            human_seats: [false; 4],
             last_evaluations: 0,
             last_belief_ess: 0.0,
             last_tree_nodes: 0,
@@ -104,6 +108,7 @@ impl NeuralNetworkBot {
     /// Sampled money for distinct legal moves. Ordinary search gives every move
     /// the same deals and rollout streams. Experimental allocation returns only
     /// surviving moves, which share the additional rounds allocated to them.
+    /// The optional stopper preference affects `play`, not these money estimates.
     pub fn evaluate(&mut self, bot: &BotState, state: &GameState) -> Vec<(Card, f32)> {
         self.search(bot, state).0
     }
@@ -260,6 +265,20 @@ impl Algorithm for NeuralNetworkBot {
                 }
             }
         }
+        if self.experiments.stopper_margin > 0.0 {
+            if let Some(stopper) = crate::moon_defense::supported_stopper(bot, state) {
+                let best = values.iter().map(|v| v.1).fold(f32::NEG_INFINITY, f32::max);
+                if let Some(&(card, _)) = values
+                    .iter()
+                    .filter(|(card, value)| {
+                        *card != stopper && *value >= best - self.experiments.stopper_margin
+                    })
+                    .max_by(|a, b| a.1.partial_cmp(&b.1).unwrap())
+                {
+                    return card;
+                }
+            }
+        }
         values
             .into_iter()
             .max_by(|a, b| a.1.partial_cmp(&b.1).unwrap())
@@ -268,10 +287,24 @@ impl Algorithm for NeuralNetworkBot {
     }
 
     fn on_event(&mut self, _: &BotState, state: &GameState, event: &GameEvent) {
+        if let GameEvent::Sit {
+            north,
+            east,
+            south,
+            west,
+            ..
+        } = event
+        {
+            self.human_seats = [north, east, south, west].map(|p| p.strategy().is_none());
+        }
         self.hand_maker.on_event(state, event);
+        if self.experiments.charge_belief_strength > 0.0 {
+            self.charge_history.on_event(state, event);
+        }
         if self.experiments.opponent_model
             || self.experiments.conservative_model
             || self.experiments.belief_strength > 0.0
+            || self.experiments.early_intent
         {
             self.history.on_event(state, event);
         }
@@ -358,6 +391,18 @@ mod tests {
                 && !bot.experiments.moon_consensus
         );
         assert_eq!(bot.experiments.moon_defense, 0.0);
+        assert_eq!(bot.experiments.stopper_margin, 8.0);
+        assert!(!bot.experiments.defensive_plan);
+        assert!(!bot.experiments.claim_rollouts);
+        assert!(!bot.experiments.early_shooters);
+        assert_eq!(bot.experiments.human_rollouts, 1.0);
+        assert!(bot.experiments.skilled_model);
+        assert!(bot.experiments.human_model_fallback);
+        assert!(!bot.experiments.action_model);
+        assert!(!bot.experiments.learned_plan);
+        assert_eq!(bot.experiments.charge_belief_strength, 0.0);
+        assert!(!bot.experiments.early_intent);
+        assert!(!bot.experiments.disruptive_plan);
         assert_eq!(bot.experiments.belief_strength, 0.0);
         assert_eq!(bot.experiments.pass_samples, 0);
         assert_eq!(bot.experiments.charge_samples, 0);

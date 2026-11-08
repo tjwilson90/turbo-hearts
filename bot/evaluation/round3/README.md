@@ -1,5 +1,8 @@
 # Follow-up: adapting without assuming too much
 
+The subsequent [human-play follow-up](../round4/README.md) retains these changes
+and adds a bounded preference for preserving supported master hearts.
+
 The previous round found a real opportunity and a real failure: modeling
 opponents improved mixed matches by 17.69 money per hand, but lost 7.82 against
 full-strength search. This follow-up tests whether useful adaptation can be

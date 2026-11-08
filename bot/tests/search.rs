@@ -125,6 +125,18 @@ fn experimental_search_respects_legality_budgets_and_replay() {
         "cautious:8:8:none:0:32:0:0.6",
         "consensus:8:8",
         "canonical:8:16",
+        "plan:8:8",
+        "claims:8:8",
+        "early:8:8",
+        "preserve:8:8",
+        "humanmix:8:8",
+        "chargebelief:8:8",
+        "intent:8:8",
+        "disrupt:8:8",
+        "humanaware:8:8",
+        "skilledmix:8:8",
+        "actionmix:8:8",
+        "actionplan:8:8",
     ] {
         let mut game = Match::new(
             983,
@@ -143,7 +155,18 @@ fn experimental_search_respects_legality_budgets_and_replay() {
                     .distinct_plays(state.played, state.current_trick);
                 let expected = copy.play(bot, state);
                 let count = copy.last_search_evaluations();
-                assert!(count <= 8 * legal.len() * 2);
+                assert!(
+                    count
+                        <= 8 * legal.len()
+                            * if ["plan:", "disrupt:", "humanaware:", "actionplan:"]
+                                .iter()
+                                .any(|p| profile.starts_with(p))
+                            {
+                                3
+                            } else {
+                                2
+                            }
+                );
                 let actual = game.players[0].search.as_mut().unwrap().play(bot, state);
                 assert_eq!(actual, expected);
                 if profile.starts_with("belief") || profile.starts_with("posterior") {
@@ -222,7 +245,7 @@ fn arena_default_matches_confirmed_policy_under_every_ruleset() {
             )
         };
         let mut production = make("default");
-        let mut confirmed = make("cautiousdynamic:128:12:none:0:32:0:0.6");
+        let mut confirmed = make("skilledfallback");
         production.finish();
         confirmed.finish();
         assert_eq!(production.game.state, confirmed.game.state);

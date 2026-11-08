@@ -9,6 +9,15 @@ fn main() {
 Players: default, heuristic, duck, gottatry, random, search:SAMPLES:EXACT, moon:SAMPLES:EXACT, defend:SAMPLES:EXACT.\n\
 Experiments with the same :SAMPLES:EXACT suffix: model, belief, posterior, tree, modeltree, allocate, guided, preplay, pass, charge, combined, modelcharge, posteriorcharge.\n\
 Follow-ups: guard, cautious, cautiousguard, selective, consensus, guardconsensus, dynamic, dynamicguard, cautiousdynamic, dynamiccharge, cached, canonical.\n\
+Human-play experiments: plan, claims, early, preserve, safe, planclaims, earlyclaims, safeclaims, safeearly, humanlike, humanmodel, humanmix, safemix (same :SAMPLES:EXACT suffix).\n\
+Early-signal experiments on frozen round4: chargebelief, intent, disrupt, humanaware (same :SAMPLES:EXACT suffix).\n\
+Successful-human profiles: skilledmix, skilledmodel, skilledintent, skilledclaims, skilledfallback (production), skilledadaptive.\n\
+Direct-human profiles: actionmix, actionmodel, actionintent, actionclaims, actionplan (same :SAMPLES:EXACT suffix).\n\
+Fitted responders: skilled, skilledclaim, skilledhybrid, action, actionclaim, actionhybrid. Hybrids use frozen round4 search.\n\
+round4 freezes the earlier supported-stopper policy; all research profiles retain their frozen baselines.\n\
+chargebelief/humanaware use slot 6 as charging-likelihood power (default 0.5); all retain stopper margin 8.\n\
+preserve/safe profiles use the DEFENDER_FRACTION slot as the maximum stopper preference in money (default 4).\n\
+human is the fitted human action model; humanclaim also makes provable claims. Neither represents live human opponents.\n\
 Append :MODEL:PRIOR_SAMPLES to a search player to test a learned prior.\n\
 Allocation: append :MODEL:0:MIN_ROUNDS (use none for an unguided allocator; default MIN_ROUNDS=32).\n\
 After MIN_ROUNDS, append :DEFENDER_FRACTION:STYLE_SUPPORT for applicable follow-up profiles (defaults 1 and 0.9).\n\

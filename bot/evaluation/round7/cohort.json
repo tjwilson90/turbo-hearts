@@ -1,0 +1,128 @@
+{
+  "selection": "top third among humans with >=30 training games; ridge 30; training only",
+  "rating_target": "money/hand = own strength minus mean opposing strength",
+  "selected_keys": [
+    1,
+    2,
+    3,
+    7,
+    8
+  ],
+  "eligible": [
+    {
+      "key": 1,
+      "training_games": 784,
+      "rating": 12.400564487641514
+    },
+    {
+      "key": 8,
+      "training_games": 56,
+      "rating": 11.270719297617227
+    },
+    {
+      "key": 7,
+      "training_games": 689,
+      "rating": 10.990408245444376
+    },
+    {
+      "key": 3,
+      "training_games": 636,
+      "rating": 9.027663731929552
+    },
+    {
+      "key": 2,
+      "training_games": 356,
+      "rating": 5.901159877103395
+    },
+    {
+      "key": 6,
+      "training_games": 359,
+      "rating": 3.2107813620811823
+    },
+    {
+      "key": 25,
+      "training_games": 279,
+      "rating": 3.0770677191801634
+    },
+    {
+      "key": 12,
+      "training_games": 30,
+      "rating": 1.448565471960887
+    },
+    {
+      "key": 9,
+      "training_games": 355,
+      "rating": 1.1971055212923938
+    },
+    {
+      "key": 45,
+      "training_games": 30,
+      "rating": -0.15271054583495047
+    },
+    {
+      "key": 35,
+      "training_games": 36,
+      "rating": -0.9623263272153223
+    },
+    {
+      "key": 23,
+      "training_games": 339,
+      "rating": -3.0029246604124147
+    },
+    {
+      "key": 10,
+      "training_games": 356,
+      "rating": -3.9268958810299694
+    }
+  ],
+  "performance_by_split": [
+    {
+      "split": 0,
+      "games_with_selected": 1169,
+      "selected": {
+        "player_games": 2521,
+        "mean_money_per_hand": 5.63665212217374
+      },
+      "other_humans": {
+        "player_games": 1918,
+        "mean_money_per_hand": -5.477320125130344
+      }
+    },
+    {
+      "split": 1,
+      "games_with_selected": 254,
+      "selected": {
+        "player_games": 618,
+        "mean_money_per_hand": 5.983414239482201
+      },
+      "other_humans": {
+        "player_games": 356,
+        "mean_money_per_hand": -9.32373595505618
+      }
+    },
+    {
+      "split": 2,
+      "games_with_selected": 244,
+      "selected": {
+        "player_games": 583,
+        "mean_money_per_hand": 8.726843910806174
+      },
+      "other_humans": {
+        "player_games": 301,
+        "mean_money_per_hand": -9.970099667774086
+      }
+    },
+    {
+      "split": 3,
+      "games_with_selected": 0,
+      "selected": {
+        "player_games": 0,
+        "mean_money_per_hand": null
+      },
+      "other_humans": {
+        "player_games": 4,
+        "mean_money_per_hand": 2.1875
+      }
+    }
+  ]
+}

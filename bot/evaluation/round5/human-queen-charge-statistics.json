@@ -1,0 +1,18 @@
+{
+  "held": {
+    "hands": 6361,
+    "spades_at_least_5": 3293,
+    "spades_at_least_6": 1689,
+    "ace_spades": 2308,
+    "nine_spades": 1824,
+    "ace_and_nine_spades": 654
+  },
+  "charged": {
+    "hands": 1986,
+    "spades_at_least_5": 1708,
+    "spades_at_least_6": 1285,
+    "ace_spades": 966,
+    "nine_spades": 791,
+    "ace_and_nine_spades": 370
+  }
+}
