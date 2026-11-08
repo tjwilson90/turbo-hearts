@@ -1,0 +1,122 @@
+{
+  "baseline": "round7",
+  "by_direction": [
+    {
+      "deals": 25,
+      "difference_ci95": [
+        -14.042436653877438,
+        15.46243665387744
+      ],
+      "direction": "left",
+      "money": [
+        50.27,
+        49.56
+      ],
+      "paired_difference": 0.71
+    },
+    {
+      "deals": 25,
+      "difference_ci95": [
+        -27.633154013107884,
+        35.35315401310788
+      ],
+      "direction": "right",
+      "money": [
+        34.69,
+        30.83
+      ],
+      "paired_difference": 3.86
+    },
+    {
+      "deals": 25,
+      "difference_ci95": [
+        -24.20734033765853,
+        31.16734033765853
+      ],
+      "direction": "across",
+      "money": [
+        43.6,
+        40.12
+      ],
+      "paired_difference": 3.48
+    },
+    {
+      "deals": 25,
+      "difference_ci95": [
+        -44.193954954153355,
+        11.833954954153352
+      ],
+      "direction": "keeper",
+      "money": [
+        9.5,
+        25.68
+      ],
+      "paired_difference": -16.18
+    }
+  ],
+  "candidate": "prelearn:none:assets/models/preplay-charge-additive.tpq",
+  "charges_by_suit": [
+    [
+      90,
+      56,
+      41,
+      61
+    ],
+    [
+      43,
+      7,
+      39,
+      28
+    ]
+  ],
+  "deals": 100,
+  "difference_ci95": [
+    -15.069712412474525,
+    11.004712412474523
+  ],
+  "hands_per_version": 400,
+  "keeper_redraws": [
+    49,
+    64
+  ],
+  "max_move_ms": [
+    9.659,
+    11.523
+  ],
+  "money": [
+    34.515,
+    36.5475
+  ],
+  "moons": [
+    37,
+    32
+  ],
+  "ms_per_hand": [
+    17.9879425,
+    18.2773925
+  ],
+  "opponent": "actionhybrid",
+  "opponent_moons": [
+    25,
+    26
+  ],
+  "paired_difference": -2.0325,
+  "preplay_ms_per_hand": [
+    0.001535,
+    5.25e-05
+  ],
+  "queen_and_8_to_12_hearts": [
+    26,
+    21
+  ],
+  "root_evaluations_per_hand": [
+    6510.4,
+    6527.04
+  ],
+  "rules": "classic",
+  "seed": 1901000,
+  "win_share": [
+    0.35625,
+    0.3575
+  ]
+}

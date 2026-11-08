@@ -1,0 +1,122 @@
+{
+  "baseline": "round7",
+  "by_direction": [
+    {
+      "deals": 25,
+      "difference_ci95": [
+        -35.76917427676313,
+        -0.030825723236866054
+      ],
+      "direction": "left",
+      "money": [
+        -24.16,
+        -6.26
+      ],
+      "paired_difference": -17.9
+    },
+    {
+      "deals": 25,
+      "difference_ci95": [
+        -25.840818695813976,
+        9.260818695813978
+      ],
+      "direction": "right",
+      "money": [
+        2.53,
+        10.82
+      ],
+      "paired_difference": -8.29
+    },
+    {
+      "deals": 25,
+      "difference_ci95": [
+        -21.931101855553244,
+        15.091101855553243
+      ],
+      "direction": "across",
+      "money": [
+        4.61,
+        8.03
+      ],
+      "paired_difference": -3.42
+    },
+    {
+      "deals": 25,
+      "difference_ci95": [
+        -27.631704195336905,
+        16.751704195336902
+      ],
+      "direction": "keeper",
+      "money": [
+        -4.77,
+        0.67
+      ],
+      "paired_difference": -5.44
+    }
+  ],
+  "candidate": "prelearn:none:assets/models/preplay-charge-additive.tpq",
+  "charges_by_suit": [
+    [
+      90,
+      56,
+      41,
+      61
+    ],
+    [
+      43,
+      7,
+      39,
+      28
+    ]
+  ],
+  "deals": 100,
+  "difference_ci95": [
+    -18.240408058168267,
+    0.7154080581682685
+  ],
+  "hands_per_version": 400,
+  "keeper_redraws": [
+    49,
+    64
+  ],
+  "max_move_ms": [
+    16.406,
+    16.368
+  ],
+  "money": [
+    -5.4475,
+    3.315
+  ],
+  "moons": [
+    18,
+    19
+  ],
+  "ms_per_hand": [
+    18.2497775,
+    18.8224725
+  ],
+  "opponent": "round7:32:12",
+  "opponent_moons": [
+    45,
+    50
+  ],
+  "paired_difference": -8.7625,
+  "preplay_ms_per_hand": [
+    0.0016175,
+    0.0
+  ],
+  "queen_and_8_to_12_hearts": [
+    36,
+    34
+  ],
+  "root_evaluations_per_hand": [
+    6590.08,
+    6840.96
+  ],
+  "rules": "classic",
+  "seed": 1901000,
+  "win_share": [
+    0.25583333333333336,
+    0.29041666666666666
+  ]
+}

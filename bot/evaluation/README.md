@@ -13,6 +13,12 @@ charging in every suit, early control retention, and preventive heart/nine plays
 The [successful-human update](round7/README.md) fits policies to consistently
 successful players, compares human/bot decisions with responsive continuations,
 and enables the fitted human fallback while retaining inferred runner styles.
+The [capacity and history experiments](round8/README.md) test larger human
+policies, richer observations, coherent continuations, and payoff training,
+including comparisons at equal soft decision-time limits.
+The [engine and preplay experiments](round9/README.md) optimize simulation
+throughput and train direction-aware passing and charging through iterative
+responsive self-play.
 
 The original four ONNX weight files were absent, so it was impossible to measure
 the historical neural bot's playing strength. All comparisons below are against

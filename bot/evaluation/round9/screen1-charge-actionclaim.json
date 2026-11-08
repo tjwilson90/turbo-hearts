@@ -1,0 +1,122 @@
+{
+  "baseline": "round7",
+  "by_direction": [
+    {
+      "deals": 25,
+      "difference_ci95": [
+        -9.193829543590937,
+        17.453829543590935
+      ],
+      "direction": "left",
+      "money": [
+        65.8,
+        61.67
+      ],
+      "paired_difference": 4.13
+    },
+    {
+      "deals": 25,
+      "difference_ci95": [
+        -34.92210884055262,
+        17.182108840552623
+      ],
+      "direction": "right",
+      "money": [
+        43.08,
+        51.95
+      ],
+      "paired_difference": -8.87
+    },
+    {
+      "deals": 25,
+      "difference_ci95": [
+        1.8148440708425895,
+        58.24515592915741
+      ],
+      "direction": "across",
+      "money": [
+        81.35,
+        51.32
+      ],
+      "paired_difference": 30.03
+    },
+    {
+      "deals": 25,
+      "difference_ci95": [
+        -18.832531365355074,
+        24.232531365355072
+      ],
+      "direction": "keeper",
+      "money": [
+        47.81,
+        45.11
+      ],
+      "paired_difference": 2.7
+    }
+  ],
+  "candidate": "prelearn:none:assets/models/preplay-charge1.tpq",
+  "charges_by_suit": [
+    [
+      80,
+      40,
+      41,
+      64
+    ],
+    [
+      43,
+      7,
+      39,
+      28
+    ]
+  ],
+  "deals": 100,
+  "difference_ci95": [
+    -4.6682229544681055,
+    18.663222954468104
+  ],
+  "hands_per_version": 400,
+  "keeper_redraws": [
+    44,
+    64
+  ],
+  "max_move_ms": [
+    9.542,
+    21.773
+  ],
+  "money": [
+    59.51,
+    52.5125
+  ],
+  "moons": [
+    31,
+    30
+  ],
+  "ms_per_hand": [
+    17.560535,
+    17.952635
+  ],
+  "opponent": "actionclaim",
+  "opponent_moons": [
+    14,
+    17
+  ],
+  "paired_difference": 6.9975,
+  "preplay_ms_per_hand": [
+    0.001695,
+    0.0
+  ],
+  "queen_and_8_to_12_hearts": [
+    17,
+    14
+  ],
+  "root_evaluations_per_hand": [
+    6449.28,
+    6516.16
+  ],
+  "rules": "classic",
+  "seed": 1901000,
+  "win_share": [
+    0.43166666666666664,
+    0.4566666666666667
+  ]
+}

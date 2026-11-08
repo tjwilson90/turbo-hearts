@@ -1,0 +1,90 @@
+{
+  "format": "TPQ1",
+  "kind": "charge",
+  "architecture": "additive contextual ridge",
+  "context_features_per_charge": 120,
+  "active_hidden_units": 8,
+  "ridge": 0.001,
+  "loss": "decision-centered squared money / 100",
+  "validation_split": "splitmix64(deal_id) % 10 == 0",
+  "train": {
+    "decisions": 16616,
+    "deals": 11708,
+    "regret_money": 49.049652099609375,
+    "target_gain_over_parent_money": 7.747501850128174,
+    "gain_by_direction": [
+      7.94052791595459,
+      8.077926635742188,
+      7.56536865234375,
+      7.504118919372559
+    ]
+  },
+  "validation": {
+    "decisions": 1783,
+    "deals": 1255,
+    "regret_money": 52.88895034790039,
+    "target_gain_over_parent_money": 4.941671371459961,
+    "gain_by_direction": [
+      -1.4524996280670166,
+      6.7625322341918945,
+      6.660879611968994,
+      6.90821647644043
+    ]
+  },
+  "selection": [
+    {
+      "ridge": 0.0001,
+      "decisions": 1783,
+      "deals": 1255,
+      "regret_money": 53.01766586303711,
+      "target_gain_over_parent_money": 4.812955856323242,
+      "gain_by_direction": [
+        -2.011249542236328,
+        6.629287242889404,
+        6.442128658294678,
+        7.151224613189697
+      ]
+    },
+    {
+      "ridge": 0.001,
+      "decisions": 1783,
+      "deals": 1255,
+      "regret_money": 52.88895034790039,
+      "target_gain_over_parent_money": 4.941671371459961,
+      "gain_by_direction": [
+        -1.4524996280670166,
+        6.7625322341918945,
+        6.660879611968994,
+        6.90821647644043
+      ]
+    },
+    {
+      "ridge": 0.01,
+      "decisions": 1783,
+      "deals": 1255,
+      "regret_money": 53.65423583984375,
+      "target_gain_over_parent_money": 4.176388263702393,
+      "gain_by_direction": [
+        -5.038749694824219,
+        7.740105152130127,
+        4.560184955596924,
+        7.969405651092529
+      ]
+    },
+    {
+      "ridge": 0.1,
+      "decisions": 1783,
+      "deals": 1255,
+      "regret_money": 57.11188888549805,
+      "target_gain_over_parent_money": 0.7187324166297913,
+      "gain_by_direction": [
+        -7.482499599456787,
+        3.4788918495178223,
+        1.7789344787597656,
+        3.824300765991211
+      ]
+    }
+  ],
+  "data_sha256": "158a37b9ae74bc14160722c63d38b64e404a9c2d1192c3ac56760917333cc3cf",
+  "checkpoint_sha256": "647f4a90b0050b1e9dc6d284a3047650b89bfe4838071a7a7bbcb99961d5ce87"
+}

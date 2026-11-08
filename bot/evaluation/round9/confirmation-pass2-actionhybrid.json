@@ -1,0 +1,122 @@
+{
+  "baseline": "round7",
+  "by_direction": [
+    {
+      "deals": 125,
+      "difference_ci95": [
+        4.565951280139226,
+        34.73804871986078
+      ],
+      "direction": "left",
+      "money": [
+        33.374,
+        13.722
+      ],
+      "paired_difference": 19.652
+    },
+    {
+      "deals": 125,
+      "difference_ci95": [
+        5.155090421785722,
+        34.84090957821428
+      ],
+      "direction": "right",
+      "money": [
+        39.542,
+        19.544
+      ],
+      "paired_difference": 19.998
+    },
+    {
+      "deals": 125,
+      "difference_ci95": [
+        -15.097491812553487,
+        21.157491812553488
+      ],
+      "direction": "across",
+      "money": [
+        33.622,
+        30.592
+      ],
+      "paired_difference": 3.03
+    },
+    {
+      "deals": 125,
+      "difference_ci95": [
+        0.0,
+        0.0
+      ],
+      "direction": "keeper",
+      "money": [
+        19.162,
+        19.162
+      ],
+      "paired_difference": 0.0
+    }
+  ],
+  "candidate": "prelearn:assets/models/preplay-pass2.tpq:none:128:12:none:0:7",
+  "charges_by_suit": [
+    [
+      169,
+      24,
+      143,
+      119
+    ],
+    [
+      159,
+      21,
+      167,
+      138
+    ]
+  ],
+  "deals": 500,
+  "difference_ci95": [
+    3.6775682756311436,
+    17.662431724368858
+  ],
+  "hands_per_version": 2000,
+  "keeper_redraws": [
+    328,
+    328
+  ],
+  "max_move_ms": [
+    26.542,
+    22.594
+  ],
+  "money": [
+    31.425,
+    20.755
+  ],
+  "moons": [
+    281,
+    132
+  ],
+  "ms_per_hand": [
+    19.926963,
+    18.473487
+  ],
+  "opponent": "actionhybrid",
+  "opponent_moons": [
+    137,
+    138
+  ],
+  "paired_difference": 10.67,
+  "preplay_ms_per_hand": [
+    0.066812,
+    6e-06
+  ],
+  "queen_and_8_to_12_hearts": [
+    222,
+    138
+  ],
+  "root_evaluations_per_hand": [
+    7189.248,
+    6614.848
+  ],
+  "rules": "classic",
+  "seed": 2000000,
+  "win_share": [
+    0.3670000000000001,
+    0.3380000000000001
+  ]
+}

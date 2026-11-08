@@ -1,0 +1,123 @@
+{
+  "baseline": "round7",
+  "by_direction": [
+    {
+      "deals": 25,
+      "difference_ci95": [
+        -21.40651361349267,
+        27.386513613492674
+      ],
+      "direction": "left",
+      "money": [
+        55.64,
+        52.65
+      ],
+      "paired_difference": 2.99
+    },
+    {
+      "deals": 25,
+      "difference_ci95": [
+        -28.466393864917123,
+        15.08639386491712
+      ],
+      "direction": "right",
+      "money": [
+        39.41,
+        46.1
+      ],
+      "paired_difference": -6.69
+    },
+    {
+      "deals": 25,
+      "difference_ci95": [
+        -29.775033916224785,
+        19.97503391622478
+      ],
+      "direction": "across",
+      "money": [
+        39.27,
+        44.17
+      ],
+      "paired_difference": -4.9
+    },
+    {
+      "deals": 25,
+      "difference_ci95": [
+        3.266467826543984,
+        38.19353217345602
+      ],
+      "direction": "keeper",
+      "money": [
+        25.53,
+        4.8
+      ],
+      "paired_difference": 20.73
+    }
+  ],
+  "candidate": "round7:8192:12:5",
+  "charges_by_suit": [
+    [
+      44,
+      4,
+      30,
+      29
+    ],
+    [
+      44,
+      4,
+      30,
+      29
+    ]
+  ],
+  "deals": 100,
+  "difference_ci95": [
+    -8.164035263742184,
+    14.229035263742185
+  ],
+  "hands_per_version": 400,
+  "keeper_redraws": [
+    56,
+    56
+  ],
+  "max_move_ms": [
+    5.11,
+    13.141
+  ],
+  "money": [
+    39.9625,
+    36.93
+  ],
+  "moons": [
+    39,
+    36
+  ],
+  "ms_per_hand": [
+    43.266595,
+    17.5149
+  ],
+  "opponent": "actionhybrid",
+  "opponent_moons": [
+    21,
+    26
+  ],
+  "paired_difference": 3.0325,
+  "preplay_ms_per_hand": [
+    5e-06,
+    5e-06
+  ],
+  "queen_and_8_to_12_hearts": [
+    23,
+    20
+  ],
+  "root_evaluations_per_hand": [
+    27112.075,
+    6650.88
+  ],
+  "rules": "classic",
+  "seed": 1906000,
+  "win_share": [
+    0.4412500000000001,
+    0.36708333333333326
+  ],
+  "executable_sha256": "8cef5a7f0425ca8bed9d97a8d09909e2e3ad9c5db479091751676bc6867dfb54"
+}

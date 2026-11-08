@@ -62,6 +62,7 @@ class LobbyInternal extends React.PureComponent<Lobby.Props> {
                 <div className="game-list">
                     <div className="header">
                         <div className="game-list-item -selected">Lobby</div>
+                        <a className="game-list-item" href="/judge">Decision lab · Help improve the bot</a>
                     </div>
                     <div className="list">{this.renderGamesList()}</div>
                     <div className="footer">

@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Turbo Hearts · Decision lab</title>
+  <link rel="stylesheet" href="/style.css"><script src="/app.js" defer></script>
+</head>
+<body>
+  <header><div><span class="eyebrow">TURBO HEARTS</span><h1>Decision lab</h1></div>
+    <div class="progress"><strong id="progress">Loading…</strong><span id="storage-note">Your judgments stay on this computer.</span></div></header>
+  <main>
+    <p id="participation">Help improve the bot by choosing what you would do. There is no known correct answer. Choices and optional explanations are saved for later analysis.</p>
+    <div class="toolbar">
+      <a id="lobby-link" href="/lobby" hidden>Back to lobby</a>
+      <a id="signin-link" href="/auth" hidden>Sign in</a>
+      <label id="reviewer-label">Reviewer <input id="reviewer" maxlength="80" value="local" autocomplete="off"></label>
+      <label>Decisions <select id="kind"><option value="all">All decisions</option><option value="pass">Passing</option><option value="charge">Charging</option><option value="play">Card play</option></select></label>
+      <label>Round <select id="direction"><option value="all">All rounds</option><option value="left">Left</option><option value="right">Right</option><option value="across">Across</option><option value="keeper">Keeper</option></select></label>
+      <button id="next" class="quiet">Next unanswered</button>
+    </div>
+    <div id="message" role="status" aria-live="polite"></div>
+    <section id="empty" class="panel" hidden><h2>All caught up</h2><p>No unanswered questions match these filters. Change the filters, revisit a recent judgment, or come back when more questions are available.</p></section>
+    <div id="workspace" hidden>
+      <section class="question-head"><div><div class="eyebrow" id="context"></div><h2 id="prompt"></h2><p id="instruction"></p></div><span class="pill" id="perspective"></span></section>
+      <div class="layout">
+        <div class="position">
+          <section class="table-panel"><div class="table-top"><h3>The table</h3><span>Play order: N → E → S → W</span></div>
+            <div id="players" class="players"></div>
+            <h3 id="trick-title">Current trick</h3><div id="trick" class="trick"></div>
+          </section>
+          <section class="panel hand-panel"><div class="section-title"><h3>Your hand</h3><span id="selection-count"></span></div>
+            <p class="muted small">Click cards to choose. Gray cards are unavailable for this decision.</p>
+            <div id="hand" class="hand"></div>
+            <div class="choice-row"><strong id="choice-label">Preferred choice</strong><span id="chosen">—</span><button id="decline" class="quiet" hidden>No charge</button></div>
+            <div class="alternatives"><div id="alternatives"></div><button id="add-alternative" class="quiet">Add another acceptable choice</button><button id="keep-alternative" hidden>Keep alternative</button><button id="cancel-alternative" class="quiet" hidden>Cancel alternative</button></div>
+          </section>
+          <details class="panel" id="history-panel" open><summary>What happened so far <span id="history-count"></span></summary>
+            <div id="preplay-history" class="event-history"></div><div id="trick-history" class="trick-history"></div>
+          </details>
+          <details class="panel"><summary>Round and scoring reference</summary><p id="rule-detail"></p>
+            <p>Lower scores are better. Each heart is +1, Q♠ is +13, and J♦ is −10. Charging doubles those values. Taking 10♣ doubles the hand’s score (quadruples it when charged). Shooting all 13 hearts and Q♠ reverses those penalties. A 9 in the led suit extends a trick to eight cards. Money compares your score with the other players’ scores.</p>
+            <p>Choose the best action from the information shown. The recorded choice, future cards, and bot suggestions are hidden. These are judgments, not a quiz with a known correct answer.</p>
+          </details>
+        </div>
+        <aside>
+          <section class="panel response"><h3>Your judgment</h3>
+            <label>Confidence <span class="optional">optional</span><select id="confidence"><option value="">Not specified</option><option value="high">High</option><option value="medium">Medium</option><option value="low">Low / close decision</option></select></label>
+            <details id="reasoning"><summary>Reasoning <span class="optional">optional</span></summary>
+              <fieldset><legend>What are you trying to do?</legend><div id="intents" class="intent-list"></div></fieldset>
+              <label>Suspected moon runner <select id="runner"><option value="unknown">Unsure / not assessed</option><option value="none">Nobody looks like a runner</option><option value="north">North</option><option value="east">East</option><option value="south">South</option><option value="west">West</option></select></label>
+              <label>What makes this choice better?<textarea id="note" rows="5" maxlength="4000" placeholder="Which information mattered most? What would change your choice?"></textarea></label>
+            </details>
+            <label class="checkbox recognition"><input type="checkbox" id="recognized"><span>I recognize this hand or know what happened later.</span></label>
+            <p class="muted small">Recognized hands are saved separately from the default training export.</p>
+            <button id="save" class="primary" disabled>Save & next</button><button id="skip" class="quiet full">Skip this question</button>
+            <p class="muted small">Ctrl / ⌘ + Enter saves. You can edit earlier judgments below.</p>
+          </section>
+          
+        </aside>
+      </div>
+    </div>
+    <section class="panel" id="recent-panel"><h3>Recent judgments</h3><div id="recent" class="recent"></div></section>
+  </main>
+</body>
+</html>

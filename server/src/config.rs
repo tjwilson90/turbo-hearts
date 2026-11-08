@@ -20,6 +20,8 @@ pub struct Config {
     #[serde(default)]
     pub oidc: BTreeMap<String, crate::auth_endpoints::oidc::ProviderConfig>,
     pub port: u16,
+    #[serde(default)]
+    pub judgment_cases_path: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]

@@ -41,6 +41,12 @@ bincode 1.x wire format through bincode 2's legacy configuration.
 
 See [bot/README.md](bot/README.md) for the updated bot, moon planning, reproducible matches, and neural training.
 
+## Human decision collection
+
+The server includes a [decision lab](docs/decision-lab.md) at `/judge` for logged-in
+players to review passing, charging, and card-play decisions. Questions and
+responses are stored in the application database for later analysis.
+
 ## Configuration
 
 The backend loads a `config.json` file from its working directory for configuration. A

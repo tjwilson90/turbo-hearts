@@ -86,7 +86,7 @@ impl HeuristicBot {
         if legal.len() == 1 {
             return legal.max();
         }
-        let choices = self.choices(bot_state, game_state);
+        let choices = self.choices_from_legal(legal, bot_state, game_state);
         choices
             .into_iter()
             .nth(rng.random_range(0..choices.len()))
@@ -94,8 +94,19 @@ impl HeuristicBot {
     }
 
     pub(crate) fn choices(&self, bot_state: &BotState, game_state: &GameState) -> Cards {
-        let ours = game_state.legal_plays(bot_state.post_pass_hand);
+        self.choices_from_legal(
+            game_state.legal_plays(bot_state.post_pass_hand),
+            bot_state,
+            game_state,
+        )
+    }
 
+    fn choices_from_legal(
+        &self,
+        ours: Cards,
+        bot_state: &BotState,
+        game_state: &GameState,
+    ) -> Cards {
         // If we only have one legal play, play it
         if ours.len() == 1 {
             return ours;

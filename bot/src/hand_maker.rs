@@ -77,8 +77,13 @@ pub struct HandSampler {
     unknown: [Vec<Card>; 4],
     capacities: [u8; 4],
     allowed: [[bool; 4]; 4],
-    counts: HashMap<(usize, [u8; 4]), f64>,
+    counts: HashMap<(usize, [u8; 4]), AllocationNode>,
     unconstrained: bool,
+}
+
+struct AllocationNode {
+    total: f64,
+    choices: Vec<([u8; 4], [u8; 4], f64)>,
 }
 
 impl HandSampler {
@@ -140,24 +145,36 @@ impl HandSampler {
         if suit == 4 {
             return if capacities == [0; 4] { 1.0 } else { 0.0 };
         }
-        if let Some(&count) = self.counts.get(&(suit, capacities)) {
-            return count;
+        if let Some(node) = self.counts.get(&(suit, capacities)) {
+            return node.total;
         }
         let mut total = 0.0;
+        let mut choices = Vec::new();
         for (allocation, weight) in self.allocations(suit, capacities) {
             let remaining = std::array::from_fn(|i| capacities[i] - allocation[i]);
-            total += weight * self.count(suit + 1, remaining);
+            let mass = weight * self.count(suit + 1, remaining);
+            total += mass;
+            if mass > 0.0 {
+                choices.push((allocation, remaining, mass));
+            }
         }
-        self.counts.insert((suit, capacities), total);
+        self.counts
+            .insert((suit, capacities), AllocationNode { total, choices });
         total
     }
 
     pub fn sample<R: RngExt + ?Sized>(&mut self, rng: &mut R) -> [Cards; 4] {
         let mut hands = self.known;
         if self.unconstrained {
-            let mut cards = self.unknown.iter().flatten().copied().collect::<Vec<_>>();
+            let mut deck = [Card::TwoClubs; 52];
+            let mut len = 0;
+            for card in self.unknown.iter().flatten() {
+                deck[len] = *card;
+                len += 1;
+            }
+            let cards = &mut deck[..len];
             cards.shuffle(rng);
-            let mut cards = cards.into_iter();
+            let mut cards = cards.iter().copied();
             for i in 0..4 {
                 hands[i] |= cards
                     .by_ref()
@@ -168,24 +185,25 @@ impl HandSampler {
         }
         let mut capacities = self.capacities;
         for suit in 0..4 {
-            let mut target = rng.random::<f64>() * self.count(suit, capacities);
+            // The conditional allocation distribution is constant throughout
+            // this decision. Reuse its masses instead of allocating a vector
+            // and looking up every descendant for every sampled hand.
+            let node = self.counts.get(&(suit, capacities)).unwrap();
+            let mut target = rng.random::<f64>() * node.total;
             let mut chosen = None;
-            for (allocation, weight) in self.allocations(suit, capacities) {
-                let remaining = std::array::from_fn(|i| capacities[i] - allocation[i]);
-                let count = weight * self.count(suit + 1, remaining);
-                if count == 0.0 {
-                    continue;
-                }
+            for &(allocation, remaining, mass) in &node.choices {
                 chosen = Some((allocation, remaining));
-                target -= count;
+                target -= mass;
                 if target <= 0.0 {
                     break;
                 }
             }
             let (allocation, remaining) = chosen.expect("feasible suit allocation");
-            let mut cards = self.unknown[suit].clone();
+            let mut deck = [Card::TwoClubs; 13];
+            let cards = &mut deck[..self.unknown[suit].len()];
+            cards.copy_from_slice(&self.unknown[suit]);
             cards.shuffle(rng);
-            let mut cards = cards.into_iter();
+            let mut cards = cards.iter().copied();
             for i in 0..4 {
                 hands[i] |= cards
                     .by_ref()

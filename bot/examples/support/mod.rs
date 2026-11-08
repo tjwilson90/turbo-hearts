@@ -1,7 +1,10 @@
 #![allow(dead_code)]
 use rand::{RngExt, SeedableRng};
 use rand_chacha::ChaCha12Rng;
-use std::time::Instant;
+use std::{
+    sync::Arc,
+    time::{Duration, Instant},
+};
 use turbo_hearts_api::*;
 use turbo_hearts_bot::*;
 
@@ -11,12 +14,54 @@ pub struct Player {
     kind: String,
     pub network: Option<PolicyNetwork>,
     temperature: f64,
+    human_network: Option<Arc<HumanNetwork>>,
+    memory: HumanMemory,
     rng: ChaCha12Rng,
 }
 
 impl Player {
     pub fn new(kind: &str, seed: u64) -> Self {
         let parts: Vec<_> = kind.split(':').collect();
+        if parts[0] == "prelearn" {
+            assert!(parts.len() >= 3, "prelearn:PASS_MODEL:CHARGE_MODEL[:SAMPLES:EXACT:TIME_MS:MARGIN:PASS_MASK:HUMAN_RECIPIENTS]; none disables a model");
+            let mut base = format!(
+                "round7:{}:{}",
+                parts.get(3).unwrap_or(&"128"),
+                parts.get(4).unwrap_or(&"12")
+            );
+            if let Some(time) = parts.get(5) {
+                base.push(':');
+                base.push_str(time);
+            }
+            let mut player = Self::new(&base, seed);
+            let load = |path: &str| {
+                if path == "none" {
+                    None
+                } else {
+                    Some(PreplayNetwork::load(path).expect("preplay checkpoint"))
+                }
+            };
+            player.search = player.search.map(|s| {
+                let pass_mask: u8 = parts.get(7).map_or(15, |v| v.parse().unwrap());
+                assert!(pass_mask < 16);
+                s.with_preplay_models(
+                    load(parts[1]),
+                    load(parts[2]),
+                    parts.get(6).map_or(0.0, |v| v.parse().unwrap()),
+                )
+                .with_preplay_pass_directions(std::array::from_fn(|i| pass_mask & (1 << i) != 0))
+                .with_preplay_human_recipients(
+                    match parts.get(8).copied().unwrap_or("0") {
+                        "0" => false,
+                        "1" => true,
+                        _ => panic!("human recipient flag must be 0 or 1"),
+                    },
+                )
+            });
+            player.kind = kind.to_owned();
+            return player;
+        }
+
         let network = if parts[0] == "policy" {
             Some(PolicyNetwork::load(parts[1]).expect("policy checkpoint"))
         } else {
@@ -27,7 +72,43 @@ impl Player {
         } else {
             0.0
         };
-        let search = if network.is_some() {
+        let human_network = if ["neuralplayer", "neuralhybrid"].contains(&parts[0]) {
+            Some(Arc::new(
+                HumanNetwork::load(parts[1]).expect("human policy checkpoint"),
+            ))
+        } else {
+            None
+        };
+        let search = if parts[0] == "neuralplayer" {
+            None
+        } else if [
+            "round7",
+            "coherent",
+            "neural",
+            "neuralmix",
+            "payoff",
+            "neuralhybrid",
+        ]
+        .contains(&parts[0])
+        {
+            let base = if ["round7", "coherent"].contains(&parts[0]) {
+                1
+            } else {
+                2
+            };
+            Some(NeuralNetworkBot::with_config(
+                SearchConfig {
+                    samples: parts.get(base).map_or(128, |v| v.parse().unwrap()),
+                    exact_cards: parts.get(base + 1).map_or(12, |v| v.parse().unwrap()),
+                    time_limit: parts
+                        .get(base + 2)
+                        .filter(|v| **v != "none")
+                        .map(|v| Duration::from_millis(v.parse().unwrap())),
+                    ..SearchConfig::default()
+                },
+                seed,
+            ))
+        } else if network.is_some() {
             None
         } else if ["default", "round4", "skilledhybrid", "actionhybrid"].contains(&kind) {
             Some(NeuralNetworkBot::with_config(
@@ -132,8 +213,38 @@ impl Player {
             None
         };
         let search = search.map(|search| {
+            if ["round7", "neuralhybrid"].contains(&parts[0]) {
+                return search.with_experiments(SearchExperiments::round_seven());
+            }
+            if parts[0] == "coherent" {
+                return search.with_experiments(SearchExperiments {
+                    coherent_humans: true,
+                    ..SearchExperiments::round_seven()
+                });
+            }
+            if ["neural", "neuralmix"].contains(&parts[0]) {
+                return search
+                    .with_experiments(SearchExperiments {
+                        human_rollouts: if parts[0] == "neuralmix" { 0.5 } else { 1.0 },
+                        ..SearchExperiments::round_seven()
+                    })
+                    .with_human_network(
+                        HumanNetwork::load(parts[1]).expect("human policy checkpoint"),
+                    );
+            }
+            if parts[0] == "payoff" {
+                return search
+                    .with_experiments(SearchExperiments::round_seven())
+                    .with_payoff_network(
+                        HumanNetwork::load(parts[1]).expect("payoff checkpoint"),
+                        parts.get(5).map_or(0.25, |v| v.parse().unwrap()),
+                    );
+            }
+
             if kind == "default" {
-                return search.with_experiments(SearchExperiments::production());
+                return search
+                    .with_experiments(SearchExperiments::production())
+                    .with_production_preplay();
             }
             if ["round4", "skilledhybrid", "actionhybrid"].contains(&kind) {
                 return search.with_experiments(SearchExperiments::round_four());
@@ -242,6 +353,7 @@ impl Player {
             }
             search.with_experiments(SearchExperiments {
                 learned_plan: false,
+                coherent_humans: false,
                 human_model_fallback: false,
                 action_model: false,
                 skilled_model: false,
@@ -334,6 +446,18 @@ impl Player {
             })
         });
         let search = search.map(|search| {
+            if [
+                "round7",
+                "coherent",
+                "neural",
+                "neuralmix",
+                "payoff",
+                "neuralhybrid",
+            ]
+            .contains(&parts[0])
+            {
+                return search;
+            }
             if let Some(path) = parts.get(3) {
                 if *path == "none" {
                     search
@@ -353,6 +477,8 @@ impl Player {
         });
         Self {
             search,
+            human_network,
+            memory: HumanMemory::default(),
             kind: kind.to_owned(),
             network,
             temperature,
@@ -419,6 +545,11 @@ impl Algorithm for Player {
         }
     }
     fn play(&mut self, bot: &BotState, state: &GameState) -> Card {
+        if let Some(network) = &self.human_network {
+            if self.search.is_none() || self.rng.random_bool(0.5) {
+                return network.play(bot, state, &self.memory, &mut self.rng);
+            }
+        }
         if self.kind == "action"
             || self.kind == "actionclaim"
             || (self.kind == "actionhybrid" && self.rng.random_bool(0.5))
@@ -465,12 +596,14 @@ impl Algorithm for Player {
         }
     }
     fn on_event(&mut self, bot: &BotState, state: &GameState, event: &GameEvent) {
+        self.memory.on_event(bot, state, event);
         if let Some(search) = &mut self.search {
             search.on_event(bot, state, event);
         }
     }
 }
 
+#[derive(Clone)]
 pub struct Match {
     pub game: Game<()>,
     pub states: [BotState; 4],
@@ -489,6 +622,27 @@ impl Match {
         direction: PassDirection,
         kinds: [&str; 4],
         rules: ChargingRules,
+    ) -> Self {
+        let mut result = Self::dealt(seed, direction, kinds, rules);
+        result.finish_preplay();
+        result
+    }
+
+    pub fn dealt(
+        seed: u64,
+        direction: PassDirection,
+        kinds: [&str; 4],
+        rules: ChargingRules,
+    ) -> Self {
+        Self::dealt_with_humans(seed, direction, kinds, rules, [true; 4])
+    }
+
+    pub fn dealt_with_humans(
+        seed: u64,
+        direction: PassDirection,
+        kinds: [&str; 4],
+        rules: ChargingRules,
+        humans: [bool; 4],
     ) -> Self {
         let mut game = Game::new();
         game.seed = HashedSeed::from(&Seed::Chosen {
@@ -513,31 +667,52 @@ impl Match {
             root_evaluations: [0; 4],
             max_play_micros: [0; 4],
         };
-        let player = turbo_hearts_api::Player::Human {
-            user_id: UserId::null(),
-        };
+        let players: [_; 4] = std::array::from_fn(|i| {
+            if humans[i] {
+                turbo_hearts_api::Player::Human {
+                    user_id: UserId::null(),
+                }
+            } else {
+                turbo_hearts_api::Player::Bot {
+                    user_id: UserId::null(),
+                    strategy: BotStrategy::NeuralNet,
+                }
+            }
+        });
         result.apply(GameEvent::Sit {
-            north: player.clone(),
-            east: player.clone(),
-            south: player.clone(),
-            west: player,
+            north: players[0].clone(),
+            east: players[1].clone(),
+            south: players[2].clone(),
+            west: players[3].clone(),
             rules,
             seed: Seed::Chosen {
                 value: format!("arena-{}", seed),
             },
         });
         result.apply(result.game.seed.deal(direction));
-        while !result.game.state.phase.is_playing() {
-            if result.game.state.phase.is_passing() {
-                result.pass();
-            } else {
-                result.charge();
-            }
-        }
         result
     }
 
-    fn apply(&mut self, event: GameEvent) {
+    pub fn finish_preplay(&mut self) {
+        while !self.game.state.phase.is_playing() {
+            if self.game.state.phase.is_passing() {
+                self.pass();
+            } else {
+                self.charge();
+            }
+        }
+    }
+
+    pub fn reseed_players(&mut self, seed: u64) {
+        for (i, player) in self.players.iter_mut().enumerate() {
+            player.rng = ChaCha12Rng::seed_from_u64(seed * 4 + i as u64);
+            if let Some(search) = &mut player.search {
+                search.reseed(seed * 4 + i as u64);
+            }
+        }
+    }
+
+    pub fn apply(&mut self, event: GameEvent) {
         let Self {
             game,
             states,
@@ -576,13 +751,17 @@ impl Match {
     }
 
     fn pass(&mut self) {
-        let phase = self.game.state.phase;
         let passes: [Cards; 4] = std::array::from_fn(|i| {
             let start = Instant::now();
             let cards = self.players[i].pass(&self.states[i], &self.observations[i]);
             self.preplay_micros[i] += start.elapsed().as_micros();
             cards
         });
+        self.apply_passes(passes);
+    }
+
+    pub fn apply_passes(&mut self, passes: [Cards; 4]) {
+        let phase = self.game.state.phase;
         for i in 0..4 {
             assert!(self.states[i].pre_pass_hand.contains_all(passes[i]));
             assert_eq!(passes[i].len(), 3);
@@ -606,9 +785,13 @@ impl Match {
     }
 
     fn charge(&mut self) {
+        self.charge_from(0);
+    }
+
+    pub fn charge_from(&mut self, mut first: usize) {
         let mut turns = 0;
         while self.game.state.phase.is_charging() {
-            for i in 0..4 {
+            for i in first..4 {
                 if !self.game.state.phase.is_charging() {
                     break;
                 }
@@ -625,6 +808,7 @@ impl Match {
                     assert!(turns <= 32, "charging did not terminate");
                 }
             }
+            first = 0;
         }
     }
 
@@ -636,8 +820,10 @@ impl Match {
             "skilledhybrid",
             "actionclaim",
             "actionhybrid",
+            "neuralplayer",
+            "neuralhybrid",
         ]
-        .contains(&self.players[seat.idx()].kind.as_str())
+        .contains(&self.players[seat.idx()].kind.split(':').next().unwrap())
             && should_claim(
                 &self.observations[seat.idx()],
                 self.states[seat.idx()].void,

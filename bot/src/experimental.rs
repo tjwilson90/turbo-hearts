@@ -44,6 +44,8 @@ pub struct SearchExperiments {
     /// Treat the fitted human policy as a fallback: retain an inferred duck or
     /// shooter style, including sampled early shooting evidence.
     pub human_model_fallback: bool,
+    /// Infer and sample one persistent human policy component per continuation.
+    pub coherent_humans: bool,
     /// Tempered first-opportunity human charging likelihood, all four cards.
     pub charge_belief_strength: f64,
     /// Soft early shooting evidence from declining safe high-card disposal.
@@ -83,6 +85,7 @@ impl Default for SearchExperiments {
             skilled_model: false,
             action_model: false,
             human_model_fallback: false,
+            coherent_humans: false,
             charge_belief_strength: 0.0,
             early_intent: false,
             disruptive_plan: false,
@@ -102,6 +105,11 @@ impl Default for SearchExperiments {
 impl SearchExperiments {
     /// Default play settings selected by human-focused evaluations.
     pub fn production() -> Self {
+        Self::round_seven()
+    }
+
+    /// Frozen successful-human fallback default.
+    pub fn round_seven() -> Self {
         Self {
             human_rollouts: 1.0,
             skilled_model: true,
@@ -137,6 +145,7 @@ impl SearchExperiments {
             || self.defensive_plan
             || self.claim_rollouts
             || self.early_shooters
+            || self.coherent_humans
             || self.human_rollouts > 0.0
             || self.charge_belief_strength > 0.0
             || self.early_intent
@@ -172,6 +181,25 @@ impl Default for BehaviorHistory {
 }
 
 impl BehaviorHistory {
+    fn coherent_weights(&self, hands: [Cards; 4], seat: Seat, state: &GameState) -> [f64; 6] {
+        let bot = BotState::with_void(seat, hands[seat.idx()], self.void);
+        let mut log = crate::SkilledPolicy::weights(&bot, state).map(f64::ln);
+        for obs in self.plays.iter().filter(|o| o.seat == seat) {
+            let own = BotState::with_void(seat, hands[seat.idx()], obs.void);
+            let legal = obs.state.legal_plays(own.post_pass_hand);
+            if legal.len() <= 1 {
+                continue;
+            }
+            let p = crate::skilled_likelihoods(&own, &obs.state, obs.card);
+            for i in 0..6 {
+                log[i] += 0.5 * (0.25 / legal.len() as f64 + 0.75 * p[i]).ln();
+            }
+        }
+        let max = log.iter().copied().fold(f64::NEG_INFINITY, f64::max);
+        let weights = log.map(|x| (x - max).exp());
+        let sum: f64 = weights.iter().sum();
+        weights.map(|p| p / sum)
+    }
     fn early_runner_probability(&self, hands: [Cards; 4], seat: Seat) -> f64 {
         let mut evidence = 0.0;
         let mut opportunities = 0;
@@ -372,7 +400,17 @@ impl NeuralNetworkBot {
         let mut inference_rng = self.rng.clone();
         let mut pool = Vec::new();
         if infer {
-            for _ in 0..self.config.samples.max(32) * 2 {
+            // Under a time cap, a large rollout ceiling must not also create
+            // an unbounded up-front inference pool. Default 128-sample play
+            // and all fixed-sample research comparisons retain their budgets.
+            let inference_samples = if self.config.time_limit.is_some() {
+                self.config
+                    .samples
+                    .min(crate::SearchConfig::default().samples)
+            } else {
+                self.config.samples
+            };
+            for _ in 0..inference_samples.max(32) * 2 {
                 let hands = sampler.sample(if conservative {
                     &mut inference_rng
                 } else {
@@ -491,7 +529,10 @@ impl NeuralNetworkBot {
         let budget = self.config.samples * plays.len();
         let mut spent = 0;
         let mut rounds = 0;
-        let mut trees = SearchTree::default();
+        let mut trees = SearchTree {
+            network: self.human_network.clone(),
+            ..SearchTree::default()
+        };
         let mut endgames = crate::endgame::EndgameSolver::new(self.experiments.canonical_endgames);
         let mut next_elimination = self.experiments.allocation_min.max(1);
         while spent + active.len() <= budget {
@@ -524,6 +565,7 @@ impl NeuralNetworkBot {
                 (sampler.sample(&mut self.rng), [[0.6, 0.2, 0.2]; 4])
             };
             let seed: u64 = self.rng.random();
+            let rollout_rng = ChaCha12Rng::seed_from_u64(seed);
             let mut styles = if conservative {
                 Some(conservative_styles)
             } else if self.experiments.opponent_model {
@@ -560,7 +602,14 @@ impl NeuralNetworkBot {
                             || self.human_seats[seat.idx()])
                         && human_rng.random_bool(self.experiments.human_rollouts)
                     {
-                        selected[seat.idx()] = if self.experiments.action_model {
+                        selected[seat.idx()] = if self.experiments.coherent_humans {
+                            10 + choose_weighted(
+                                &self.history.coherent_weights(hands, seat, state),
+                                &mut human_rng,
+                            )
+                        } else if self.human_network.is_some() {
+                            7
+                        } else if self.experiments.action_model {
                             6
                         } else if self.experiments.skilled_model {
                             5
@@ -593,6 +642,11 @@ impl NeuralNetworkBot {
                             solve_endgame(&game, &hands)
                         }
                     } else {
+                        if trees.network.is_some() {
+                            let mut memory = self.human_memory.clone();
+                            memory.observe_public(state, &event);
+                            trees.memory = Some(memory);
+                        }
                         trees.simulate(
                             &mut game,
                             void,
@@ -614,7 +668,7 @@ impl NeuralNetworkBot {
                             } else {
                                 Vec::new()
                             },
-                            &mut ChaCha12Rng::seed_from_u64(seed),
+                            &mut rollout_rng.clone(),
                         );
                         game.won
                     };
@@ -707,6 +761,8 @@ struct NodeKey {
 
 #[derive(Default)]
 struct SearchTree {
+    memory: Option<crate::HumanMemory>,
+    network: Option<std::sync::Arc<crate::HumanNetwork>>,
     nodes: HashMap<NodeKey, Vec<(Card, u32, f64)>>,
 }
 
@@ -763,6 +819,7 @@ impl SearchTree {
         } else {
             None
         };
+        let mut memory = self.memory.clone();
         let mut path = Vec::new();
         let mut expanding = false;
         while state.played != Cards::ALL {
@@ -849,15 +906,27 @@ impl SearchTree {
                 own_plays.push(card);
                 card
             } else if seat != root && styles.map_or(false, |s| s[seat.idx()] != 3) {
-                style_play(styles.unwrap()[seat.idx()], &bot, state, rng)
+                if styles.unwrap()[seat.idx()] == 7 {
+                    self.network.as_ref().expect("neural rollout policy").play(
+                        &bot,
+                        state,
+                        memory.as_ref().unwrap(),
+                        rng,
+                    )
+                } else {
+                    style_play(styles.unwrap()[seat.idx()], &bot, state, rng)
+                }
             } else if shooting {
                 GottaTryBot.play_with_rng(&bot, state, rng)
             } else {
                 HeuristicBot.play_with_rng(&bot, state, rng)
             };
             let event = GameEvent::Play { seat, card };
-            void = void.on_event(state, &event);
-            state.apply(&event);
+            if let Some(memory) = &mut memory {
+                memory.observe_public(state, &event);
+            }
+            void = void.on_play(state, seat, card);
+            state.play_card(seat, card);
         }
         let money = state.scores().money(root) as f64;
         for (key, index) in path {
@@ -875,6 +944,17 @@ pub(crate) fn style_play<R: RngExt + ?Sized>(
     rng: &mut R,
 ) -> Card {
     match style {
+        10..=15 => {
+            let choices = if rng.random_bool(0.25) {
+                state.legal_plays(bot.post_pass_hand)
+            } else {
+                crate::skilled::component_choices(bot, state, style - 10)
+            };
+            choices
+                .into_iter()
+                .nth(rng.random_range(0..choices.len()))
+                .unwrap()
+        }
         1 => DuckBot.play_with_rng(bot, state, rng),
         2 => GottaTryBot.play_with_rng(bot, state, rng),
         4 => crate::HumanPolicy::play_with_rng(bot, state, rng),

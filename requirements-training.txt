@@ -1,2 +1,2 @@
-# Runtime play needs only Rust; this is for neural_net.py.
+# Runtime play needs only Rust; NumPy supports the Python model trainers.
 numpy>=2.0,<3

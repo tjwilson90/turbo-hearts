@@ -245,7 +245,15 @@ fn arena_default_matches_confirmed_policy_under_every_ruleset() {
             )
         };
         let mut production = make("default");
-        let mut confirmed = make("skilledfallback");
+        let learned = format!(
+            "prelearn:{}/../assets/models/preplay-pass2.tpq:none:128:12:none:0:7",
+            env!("CARGO_MANIFEST_DIR")
+        );
+        let mut confirmed = make(if *rules == ChargingRules::Classic {
+            &learned
+        } else {
+            "skilledfallback"
+        });
         production.finish();
         confirmed.finish();
         assert_eq!(production.game.state, confirmed.game.state);

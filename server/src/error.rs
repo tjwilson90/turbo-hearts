@@ -8,6 +8,8 @@ use warp::{reject::Reject, Rejection, Reply};
 
 #[derive(Debug, Error)]
 pub enum CardsError {
+    #[error("{message}")]
+    Judgment { status: u16, message: String },
     #[error("invalid configuration: {0}")]
     Configuration(String),
     #[error("game {0} has already started")]
@@ -62,6 +64,13 @@ pub async fn handle_rejection(err: Rejection) -> Result<impl Reply, Infallible> 
             .status(error.status())
             .header(header::CACHE_CONTROL, "no-store")
             .body(error.to_string())
+            .unwrap()
+    } else if let Some(CardsError::Judgment { status, message }) = err.find::<CardsError>() {
+        Response::builder()
+            .status(*status)
+            .header(header::CONTENT_TYPE, "application/json")
+            .header(header::CACHE_CONTROL, "no-store")
+            .body(serde_json::json!({"error": message}).to_string())
             .unwrap()
     } else if let Some(error) = err.find::<CardsError>() {
         let status = match error {

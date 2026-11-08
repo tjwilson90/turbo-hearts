@@ -1,0 +1,20 @@
+{
+  "fixed_scores_and_work_identical": true,
+  "fixed_ms_before_after": [
+    22.403313750000002,
+    17.58107625
+  ],
+  "timed_ms_before_after": [
+    43.047725,
+    43.07437
+  ],
+  "timed_evaluations_before_after": [
+    20213.333749999998,
+    26906.46875
+  ],
+  "deals_per_run": 100,
+  "same_deals_repeated": true,
+  "nominal_ms_per_decision": 5,
+  "fixed_time_reduction_fraction": 0.2152466172554497,
+  "timed_work_increase_fraction": 0.33112474581289697
+}

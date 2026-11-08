@@ -1,0 +1,122 @@
+{
+  "baseline": "round7",
+  "by_direction": [
+    {
+      "deals": 75,
+      "difference_ci95": [
+        0.7769024972723599,
+        44.1097641693943
+      ],
+      "direction": "left",
+      "money": [
+        46.78666666666667,
+        24.343333333333334
+      ],
+      "paired_difference": 22.44333333333333
+    },
+    {
+      "deals": 75,
+      "difference_ci95": [
+        7.931388767979115,
+        51.601944565354216
+      ],
+      "direction": "right",
+      "money": [
+        34.16,
+        4.3933333333333335
+      ],
+      "paired_difference": 29.766666666666666
+    },
+    {
+      "deals": 75,
+      "difference_ci95": [
+        -22.49053579548344,
+        19.01053579548344
+      ],
+      "direction": "across",
+      "money": [
+        23.616666666666667,
+        25.356666666666666
+      ],
+      "paired_difference": -1.74
+    },
+    {
+      "deals": 75,
+      "difference_ci95": [
+        0.0,
+        0.0
+      ],
+      "direction": "keeper",
+      "money": [
+        24.75,
+        24.75
+      ],
+      "paired_difference": 0.0
+    }
+  ],
+  "candidate": "prelearn:assets/models/preplay-pass1.tpq:none:128:12:none:0:7",
+  "charges_by_suit": [
+    [
+      90,
+      22,
+      76,
+      82
+    ],
+    [
+      100,
+      17,
+      79,
+      79
+    ]
+  ],
+  "deals": 300,
+  "difference_ci95": [
+    3.25722455307616,
+    21.97777544692384
+  ],
+  "hands_per_version": 1200,
+  "keeper_redraws": [
+    168,
+    168
+  ],
+  "max_move_ms": [
+    70.298,
+    131.131
+  ],
+  "money": [
+    32.32833333333333,
+    19.710833333333333
+  ],
+  "moons": [
+    198,
+    88
+  ],
+  "ms_per_hand": [
+    21.455631666666665,
+    19.71761083333333
+  ],
+  "opponent": "actionhybrid",
+  "opponent_moons": [
+    82,
+    97
+  ],
+  "paired_difference": 12.6175,
+  "preplay_ms_per_hand": [
+    0.06793833333333334,
+    8.333333333333333e-07
+  ],
+  "queen_and_8_to_12_hearts": [
+    125,
+    83
+  ],
+  "root_evaluations_per_hand": [
+    7258.24,
+    6519.04
+  ],
+  "rules": "classic",
+  "seed": 1903000,
+  "win_share": [
+    0.3640277777777778,
+    0.3425
+  ]
+}

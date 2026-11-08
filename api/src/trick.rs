@@ -46,6 +46,13 @@ impl Trick {
         xor.wrapping_sub(0x01_01_01_01) & (!xor) & 0x80_80_80_80 == 0
     }
 
+    /// Test all eight packed bytes without constructing a card set.
+    #[inline]
+    pub fn contains(self, card: Card) -> bool {
+        let bytes = self.state ^ (card as u64 * 0x0101_0101_0101_0101);
+        bytes.wrapping_sub(0x0101_0101_0101_0101) & !bytes & 0x8080_8080_8080_8080 != 0
+    }
+
     pub fn cards(self) -> Cards {
         let mut cards = Cards::NONE;
         let mut state = self.state;
@@ -132,6 +139,24 @@ impl ExactSizeIterator for TrickIter {}
 #[cfg(test)]
 mod test {
     use super::*;
+
+    #[test]
+    fn packed_membership_matches_card_set_for_partial_and_extended_tricks() {
+        use rand::{RngExt, SeedableRng};
+        let mut rng = rand_chacha::ChaCha12Rng::seed_from_u64(92);
+        let deck: Vec<_> = Cards::ALL.into_iter().collect();
+        for _ in 0..2000 {
+            let mut trick = Trick::new();
+            for len in 0..=8 {
+                for &card in &deck {
+                    assert_eq!(trick.contains(card), trick.cards().contains(card));
+                }
+                if len != 8 {
+                    trick = trick.push(deck[rng.random_range(0..52)]);
+                }
+            }
+        }
+    }
 
     #[test]
     fn test_is_empty() {

@@ -1,0 +1,149 @@
+{
+  "role": "counterfactual money advantage / 100",
+  "inputs": 363,
+  "hidden": 32,
+  "parameters": 14288,
+  "best_epoch": 3,
+  "epochs": 18,
+  "seed": 81,
+  "regularization": 0.0001,
+  "private_pass_mask_probability": 0.5,
+  "initialize": "assets/models/human-history32.thh",
+  "metrics": [
+    {
+      "split": 0,
+      "decisions": 1414,
+      "full": 0.06126041253759478,
+      "masked": 0.061335978696972174
+    },
+    {
+      "split": 1,
+      "decisions": 379,
+      "full": 0.08660621747992572,
+      "masked": 0.08656623607691606
+    },
+    {
+      "split": 2,
+      "decisions": 329,
+      "full": 0.1158598826794992,
+      "masked": 0.11578021525063534
+    }
+  ],
+  "history": [
+    {
+      "epoch": 1,
+      "validation_full": 0.08787258634205226,
+      "validation_masked": 0.08787151235672246,
+      "lr": 0.003
+    },
+    {
+      "epoch": 2,
+      "validation_full": 0.08717634227915061,
+      "validation_masked": 0.08715839533464527,
+      "lr": 0.003
+    },
+    {
+      "epoch": 3,
+      "validation_full": 0.08660621747992572,
+      "validation_masked": 0.08656623607691606,
+      "lr": 0.003
+    },
+    {
+      "epoch": 4,
+      "validation_full": 0.08723119662264756,
+      "validation_masked": 0.08716732089096825,
+      "lr": 0.003
+    },
+    {
+      "epoch": 5,
+      "validation_full": 0.08781259214031567,
+      "validation_masked": 0.08773342722888498,
+      "lr": 0.003
+    },
+    {
+      "epoch": 6,
+      "validation_full": 0.08866335780297055,
+      "validation_masked": 0.08854253404196287,
+      "lr": 0.003
+    },
+    {
+      "epoch": 7,
+      "validation_full": 0.0887347937467386,
+      "validation_masked": 0.08857920362016232,
+      "lr": 0.003
+    },
+    {
+      "epoch": 8,
+      "validation_full": 0.08894864123134905,
+      "validation_masked": 0.088774892285065,
+      "lr": 0.003
+    },
+    {
+      "epoch": 9,
+      "validation_full": 0.08907740709567243,
+      "validation_masked": 0.0889062540427526,
+      "lr": 0.0015
+    },
+    {
+      "epoch": 10,
+      "validation_full": 0.089387773072958,
+      "validation_masked": 0.08919835419915041,
+      "lr": 0.0015
+    },
+    {
+      "epoch": 11,
+      "validation_full": 0.08972730229623961,
+      "validation_masked": 0.08952394706854955,
+      "lr": 0.0015
+    },
+    {
+      "epoch": 12,
+      "validation_full": 0.08989024152640766,
+      "validation_masked": 0.08967525045322167,
+      "lr": 0.0015
+    },
+    {
+      "epoch": 13,
+      "validation_full": 0.08989916431235502,
+      "validation_masked": 0.08967380386414073,
+      "lr": 0.0015
+    },
+    {
+      "epoch": 14,
+      "validation_full": 0.08994738488212085,
+      "validation_masked": 0.08971691264428265,
+      "lr": 0.00075
+    },
+    {
+      "epoch": 15,
+      "validation_full": 0.09003474875861951,
+      "validation_masked": 0.08979390764756981,
+      "lr": 0.00075
+    },
+    {
+      "epoch": 16,
+      "validation_full": 0.09015342516616406,
+      "validation_masked": 0.08990890171228991,
+      "lr": 0.00075
+    },
+    {
+      "epoch": 17,
+      "validation_full": 0.09019802933332548,
+      "validation_masked": 0.08995816700577802,
+      "lr": 0.00075
+    },
+    {
+      "epoch": 18,
+      "validation_full": 0.0903168340917083,
+      "validation_masked": 0.09007349758702884,
+      "lr": 0.00075
+    }
+  ],
+  "checkpoint_sha256": "8129e465e775e2e1dd0bde9baf80c7890651bb1a7d150ac171e0afef66c6a6a2",
+  "data_sha256": "7ff8d8a98805b0b6f7db08394aacbbc8038f1e0248663c768f837a4b480be707",
+  "legacy_actions": false,
+  "active_parameters": 14288,
+  "epochs_requested": 80,
+  "targets_sha256": "c1adc3ba220226ff2edabcd6c88c85d161cec11aa6cc9d4e4c6af0476c216667",
+  "initialize_sha256": "ed910e6e791f8c91968178f375b08bc4f329cd60c5e71adc1550922b201f723f"
+}

@@ -1,0 +1,503 @@
+{
+  "format": "TPQ1",
+  "kind": "pass",
+  "features": 256,
+  "hidden": 32,
+  "loss": "decision-centered mean squared money / 100",
+  "regularization": 0.0003,
+  "best_epoch": 12,
+  "epochs": 33,
+  "seed": 91,
+  "initial": null,
+  "validation_split": "splitmix64(deal_id) % 10 == 0",
+  "train": {
+    "decisions": 9910,
+    "deals": 9910,
+    "regret_money": 114.18965911865234,
+    "target_gain_over_parent_money": 23.568517684936523,
+    "gain_by_direction": [
+      26.890155792236328,
+      23.993019104003906,
+      23.50260353088379,
+      17.9299373626709
+    ]
+  },
+  "validation": {
+    "decisions": 1054,
+    "deals": 1054,
+    "regret_money": 127.50142669677734,
+    "target_gain_over_parent_money": 9.436907768249512,
+    "gain_by_direction": [
+      15.372302055358887,
+      13.38848876953125,
+      -1.1768473386764526,
+      12.390375137329102
+    ]
+  },
+  "history": [
+    {
+      "epoch": 1,
+      "learning_rate": 0.002,
+      "decisions": 1054,
+      "deals": 1054,
+      "regret_money": 136.47959899902344,
+      "target_gain_over_parent_money": 0.4587288498878479,
+      "gain_by_direction": [
+        9.395683288574219,
+        -0.8705046772956848,
+        -6.533761501312256,
+        0.7780753374099731
+      ]
+    },
+    {
+      "epoch": 2,
+      "learning_rate": 0.002,
+      "decisions": 1054,
+      "deals": 1054,
+      "regret_money": 132.33302307128906,
+      "target_gain_over_parent_money": 4.605313301086426,
+      "gain_by_direction": [
+        16.505393981933594,
+        -2.2230215072631836,
+        0.4067522883415222,
+        4.048128128051758
+      ]
+    },
+    {
+      "epoch": 3,
+      "learning_rate": 0.002,
+      "decisions": 1054,
+      "deals": 1054,
+      "regret_money": 132.43548583984375,
+      "target_gain_over_parent_money": 4.502845764160156,
+      "gain_by_direction": [
+        16.496402740478516,
+        3.305755853652954,
+        -4.974277496337891,
+        4.21390438079834
+      ]
+    },
+    {
+      "epoch": 4,
+      "learning_rate": 0.002,
+      "decisions": 1054,
+      "deals": 1054,
+      "regret_money": 128.38140869140625,
+      "target_gain_over_parent_money": 8.556926727294922,
+      "gain_by_direction": [
+        23.944244384765625,
+        5.005395412445068,
+        0.3054670989513397,
+        4.684492111206055
+      ]
+    },
+    {
+      "epoch": 5,
+      "learning_rate": 0.002,
+      "decisions": 1054,
+      "deals": 1054,
+      "regret_money": 131.84915161132812,
+      "target_gain_over_parent_money": 5.089183330535889,
+      "gain_by_direction": [
+        21.719423294067383,
+        5.147481441497803,
+        -6.509645938873291,
+        -0.4304804503917694
+      ]
+    },
+    {
+      "epoch": 6,
+      "learning_rate": 0.002,
+      "decisions": 1054,
+      "deals": 1054,
+      "regret_money": 131.92599487304688,
+      "target_gain_over_parent_money": 5.012333869934082,
+      "gain_by_direction": [
+        13.602519035339355,
+        8.143884658813477,
+        -4.808682441711426,
+        3.9197869300842285
+      ]
+    },
+    {
+      "epoch": 7,
+      "learning_rate": 0.002,
+      "decisions": 1054,
+      "deals": 1054,
+      "regret_money": 132.4691619873047,
+      "target_gain_over_parent_money": 4.469165325164795,
+      "gain_by_direction": [
+        15.039567947387695,
+        0.2140285223722458,
+        -1.8553048372268677,
+        5.598930835723877
+      ]
+    },
+    {
+      "epoch": 8,
+      "learning_rate": 0.002,
+      "decisions": 1054,
+      "deals": 1054,
+      "regret_money": 129.9293212890625,
+      "target_gain_over_parent_money": 7.0090131759643555,
+      "gain_by_direction": [
+        18.598920822143555,
+        3.535970687866211,
+        -1.792604684829712,
+        9.580214500427246
+      ]
+    },
+    {
+      "epoch": 9,
+      "learning_rate": 0.002,
+      "decisions": 1054,
+      "deals": 1054,
+      "regret_money": 133.50379943847656,
+      "target_gain_over_parent_money": 3.434535026550293,
+      "gain_by_direction": [
+        16.48921012878418,
+        2.1043174266815186,
+        -6.675240993499756,
+        2.8181817531585693
+      ]
+    },
+    {
+      "epoch": 10,
+      "learning_rate": 0.002,
+      "decisions": 1054,
+      "deals": 1054,
+      "regret_money": 133.3315887451172,
+      "target_gain_over_parent_money": 3.606736660003662,
+      "gain_by_direction": [
+        19.584531784057617,
+        -1.428057312965393,
+        -6.435690879821777,
+        4.040106773376465
+      ]
+    },
+    {
+      "epoch": 11,
+      "learning_rate": 0.002,
+      "decisions": 1054,
+      "deals": 1054,
+      "regret_money": 127.51897430419922,
+      "target_gain_over_parent_money": 9.419354438781738,
+      "gain_by_direction": [
+        14.964030265808105,
+        14.660070419311523,
+        3.0080389976501465,
+        4.0481276512146
+      ]
+    },
+    {
+      "epoch": 12,
+      "learning_rate": 0.002,
+      "decisions": 1054,
+      "deals": 1054,
+      "regret_money": 127.50142669677734,
+      "target_gain_over_parent_money": 9.436907768249512,
+      "gain_by_direction": [
+        15.372302055358887,
+        13.38848876953125,
+        -1.1768473386764526,
+        12.390375137329102
+      ]
+    },
+    {
+      "epoch": 13,
+      "learning_rate": 0.002,
+      "decisions": 1054,
+      "deals": 1054,
+      "regret_money": 129.283203125,
+      "target_gain_over_parent_money": 7.655122756958008,
+      "gain_by_direction": [
+        11.498201370239258,
+        12.498200416564941,
+        -1.78617262840271,
+        10.44385051727295
+      ]
+    },
+    {
+      "epoch": 14,
+      "learning_rate": 0.002,
+      "decisions": 1054,
+      "deals": 1054,
+      "regret_money": 133.17410278320312,
+      "target_gain_over_parent_money": 3.7642319202423096,
+      "gain_by_direction": [
+        9.332734107971191,
+        7.077338695526123,
+        -3.1446948051452637,
+        2.050802230834961
+      ]
+    },
+    {
+      "epoch": 15,
+      "learning_rate": 0.002,
+      "decisions": 1054,
+      "deals": 1054,
+      "regret_money": 128.00711059570312,
+      "target_gain_over_parent_money": 8.93121337890625,
+      "gain_by_direction": [
+        12.760793685913086,
+        16.485612869262695,
+        0.2974274158477783,
+        6.366311073303223
+      ]
+    },
+    {
+      "epoch": 16,
+      "learning_rate": 0.002,
+      "decisions": 1054,
+      "deals": 1054,
+      "regret_money": 130.22438049316406,
+      "target_gain_over_parent_money": 6.71394681930542,
+      "gain_by_direction": [
+        15.647480964660645,
+        9.879496574401855,
+        -2.408360719680786,
+        3.8983962535858154
+      ]
+    },
+    {
+      "epoch": 17,
+      "learning_rate": 0.002,
+      "decisions": 1054,
+      "deals": 1054,
+      "regret_money": 130.97201538085938,
+      "target_gain_over_parent_money": 5.966318607330322,
+      "gain_by_direction": [
+        13.866907119750977,
+        8.464029312133789,
+        1.5209004878997803,
+        -2.0989301204681396
+      ]
+    },
+    {
+      "epoch": 18,
+      "learning_rate": 0.002,
+      "decisions": 1054,
+      "deals": 1054,
+      "regret_money": 132.5986785888672,
+      "target_gain_over_parent_money": 4.339658260345459,
+      "gain_by_direction": [
+        11.4154691696167,
+        7.877697944641113,
+        -2.7572343349456787,
+        0.3636363744735718
+      ]
+    },
+    {
+      "epoch": 19,
+      "learning_rate": 0.002,
+      "decisions": 1054,
+      "deals": 1054,
+      "regret_money": 132.49241638183594,
+      "target_gain_over_parent_money": 4.445921421051025,
+      "gain_by_direction": [
+        5.127697944641113,
+        9.01618766784668,
+        0.7845667004585266,
+        2.727273464202881
+      ]
+    },
+    {
+      "epoch": 20,
+      "learning_rate": 0.001,
+      "decisions": 1054,
+      "deals": 1054,
+      "regret_money": 130.81593322753906,
+      "target_gain_over_parent_money": 6.122391700744629,
+      "gain_by_direction": [
+        12.71222972869873,
+        9.210433959960938,
+        3.3665597438812256,
+        -3.6818184852600098
+      ]
+    },
+    {
+      "epoch": 21,
+      "learning_rate": 0.001,
+      "decisions": 1054,
+      "deals": 1054,
+      "regret_money": 132.30787658691406,
+      "target_gain_over_parent_money": 4.630455493927002,
+      "gain_by_direction": [
+        5.534172058105469,
+        8.911870002746582,
+        3.762056350708008,
+        -1.633690357208252
+      ]
+    },
+    {
+      "epoch": 22,
+      "learning_rate": 0.001,
+      "decisions": 1054,
+      "deals": 1054,
+      "regret_money": 133.36480712890625,
+      "target_gain_over_parent_money": 3.5735294818878174,
+      "gain_by_direction": [
+        9.843525886535645,
+        7.687050819396973,
+        0.2443733662366867,
+        -6.326202869415283
+      ]
+    },
+    {
+      "epoch": 23,
+      "learning_rate": 0.001,
+      "decisions": 1054,
+      "deals": 1054,
+      "regret_money": 132.58206176757812,
+      "target_gain_over_parent_money": 4.35626220703125,
+      "gain_by_direction": [
+        10.066548347473145,
+        7.920865058898926,
+        1.9485526084899902,
+        -5.4278082847595215
+      ]
+    },
+    {
+      "epoch": 24,
+      "learning_rate": 0.001,
+      "decisions": 1054,
+      "deals": 1054,
+      "regret_money": 133.78936767578125,
+      "target_gain_over_parent_money": 3.148956298828125,
+      "gain_by_direction": [
+        8.705035209655762,
+        9.118705749511719,
+        0.31028851866722107,
+        -9.264705657958984
+      ]
+    },
+    {
+      "epoch": 25,
+      "learning_rate": 0.001,
+      "decisions": 1054,
+      "deals": 1054,
+      "regret_money": 134.10389709472656,
+      "target_gain_over_parent_money": 2.834440231323242,
+      "gain_by_direction": [
+        6.552156925201416,
+        5.125899314880371,
+        1.9710607528686523,
+        -4.6631011962890625
+      ]
+    },
+    {
+      "epoch": 26,
+      "learning_rate": 0.001,
+      "decisions": 1054,
+      "deals": 1054,
+      "regret_money": 135.23434448242188,
+      "target_gain_over_parent_money": 1.7039846181869507,
+      "gain_by_direction": [
+        8.553956031799316,
+        9.676259994506836,
+        -7.117364406585693,
+        -5.660427570343018
+      ]
+    },
+    {
+      "epoch": 27,
+      "learning_rate": 0.0005,
+      "decisions": 1054,
+      "deals": 1054,
+      "regret_money": 132.4933624267578,
+      "target_gain_over_parent_money": 4.444971084594727,
+      "gain_by_direction": [
+        8.80215835571289,
+        5.496403217315674,
+        5.348875522613525,
+        -5.098930835723877
+      ]
+    },
+    {
+      "epoch": 28,
+      "learning_rate": 0.0005,
+      "decisions": 1054,
+      "deals": 1054,
+      "regret_money": 132.5308380126953,
+      "target_gain_over_parent_money": 4.407495498657227,
+      "gain_by_direction": [
+        9.973020553588867,
+        8.262589454650879,
+        1.9919613599777222,
+        -5.580214977264404
+      ]
+    },
+    {
+      "epoch": 29,
+      "learning_rate": 0.0005,
+      "decisions": 1054,
+      "deals": 1054,
+      "regret_money": 132.74667358398438,
+      "target_gain_over_parent_money": 4.191650867462158,
+      "gain_by_direction": [
+        12.794963836669922,
+        8.956835746765137,
+        -1.3745982646942139,
+        -6.425133228302002
+      ]
+    },
+    {
+      "epoch": 30,
+      "learning_rate": 0.0005,
+      "decisions": 1054,
+      "deals": 1054,
+      "regret_money": 134.5725860595703,
+      "target_gain_over_parent_money": 2.3657495975494385,
+      "gain_by_direction": [
+        11.266186714172363,
+        8.100720405578613,
+        -3.1286160945892334,
+        -10.254010200500488
+      ]
+    },
+    {
+      "epoch": 31,
+      "learning_rate": 0.0005,
+      "decisions": 1054,
+      "deals": 1054,
+      "regret_money": 133.15322875976562,
+      "target_gain_over_parent_money": 3.7851040363311768,
+      "gain_by_direction": [
+        11.816546440124512,
+        6.856115818023682,
+        -0.27009865641593933,
+        -5.975935459136963
+      ]
+    },
+    {
+      "epoch": 32,
+      "learning_rate": 0.0005,
+      "decisions": 1054,
+      "deals": 1054,
+      "regret_money": 133.45635986328125,
+      "target_gain_over_parent_money": 3.481973648071289,
+      "gain_by_direction": [
+        11.937049865722656,
+        6.901079177856445,
+        -2.7170426845550537,
+        -3.8609631061553955
+      ]
+    },
+    {
+      "epoch": 33,
+      "learning_rate": 0.0005,
+      "decisions": 1054,
+      "deals": 1054,
+      "regret_money": 134.0308380126953,
+      "target_gain_over_parent_money": 2.9074952602386475,
+      "gain_by_direction": [
+        7.327339172363281,
+        6.685252666473389,
+        0.7749192714691162,
+        -5.732620716094971
+      ]
+    }
+  ],
+  "data_sha256": "05dc3988b43b505efc0d88694b14cfc4bd8ff5bd898d6f0456be3739daa1db4f",
+  "checkpoint_sha256": "78d611026438b1be0ab36b4ae82f1a425f80cc329ccac7ad6242d71d74099cbe"
+}

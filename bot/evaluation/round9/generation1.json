@@ -1,0 +1,45 @@
+{
+  "generation": 1,
+  "deals": 12000,
+  "seed_ranges": [
+    [
+      1800000,
+      1805999
+    ],
+    [
+      1806000,
+      1808999
+    ],
+    [
+      1809000,
+      1811999
+    ]
+  ],
+  "rows": 209132,
+  "groups_by_task_direction": [
+    [
+      3000,
+      3000,
+      3000,
+      1964
+    ],
+    [
+      2705,
+      2675,
+      2705,
+      4122
+    ]
+  ],
+  "features": 256,
+  "repeats": 2,
+  "pass_candidates": 16,
+  "learner": "round7:8:8",
+  "population": [
+    "actionclaim",
+    "skilledclaim",
+    "round7:8:8",
+    "heuristic",
+    "gottatry"
+  ],
+  "sha256": "05dc3988b43b505efc0d88694b14cfc4bd8ff5bd898d6f0456be3739daa1db4f"
+}
