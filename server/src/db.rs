@@ -10,7 +10,10 @@ use std::{fmt::Debug, path::Path, str::FromStr, time::Duration};
 use tokio::task;
 use turbo_hearts_api::{BotStrategy, ChargingRules, GameEvent, GameId, Seat, Seed, UserId};
 
-static SQL: &[&'static str] = &[include_str!("../sql/schema.sql")];
+static SQL: &[&str] = &[
+    include_str!("../sql/schema.sql"),
+    include_str!("../sql/judgments.sql"),
+];
 
 pub struct Database {
     pool: Pool<SqliteConnectionManager>,
@@ -23,19 +26,19 @@ impl Database {
             .connection_customizer(Box::new(Customizer))
             .build(manager)
             .unwrap();
-        let conn = pool.get().unwrap();
+        let mut conn = pool.get().unwrap();
         let version = conn.query_row("PRAGMA user_version", [], |row| {
             Ok(row.get::<_, i64>(0)? as usize)
         })?;
         if version < SQL.len() {
-            if version == 0 {
-                conn.execute_batch(SQL[0])?;
-            } else {
-                for upgrade in SQL[version..].iter() {
-                    conn.execute_batch(upgrade)?;
-                }
+            // WAL cannot be changed inside a transaction. All schema/version changes can.
+            conn.execute_batch("PRAGMA journal_mode = WAL")?;
+            let tx = conn.transaction_with_behavior(TransactionBehavior::Immediate)?;
+            for upgrade in &SQL[version..] {
+                tx.execute_batch(upgrade)?;
             }
-            conn.execute_batch(&format!("PRAGMA user_version = {}", SQL.len()))?;
+            tx.pragma_update(None, "user_version", SQL.len() as i64)?;
+            tx.commit()?;
         }
         Ok(Self { pool })
     }

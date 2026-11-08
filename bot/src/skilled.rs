@@ -40,7 +40,7 @@ pub fn skilled_components(bot: &BotState, state: &GameState) -> [Cards; SKILLED_
     std::array::from_fn(|index| component_choices(bot, state, index))
 }
 
-fn component_choices(bot: &BotState, state: &GameState, index: usize) -> Cards {
+pub(crate) fn component_choices(bot: &BotState, state: &GameState, index: usize) -> Cards {
     match index {
         0 => state.legal_plays(bot.post_pass_hand),
         1 => HeuristicBot.choices(bot, state),
@@ -93,6 +93,13 @@ impl SkilledPolicy {
         rng: &mut R,
     ) -> Card {
         let mut target = rng.random::<f64>();
+        let legal = state.legal_plays(bot.post_pass_hand);
+        if legal.len() == 1 {
+            // Keep both draws made by the mixture/component path, including
+            // random_range's implementation for a singleton choice.
+            let _ = rng.random_range(0..1usize);
+            return legal.max();
+        }
         let weights = Self::weights(bot, state);
         let mut component = SKILLED_COMPONENTS - 1;
         for (i, p) in weights.iter().enumerate() {

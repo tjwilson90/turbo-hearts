@@ -1,7 +1,10 @@
 use crate::{policy_features, Algorithm, GottaTryBot, HandMaker, HeuristicBot, PolicyNetwork};
 use rand::{RngExt, SeedableRng};
 use rand_chacha::ChaCha12Rng;
-use std::time::{Duration, Instant};
+use std::{
+    sync::{Arc, OnceLock},
+    time::{Duration, Instant},
+};
 use turbo_hearts_api::{BotState, Card, Cards, GameEvent, GameState, Seat, VoidState, WonState};
 
 /// Search settings. Fixed samples and a seed make experiments reproducible.
@@ -46,6 +49,16 @@ pub struct NeuralNetworkBot {
     pub(crate) history: crate::experimental::BehaviorHistory,
     pub(crate) charge_history: crate::charge_belief::ChargeHistory,
     pub(crate) human_seats: [bool; 4],
+    pub(crate) human_memory: crate::HumanMemory,
+    pub(crate) human_network: Option<Arc<crate::HumanNetwork>>,
+    payoff_network: Option<Arc<crate::HumanNetwork>>,
+    payoff_weight: f32,
+    pass_network: Option<Arc<crate::PreplayNetwork>>,
+    charge_network: Option<Arc<crate::PreplayNetwork>>,
+    preplay_margin: f32,
+    preplay_pass_directions: [bool; 4],
+    preplay_human_recipients: bool,
+    preplay_lone_bot_classic: bool,
     pub(crate) last_evaluations: usize,
     pub(crate) last_belief_ess: f64,
     pub(crate) last_tree_nodes: usize,
@@ -61,6 +74,7 @@ impl NeuralNetworkBot {
     pub fn with_seed(seed: u64) -> Self {
         Self::with_config(SearchConfig::default(), seed)
             .with_experiments(crate::SearchExperiments::production())
+            .with_production_preplay()
     }
 
     /// Budget-configured frozen baseline. Add `with_experiments` to select
@@ -81,11 +95,98 @@ impl NeuralNetworkBot {
             history: crate::experimental::BehaviorHistory::default(),
             charge_history: crate::charge_belief::ChargeHistory::default(),
             human_seats: [false; 4],
+            human_memory: crate::HumanMemory::default(),
+            human_network: None,
+            payoff_network: None,
+            payoff_weight: 0.0,
+            pass_network: None,
+            charge_network: None,
+            preplay_margin: 0.0,
+            preplay_pass_directions: [true; 4],
+            preplay_human_recipients: false,
+            preplay_lone_bot_classic: false,
             last_evaluations: 0,
             last_belief_ess: 0.0,
             last_tree_nodes: 0,
             prior_samples: 0.0,
         }
+    }
+
+    /// Opt-in passing/charging values; card-play search remains unchanged.
+    pub fn with_preplay_models(
+        mut self,
+        pass: Option<crate::PreplayNetwork>,
+        charge: Option<crate::PreplayNetwork>,
+        margin: f32,
+    ) -> Self {
+        assert!(margin.is_finite() && margin >= 0.0);
+        if let Some(p) = &pass {
+            assert_eq!(p.kind(), crate::PreplayKind::Pass);
+        }
+        if let Some(p) = &charge {
+            assert_eq!(p.kind(), crate::PreplayKind::Charge);
+        }
+        self.pass_network = pass.map(Arc::new);
+        self.charge_network = charge.map(Arc::new);
+        self.preplay_margin = margin;
+        self.preplay_lone_bot_classic = false;
+        self
+    }
+
+    /// Learned directed passing for a lone bot against three public humans in
+    /// Classic. Other tables, keeper passing, and charging retain heuristics.
+    pub fn with_production_preplay(mut self) -> Self {
+        static PASS: OnceLock<Arc<crate::PreplayNetwork>> = OnceLock::new();
+        self.pass_network = Some(Arc::clone(PASS.get_or_init(|| {
+            Arc::new(
+                crate::PreplayNetwork::from_bytes(include_bytes!(
+                    "../../assets/models/preplay-pass2.tpq"
+                ))
+                .expect("bundled passing checkpoint"),
+            )
+        })));
+        self.charge_network = None;
+        self.preplay_margin = 0.0;
+        self.preplay_pass_directions = [true, true, true, false];
+        self.preplay_human_recipients = false;
+        self.preplay_lone_bot_classic = true;
+        self
+    }
+
+    /// Enable a learned passing head independently for left, right, across,
+    /// and keeper. Disabled directions retain the existing passing policy.
+    pub fn with_preplay_pass_directions(mut self, directions: [bool; 4]) -> Self {
+        self.preplay_pass_directions = directions;
+        self
+    }
+
+    /// Restrict learned passing to publicly identified human recipients.
+    pub fn with_preplay_human_recipients(mut self, enabled: bool) -> Self {
+        self.preplay_human_recipients = enabled;
+        self
+    }
+
+    /// Start an independent future random stream while preserving observations.
+    /// Useful for paired counterfactual continuations from a common position.
+    pub fn reseed(&mut self, seed: u64) {
+        self.rng = ChaCha12Rng::seed_from_u64(seed);
+        self.charge_rng = ChaCha12Rng::seed_from_u64(seed);
+    }
+
+    /// Experimental continuation policy. Pair with round_seven() experiments
+    /// to enable rollouts at public human seats while retaining inferred styles.
+    pub fn with_human_network(mut self, network: crate::HumanNetwork) -> Self {
+        assert!(!network.advantage);
+        self.human_network = Some(Arc::new(network));
+        self
+    }
+    /// Experimental monetary advantage blend in play selection, not evaluate.
+    /// Only used outside exact endgames when another public human is present.
+    pub fn with_payoff_network(mut self, network: crate::HumanNetwork, weight: f32) -> Self {
+        assert!(network.advantage && weight.is_finite() && (0.0..=1.0).contains(&weight));
+        self.payoff_network = Some(Arc::new(network));
+        self.payoff_weight = weight;
+        self
     }
 
     /// Experimental learned advantage prior, in units of additional samples.
@@ -127,7 +228,7 @@ impl NeuralNetworkBot {
         self.last_evaluations = 0;
         self.last_belief_ess = 0.0;
         self.last_tree_nodes = 0;
-        if self.experiments.changes_play() {
+        if self.experiments.changes_play() || self.human_network.is_some() {
             return self.experimental_search(bot, state);
         }
         let plays: Vec<_> = state
@@ -228,6 +329,23 @@ impl Default for NeuralNetworkBot {
 
 impl Algorithm for NeuralNetworkBot {
     fn pass(&mut self, bot: &BotState, state: &GameState) -> Cards {
+        if let Some(model) = self.pass_network.as_ref().filter(|_| {
+            self.preplay_pass_directions[state.phase.direction() as usize]
+                && (!self.preplay_human_recipients
+                    || self.human_seats[state.phase.pass_receiver(bot.seat).idx()])
+                && (!self.preplay_lone_bot_classic
+                    || (state.rules == turbo_hearts_api::ChargingRules::Classic
+                        && Seat::VALUES
+                            .iter()
+                            .all(|seat| *seat == bot.seat || self.human_seats[seat.idx()])))
+        }) {
+            return model.choose(
+                bot,
+                state,
+                HeuristicBot.pass(bot, state),
+                self.preplay_margin,
+            );
+        }
         if self.experiments.pass_samples > 0
             && state.phase.direction() != turbo_hearts_api::PassDirection::Keeper
         {
@@ -238,6 +356,10 @@ impl Algorithm for NeuralNetworkBot {
     }
 
     fn charge(&mut self, bot: &BotState, state: &GameState) -> Cards {
+        if let Some(model) = &self.charge_network {
+            let baseline = HeuristicBot.charge_with_rng(bot, state, &mut self.charge_rng);
+            return model.choose(bot, state, baseline, self.preplay_margin);
+        }
         if self.experiments.charge_samples > 0 {
             self.search_charge(bot, state)
         } else {
@@ -265,6 +387,24 @@ impl Algorithm for NeuralNetworkBot {
                 }
             }
         }
+        if let Some(network) = &self.payoff_network {
+            if 52 - state.played.len() > self.config.exact_cards
+                && Seat::VALUES
+                    .iter()
+                    .any(|&s| s != bot.seat && self.human_seats[s.idx()])
+            {
+                let predictions = network.scores(bot, state, &self.human_memory);
+                let mean = predictions.iter().map(|p| p.1).sum::<f32>() / predictions.len() as f32;
+                let search_mean = values.iter().map(|v| v.1).sum::<f32>() / values.len() as f32;
+                for (card, value) in &mut values {
+                    let learned =
+                        100.0 * (predictions.iter().find(|p| p.0 == *card).unwrap().1 - mean);
+                    *value = (1.0 - self.payoff_weight) * (*value - search_mean)
+                        + self.payoff_weight * learned
+                        + search_mean;
+                }
+            }
+        }
         if self.experiments.stopper_margin > 0.0 {
             if let Some(stopper) = crate::moon_defense::supported_stopper(bot, state) {
                 let best = values.iter().map(|v| v.1).fold(f32::NEG_INFINITY, f32::max);
@@ -286,7 +426,7 @@ impl Algorithm for NeuralNetworkBot {
             .0
     }
 
-    fn on_event(&mut self, _: &BotState, state: &GameState, event: &GameEvent) {
+    fn on_event(&mut self, bot: &BotState, state: &GameState, event: &GameEvent) {
         if let GameEvent::Sit {
             north,
             east,
@@ -297,6 +437,7 @@ impl Algorithm for NeuralNetworkBot {
         {
             self.human_seats = [north, east, south, west].map(|p| p.strategy().is_none());
         }
+        self.human_memory.on_event(bot, state, event);
         self.hand_maker.on_event(state, event);
         if self.experiments.charge_belief_strength > 0.0 {
             self.charge_history.on_event(state, event);
@@ -305,6 +446,7 @@ impl Algorithm for NeuralNetworkBot {
             || self.experiments.conservative_model
             || self.experiments.belief_strength > 0.0
             || self.experiments.early_intent
+            || self.experiments.coherent_humans
         {
             self.history.on_event(state, event);
         }
@@ -342,9 +484,8 @@ pub(crate) fn rollout<R: RngExt + ?Sized>(
         } else {
             HeuristicBot.play_with_rng(&bot, state, rng)
         };
-        let event = GameEvent::Play { seat, card };
-        void = void.on_event(state, &event);
-        state.apply(&event);
+        void = void.on_play(state, seat, card);
+        state.play_card(seat, card);
     }
 }
 
@@ -364,7 +505,7 @@ pub(crate) fn solve_endgame(state: &GameState, hands: &[Cards; 4]) -> WonState {
         .distinct_plays(state.played, state.current_trick)
     {
         let mut child = state.clone();
-        child.apply(&GameEvent::Play { seat, card });
+        child.play_card(seat, card);
         let won = solve_endgame(&child, hands);
         let money = won.scores(state.charges).money(seat);
         if money > best_money {
@@ -411,6 +552,13 @@ mod tests {
         assert_eq!(bot.config.samples, 128);
         assert_eq!(bot.config.exact_cards, 12);
         assert!(bot.policy.is_none());
+        assert!(bot.pass_network.is_some());
+        assert!(bot.charge_network.is_none());
+        assert_eq!(bot.preplay_pass_directions, [true, true, true, false]);
+        assert!(bot.preplay_lone_bot_classic);
+        assert!(NeuralNetworkBot::with_config(SearchConfig::default(), 42)
+            .pass_network
+            .is_none());
     }
 
     fn moon_position(can_finish: bool) -> ([Cards; 4], GameState) {

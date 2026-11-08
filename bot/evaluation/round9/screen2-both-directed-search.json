@@ -1,0 +1,122 @@
+{
+  "baseline": "round7",
+  "by_direction": [
+    {
+      "deals": 25,
+      "difference_ci95": [
+        -34.065463386804765,
+        69.76546338680477
+      ],
+      "direction": "left",
+      "money": [
+        11.59,
+        -6.26
+      ],
+      "paired_difference": 17.85
+    },
+    {
+      "deals": 25,
+      "difference_ci95": [
+        -58.00585138216981,
+        35.4058513821698
+      ],
+      "direction": "right",
+      "money": [
+        -0.48,
+        10.82
+      ],
+      "paired_difference": -11.3
+    },
+    {
+      "deals": 25,
+      "difference_ci95": [
+        -51.23640341470362,
+        -1.783596585296383
+      ],
+      "direction": "across",
+      "money": [
+        -18.48,
+        8.03
+      ],
+      "paired_difference": -26.51
+    },
+    {
+      "deals": 25,
+      "difference_ci95": [
+        -29.970597805320455,
+        6.110597805320456
+      ],
+      "direction": "keeper",
+      "money": [
+        -11.26,
+        0.67
+      ],
+      "paired_difference": -11.93
+    }
+  ],
+  "candidate": "prelearn:assets/models/preplay-pass2.tpq:assets/models/preplay-charge2.tpq:128:12:none:0:7",
+  "charges_by_suit": [
+    [
+      105,
+      35,
+      51,
+      74
+    ],
+    [
+      43,
+      7,
+      39,
+      28
+    ]
+  ],
+  "deals": 100,
+  "difference_ci95": [
+    -27.009190487717433,
+    11.064190487717433
+  ],
+  "hands_per_version": 400,
+  "keeper_redraws": [
+    46,
+    64
+  ],
+  "max_move_ms": [
+    10.409,
+    15.795
+  ],
+  "money": [
+    -4.6575,
+    3.315
+  ],
+  "moons": [
+    33,
+    19
+  ],
+  "ms_per_hand": [
+    19.4724125,
+    18.218065
+  ],
+  "opponent": "round7:32:12",
+  "opponent_moons": [
+    43,
+    50
+  ],
+  "paired_difference": -7.9725,
+  "preplay_ms_per_hand": [
+    0.0667075,
+    0.0
+  ],
+  "queen_and_8_to_12_hearts": [
+    45,
+    34
+  ],
+  "root_evaluations_per_hand": [
+    7399.68,
+    6840.96
+  ],
+  "rules": "classic",
+  "seed": 1901000,
+  "win_share": [
+    0.2679166666666667,
+    0.29041666666666666
+  ]
+}

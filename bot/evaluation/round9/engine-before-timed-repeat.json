@@ -1,0 +1,51 @@
+{
+  "baseline": "round7",
+  "candidate": "round7:8192:12:5",
+  "deals": 100,
+  "difference_ci95": [
+    -25.13699936828898,
+    4.121999368288979
+  ],
+  "hands_per_version": 400,
+  "max_move_ms": [
+    5.579,
+    19.166
+  ],
+  "money": [
+    26.4225,
+    36.93
+  ],
+  "moons": [
+    27,
+    36
+  ],
+  "ms_per_hand": [
+    43.1141825,
+    22.3871175
+  ],
+  "opponent": "actionhybrid",
+  "opponent_moons": [
+    25,
+    26
+  ],
+  "paired_difference": -10.5075,
+  "preplay_ms_per_hand": [
+    7.5e-06,
+    1.25e-05
+  ],
+  "queen_and_8_to_12_hearts": [
+    34,
+    20
+  ],
+  "root_evaluations_per_hand": [
+    20274.6575,
+    6650.88
+  ],
+  "rules": "classic",
+  "seed": 1906000,
+  "win_share": [
+    0.38791666666666663,
+    0.36708333333333326
+  ],
+  "executable_sha256": "331f28a39cc93cf376db6d1494ad6dcf20148a8bf9e1c815644a32cb58ecff60"
+}

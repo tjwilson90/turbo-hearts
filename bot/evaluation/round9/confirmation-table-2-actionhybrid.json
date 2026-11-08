@@ -1,0 +1,68 @@
+{
+  "baseline": "round7",
+  "by_direction": [
+    {
+      "deals": 75,
+      "difference_ci95": [
+        -20.189573709637134,
+        -4.565981845918426
+      ],
+      "direction": "left",
+      "paired_difference": -12.37777777777778
+    },
+    {
+      "deals": 75,
+      "difference_ci95": [
+        -14.079765885920873,
+        3.239765885920873
+      ],
+      "direction": "right",
+      "paired_difference": -5.42
+    },
+    {
+      "deals": 75,
+      "difference_ci95": [
+        -20.071143763842137,
+        -0.9777451250467575
+      ],
+      "direction": "across",
+      "paired_difference": -10.524444444444446
+    },
+    {
+      "deals": 75,
+      "difference_ci95": [
+        0.0,
+        0.0
+      ],
+      "direction": "keeper",
+      "paired_difference": 0.0
+    }
+  ],
+  "candidate": "prelearn:assets/models/preplay-pass2.tpq:none:128:12:none:0:7",
+  "deals": 300,
+  "difference_ci95": [
+    -10.869073628379915,
+    -3.2920374827312022
+  ],
+  "human_count": 2,
+  "human_policy": "actionhybrid",
+  "money_per_bot": [
+    9.65166666666667,
+    16.73222222222223
+  ],
+  "moons_bot_human_by_version": [
+    [
+      305,
+      60
+    ],
+    [
+      177,
+      68
+    ]
+  ],
+  "paired_difference": -7.080555555555559,
+  "public_types": "actual human/bot roles",
+  "rules": "classic",
+  "seed": 2002000,
+  "table_replays_per_version": 1800
+}

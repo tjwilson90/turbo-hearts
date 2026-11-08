@@ -1,0 +1,124 @@
+{
+  "by_direction": [
+    {
+      "changed_fraction": 0.955,
+      "decisions": 1000,
+      "direction": "left",
+      "mean_metrics_learned_parent": [
+        [
+          7.370666666666666,
+          0.235,
+          0.597,
+          1.196,
+          0.831,
+          0.074
+        ],
+        [
+          9.947333333333322,
+          0.808,
+          0.746,
+          0.778,
+          0.777,
+          0.151
+        ]
+      ],
+      "passed_queen_fraction_when_held": [
+        0.296,
+        0.604
+      ]
+    },
+    {
+      "changed_fraction": 0.972,
+      "decisions": 1000,
+      "direction": "right",
+      "mean_metrics_learned_parent": [
+        [
+          7.038999999999986,
+          0.183,
+          0.548,
+          1.195,
+          0.844,
+          0.078
+        ],
+        [
+          9.888333333333327,
+          0.827,
+          0.735,
+          0.757,
+          0.782,
+          0.154
+        ]
+      ],
+      "passed_queen_fraction_when_held": [
+        0.312,
+        0.616
+      ]
+    },
+    {
+      "changed_fraction": 0.957,
+      "decisions": 1000,
+      "direction": "across",
+      "mean_metrics_learned_parent": [
+        [
+          7.265666666666679,
+          0.202,
+          0.572,
+          1.196,
+          0.841,
+          0.098
+        ],
+        [
+          9.952000000000012,
+          0.827,
+          0.719,
+          0.759,
+          0.806,
+          0.166
+        ]
+      ],
+      "passed_queen_fraction_when_held": [
+        0.392,
+        0.664
+      ]
+    },
+    {
+      "changed_fraction": 0.9774193548387097,
+      "decisions": 620,
+      "direction": "keeper",
+      "mean_metrics_learned_parent": [
+        [
+          7.318817204301076,
+          0.23709677419354838,
+          0.4870967741935484,
+          1.1387096774193548,
+          0.8241935483870968,
+          0.09032258064516129
+        ],
+        [
+          10.058064516129031,
+          0.8548387096774194,
+          0.6419354838709678,
+          0.6983870967741935,
+          0.7951612903225806,
+          0.2
+        ]
+      ],
+      "passed_queen_fraction_when_held": [
+        0.36129032258064514,
+        0.8
+      ]
+    }
+  ],
+  "deals": 1000,
+  "metrics": [
+    "mean_passed_rank_2_to_14",
+    "passed_aces_or_kings",
+    "retained_void_suits",
+    "retained_top_sequence_cards",
+    "retained_nines",
+    "passed_queen"
+  ],
+  "model": "assets/models/preplay-pass2.tpq",
+  "seed": 1905000,
+  "state_distribution": "parent preplay, Classic; keeper only after all decline"
+}

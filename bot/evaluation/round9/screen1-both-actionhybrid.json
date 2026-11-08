@@ -1,0 +1,122 @@
+{
+  "baseline": "round7",
+  "by_direction": [
+    {
+      "deals": 25,
+      "difference_ci95": [
+        -46.80369755970741,
+        69.68369755970741
+      ],
+      "direction": "left",
+      "money": [
+        61.0,
+        49.56
+      ],
+      "paired_difference": 11.44
+    },
+    {
+      "deals": 25,
+      "difference_ci95": [
+        -43.65549250247466,
+        27.375492502474657
+      ],
+      "direction": "right",
+      "money": [
+        22.69,
+        30.83
+      ],
+      "paired_difference": -8.14
+    },
+    {
+      "deals": 25,
+      "difference_ci95": [
+        -22.994360453850533,
+        66.29436045385053
+      ],
+      "direction": "across",
+      "money": [
+        61.77,
+        40.12
+      ],
+      "paired_difference": 21.65
+    },
+    {
+      "deals": 25,
+      "difference_ci95": [
+        -35.61281661157786,
+        12.072816611577863
+      ],
+      "direction": "keeper",
+      "money": [
+        13.91,
+        25.68
+      ],
+      "paired_difference": -11.77
+    }
+  ],
+  "candidate": "prelearn:assets/models/preplay-pass1.tpq:assets/models/preplay-charge1.tpq",
+  "charges_by_suit": [
+    [
+      100,
+      44,
+      61,
+      82
+    ],
+    [
+      43,
+      7,
+      39,
+      28
+    ]
+  ],
+  "deals": 100,
+  "difference_ci95": [
+    -17.792238346890898,
+    24.382238346890894
+  ],
+  "hands_per_version": 400,
+  "keeper_redraws": [
+    44,
+    64
+  ],
+  "max_move_ms": [
+    9.952,
+    9.923
+  ],
+  "money": [
+    39.8425,
+    36.5475
+  ],
+  "moons": [
+    62,
+    32
+  ],
+  "ms_per_hand": [
+    20.11122,
+    18.3022725
+  ],
+  "opponent": "actionhybrid",
+  "opponent_moons": [
+    16,
+    26
+  ],
+  "paired_difference": 3.295,
+  "preplay_ms_per_hand": [
+    0.078455,
+    0.0
+  ],
+  "queen_and_8_to_12_hearts": [
+    51,
+    21
+  ],
+  "root_evaluations_per_hand": [
+    7352.96,
+    6527.04
+  ],
+  "rules": "classic",
+  "seed": 1901000,
+  "win_share": [
+    0.3708333333333333,
+    0.3575
+  ]
+}

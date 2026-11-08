@@ -1,0 +1,53 @@
+[
+  {
+    "split": 0,
+    "positions": 1414,
+    "predicted_choice_advantage": 12.251678466796875,
+    "human_choice_advantage": 9.044112205505371,
+    "oracle_max_advantage": 32.0810661315918,
+    "predicted_minus_human": {
+      "decisions": 1414,
+      "games": 803,
+      "mean": 3.2075672408057407,
+      "ci95": [
+        0.6329850769774903,
+        5.782149404633991
+      ]
+    },
+    "interpretation": "Four responsive continuations per move on actual hands; noisy targets, not observed human counterfactual outcomes"
+  },
+  {
+    "split": 1,
+    "positions": 379,
+    "predicted_choice_advantage": 4.00269079208374,
+    "human_choice_advantage": 9.51456356048584,
+    "oracle_max_advantage": 35.00005340576172,
+    "predicted_minus_human": {
+      "decisions": 379,
+      "games": 204,
+      "mean": -5.511873381118976,
+      "ci95": [
+        -11.725196541895615,
+        0.7014497796576631
+      ]
+    },
+    "interpretation": "Four responsive continuations per move on actual hands; noisy targets, not observed human counterfactual outcomes"
+  },
+  {
+    "split": 2,
+    "positions": 329,
+    "predicted_choice_advantage": 4.341887950897217,
+    "human_choice_advantage": 11.825170516967773,
+    "oracle_max_advantage": 40.88216018676758,
+    "predicted_minus_human": {
+      "decisions": 329,
+      "games": 181,
+      "mean": -7.483282630566768,
+      "ci95": [
+        -15.29880230337022,
+        0.3322370422366854
+      ]
+    },
+    "interpretation": "Four responsive continuations per move on actual hands; noisy targets, not observed human counterfactual outcomes"
+  }
+]

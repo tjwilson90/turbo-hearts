@@ -1,0 +1,122 @@
+{
+  "baseline": "round7",
+  "by_direction": [
+    {
+      "deals": 125,
+      "difference_ci95": [
+        -6.604187344695178,
+        20.14018734469518
+      ],
+      "direction": "left",
+      "money": [
+        70.848,
+        64.08
+      ],
+      "paired_difference": 6.768
+    },
+    {
+      "deals": 125,
+      "difference_ci95": [
+        15.525020067386624,
+        40.81097993261338
+      ],
+      "direction": "right",
+      "money": [
+        82.632,
+        54.464
+      ],
+      "paired_difference": 28.168
+    },
+    {
+      "deals": 125,
+      "difference_ci95": [
+        12.046134410750597,
+        40.0738655892494
+      ],
+      "direction": "across",
+      "money": [
+        90.004,
+        63.944
+      ],
+      "paired_difference": 26.06
+    },
+    {
+      "deals": 125,
+      "difference_ci95": [
+        0.0,
+        0.0
+      ],
+      "direction": "keeper",
+      "money": [
+        48.144,
+        48.144
+      ],
+      "paired_difference": 0.0
+    }
+  ],
+  "candidate": "prelearn:assets/models/preplay-pass2.tpq:none:128:12:none:0:7",
+  "charges_by_suit": [
+    [
+      169,
+      24,
+      143,
+      119
+    ],
+    [
+      159,
+      21,
+      167,
+      138
+    ]
+  ],
+  "deals": 500,
+  "difference_ci95": [
+    9.386265690320895,
+    21.111734309679107
+  ],
+  "hands_per_version": 2000,
+  "keeper_redraws": [
+    328,
+    328
+  ],
+  "max_move_ms": [
+    27.41,
+    30.119
+  ],
+  "money": [
+    72.907,
+    57.658
+  ],
+  "moons": [
+    364,
+    200
+  ],
+  "ms_per_hand": [
+    19.870505,
+    18.300366
+  ],
+  "opponent": "actionclaim",
+  "opponent_moons": [
+    78,
+    90
+  ],
+  "paired_difference": 15.249,
+  "preplay_ms_per_hand": [
+    0.06694,
+    2e-06
+  ],
+  "queen_and_8_to_12_hearts": [
+    83,
+    65
+  ],
+  "root_evaluations_per_hand": [
+    7160.128,
+    6548.224
+  ],
+  "rules": "classic",
+  "seed": 2000000,
+  "win_share": [
+    0.4934166666666667,
+    0.46975000000000006
+  ]
+}

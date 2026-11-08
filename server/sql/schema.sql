@@ -1,5 +1,3 @@
-PRAGMA journal_mode = WAL;
-BEGIN;
 
 CREATE TABLE IF NOT EXISTS user (
     user_id TEXT NOT NULL,
@@ -53,5 +51,3 @@ CREATE TABLE IF NOT EXISTS event (
     event TEXT NOT NULL,
     PRIMARY KEY (game_id, event_id)
 ) WITHOUT ROWID;
-
-END;

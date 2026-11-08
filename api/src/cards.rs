@@ -161,9 +161,12 @@ impl Cards {
         }
         let always_distinct = self & (Cards::NINES | Cards::CHARGEABLE);
         let mut magic = (self - always_distinct).bits;
-        let equivalent_blocks = magic | played.bits;
-        for _ in 0..11 {
-            magic = (magic | (magic >> 1)) & equivalent_blocks;
+        let mut contiguous = magic | played.bits;
+        // Parallel prefix propagation through contiguous available/played
+        // ranks. Four doubling steps replace eleven one-rank steps.
+        for shift in [1, 2, 4, 8] {
+            magic |= (magic >> shift) & contiguous;
+            contiguous &= contiguous >> shift;
         }
         magic += ((!magic) << 1) | 0x0001_0001_0001_0001;
         always_distinct
@@ -484,6 +487,52 @@ mod test {
         ($($cards:tt)*) => {
             stringify!($($cards)*).parse::<Cards>().unwrap()
         };
+    }
+
+    fn legacy_distinct(own: Cards, mut played: Cards, trick: Trick) -> Cards {
+        if !trick.is_empty() {
+            played -= (trick.cards() & trick.suit().cards()).max();
+        }
+        let distinct = own & (Cards::NINES | Cards::CHARGEABLE);
+        let mut bits = (own - distinct).bits;
+        let allowed = bits | played.bits;
+        for _ in 0..11 {
+            bits = (bits | (bits >> 1)) & allowed;
+        }
+        bits += ((!bits) << 1) | 0x0001_0001_0001_0001;
+        distinct
+            | Cards {
+                bits: own.bits & (bits >> 1),
+            }
+    }
+
+    #[test]
+    fn prefix_distinct_matches_legacy_for_every_single_suit_allocation() {
+        for suit in Suit::VALUES {
+            for mut pattern in 0..3usize.pow(13) {
+                let mut own = Cards::NONE;
+                let mut played = Cards::NONE;
+                for card in suit.cards() {
+                    match pattern % 3 {
+                        1 => own |= card,
+                        2 => played |= card,
+                        _ => {}
+                    }
+                    pattern /= 3;
+                }
+                assert_eq!(
+                    own.distinct_plays(played, Trick::new()),
+                    legacy_distinct(own, played, Trick::new())
+                );
+                if !played.is_empty() {
+                    let trick = Trick::new().push(played.max());
+                    assert_eq!(
+                        own.distinct_plays(played, trick),
+                        legacy_distinct(own, played, trick)
+                    );
+                }
+            }
+        }
     }
 
     #[test]

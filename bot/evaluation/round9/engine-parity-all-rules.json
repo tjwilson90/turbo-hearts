@@ -1,0 +1,620 @@
+[
+  {
+    "rules": "classic",
+    "before": {
+      "baseline": "round7",
+      "candidate": "round7",
+      "deals": 20,
+      "difference_ci95": [
+        0.0,
+        0.0
+      ],
+      "hands_per_version": 80,
+      "max_move_ms": [
+        11.711,
+        12.063
+      ],
+      "money": [
+        52.75,
+        52.75
+      ],
+      "moons": [
+        6,
+        6
+      ],
+      "ms_per_hand": [
+        24.7498875,
+        24.94025
+      ],
+      "opponent": "actionhybrid",
+      "opponent_moons": [
+        9,
+        9
+      ],
+      "paired_difference": 0.0,
+      "preplay_ms_per_hand": [
+        0.0,
+        0.0
+      ],
+      "queen_and_8_to_12_hearts": [
+        4,
+        4
+      ],
+      "root_evaluations_per_hand": [
+        6646.4,
+        6646.4
+      ],
+      "rules": "classic",
+      "seed": 1900200,
+      "win_share": [
+        0.3791666666666667,
+        0.3791666666666667
+      ]
+    },
+    "after": {
+      "baseline": "round7",
+      "candidate": "round7",
+      "deals": 20,
+      "difference_ci95": [
+        0.0,
+        0.0
+      ],
+      "hands_per_version": 80,
+      "max_move_ms": [
+        9.417,
+        9.252
+      ],
+      "money": [
+        52.75,
+        52.75
+      ],
+      "moons": [
+        6,
+        6
+      ],
+      "ms_per_hand": [
+        19.0590125,
+        18.9910125
+      ],
+      "opponent": "actionhybrid",
+      "opponent_moons": [
+        9,
+        9
+      ],
+      "paired_difference": 0.0,
+      "preplay_ms_per_hand": [
+        0.0,
+        0.0
+      ],
+      "queen_and_8_to_12_hearts": [
+        4,
+        4
+      ],
+      "root_evaluations_per_hand": [
+        6646.4,
+        6646.4
+      ],
+      "rules": "classic",
+      "seed": 1900200,
+      "win_share": [
+        0.3791666666666667,
+        0.3791666666666667
+      ]
+    }
+  },
+  {
+    "rules": "blind",
+    "before": {
+      "baseline": "round7",
+      "candidate": "round7",
+      "deals": 20,
+      "difference_ci95": [
+        0.0,
+        0.0
+      ],
+      "hands_per_version": 80,
+      "max_move_ms": [
+        10.457,
+        10.54
+      ],
+      "money": [
+        52.75,
+        52.75
+      ],
+      "moons": [
+        6,
+        6
+      ],
+      "ms_per_hand": [
+        23.7755875,
+        23.752425
+      ],
+      "opponent": "actionhybrid",
+      "opponent_moons": [
+        9,
+        9
+      ],
+      "paired_difference": 0.0,
+      "preplay_ms_per_hand": [
+        0.0,
+        0.0
+      ],
+      "queen_and_8_to_12_hearts": [
+        4,
+        4
+      ],
+      "root_evaluations_per_hand": [
+        6646.4,
+        6646.4
+      ],
+      "rules": "blind",
+      "seed": 1900200,
+      "win_share": [
+        0.3791666666666667,
+        0.3791666666666667
+      ]
+    },
+    "after": {
+      "baseline": "round7",
+      "candidate": "round7",
+      "deals": 20,
+      "difference_ci95": [
+        0.0,
+        0.0
+      ],
+      "hands_per_version": 80,
+      "max_move_ms": [
+        10.377,
+        9.434
+      ],
+      "money": [
+        52.75,
+        52.75
+      ],
+      "moons": [
+        6,
+        6
+      ],
+      "ms_per_hand": [
+        19.5324,
+        19.1696375
+      ],
+      "opponent": "actionhybrid",
+      "opponent_moons": [
+        9,
+        9
+      ],
+      "paired_difference": 0.0,
+      "preplay_ms_per_hand": [
+        0.0,
+        0.0
+      ],
+      "queen_and_8_to_12_hearts": [
+        4,
+        4
+      ],
+      "root_evaluations_per_hand": [
+        6646.4,
+        6646.4
+      ],
+      "rules": "blind",
+      "seed": 1900200,
+      "win_share": [
+        0.3791666666666667,
+        0.3791666666666667
+      ]
+    }
+  },
+  {
+    "rules": "bridge",
+    "before": {
+      "baseline": "round7",
+      "candidate": "round7",
+      "deals": 20,
+      "difference_ci95": [
+        0.0,
+        0.0
+      ],
+      "hands_per_version": 80,
+      "max_move_ms": [
+        10.097,
+        10.054
+      ],
+      "money": [
+        52.75,
+        52.75
+      ],
+      "moons": [
+        6,
+        6
+      ],
+      "ms_per_hand": [
+        23.0075625,
+        22.9863375
+      ],
+      "opponent": "actionhybrid",
+      "opponent_moons": [
+        9,
+        9
+      ],
+      "paired_difference": 0.0,
+      "preplay_ms_per_hand": [
+        0.0,
+        0.0
+      ],
+      "queen_and_8_to_12_hearts": [
+        4,
+        4
+      ],
+      "root_evaluations_per_hand": [
+        6646.4,
+        6646.4
+      ],
+      "rules": "bridge",
+      "seed": 1900200,
+      "win_share": [
+        0.3791666666666667,
+        0.3791666666666667
+      ]
+    },
+    "after": {
+      "baseline": "round7",
+      "candidate": "round7",
+      "deals": 20,
+      "difference_ci95": [
+        0.0,
+        0.0
+      ],
+      "hands_per_version": 80,
+      "max_move_ms": [
+        9.033,
+        9.036
+      ],
+      "money": [
+        52.75,
+        52.75
+      ],
+      "moons": [
+        6,
+        6
+      ],
+      "ms_per_hand": [
+        18.452775,
+        18.4823125
+      ],
+      "opponent": "actionhybrid",
+      "opponent_moons": [
+        9,
+        9
+      ],
+      "paired_difference": 0.0,
+      "preplay_ms_per_hand": [
+        0.0,
+        1.25e-05
+      ],
+      "queen_and_8_to_12_hearts": [
+        4,
+        4
+      ],
+      "root_evaluations_per_hand": [
+        6646.4,
+        6646.4
+      ],
+      "rules": "bridge",
+      "seed": 1900200,
+      "win_share": [
+        0.3791666666666667,
+        0.3791666666666667
+      ]
+    }
+  },
+  {
+    "rules": "blind_bridge",
+    "before": {
+      "baseline": "round7",
+      "candidate": "round7",
+      "deals": 20,
+      "difference_ci95": [
+        0.0,
+        0.0
+      ],
+      "hands_per_version": 80,
+      "max_move_ms": [
+        10.049,
+        10.089
+      ],
+      "money": [
+        52.75,
+        52.75
+      ],
+      "moons": [
+        6,
+        6
+      ],
+      "ms_per_hand": [
+        23.0053,
+        22.9731
+      ],
+      "opponent": "actionhybrid",
+      "opponent_moons": [
+        9,
+        9
+      ],
+      "paired_difference": 0.0,
+      "preplay_ms_per_hand": [
+        0.0,
+        0.0
+      ],
+      "queen_and_8_to_12_hearts": [
+        4,
+        4
+      ],
+      "root_evaluations_per_hand": [
+        6646.4,
+        6646.4
+      ],
+      "rules": "blind_bridge",
+      "seed": 1900200,
+      "win_share": [
+        0.3791666666666667,
+        0.3791666666666667
+      ]
+    },
+    "after": {
+      "baseline": "round7",
+      "candidate": "round7",
+      "deals": 20,
+      "difference_ci95": [
+        0.0,
+        0.0
+      ],
+      "hands_per_version": 80,
+      "max_move_ms": [
+        9.081,
+        10.267
+      ],
+      "money": [
+        52.75,
+        52.75
+      ],
+      "moons": [
+        6,
+        6
+      ],
+      "ms_per_hand": [
+        18.4647,
+        18.5111375
+      ],
+      "opponent": "actionhybrid",
+      "opponent_moons": [
+        9,
+        9
+      ],
+      "paired_difference": 0.0,
+      "preplay_ms_per_hand": [
+        3.75e-05,
+        0.0
+      ],
+      "queen_and_8_to_12_hearts": [
+        4,
+        4
+      ],
+      "root_evaluations_per_hand": [
+        6646.4,
+        6646.4
+      ],
+      "rules": "blind_bridge",
+      "seed": 1900200,
+      "win_share": [
+        0.3791666666666667,
+        0.3791666666666667
+      ]
+    }
+  },
+  {
+    "rules": "chain",
+    "before": {
+      "baseline": "round7",
+      "candidate": "round7",
+      "deals": 20,
+      "difference_ci95": [
+        0.0,
+        0.0
+      ],
+      "hands_per_version": 80,
+      "max_move_ms": [
+        15.163,
+        10.043
+      ],
+      "money": [
+        52.75,
+        52.75
+      ],
+      "moons": [
+        6,
+        6
+      ],
+      "ms_per_hand": [
+        23.3717375,
+        23.0466875
+      ],
+      "opponent": "actionhybrid",
+      "opponent_moons": [
+        9,
+        9
+      ],
+      "paired_difference": 0.0,
+      "preplay_ms_per_hand": [
+        0.0,
+        1.25e-05
+      ],
+      "queen_and_8_to_12_hearts": [
+        4,
+        4
+      ],
+      "root_evaluations_per_hand": [
+        6646.4,
+        6646.4
+      ],
+      "rules": "chain",
+      "seed": 1900200,
+      "win_share": [
+        0.3791666666666667,
+        0.3791666666666667
+      ]
+    },
+    "after": {
+      "baseline": "round7",
+      "candidate": "round7",
+      "deals": 20,
+      "difference_ci95": [
+        0.0,
+        0.0
+      ],
+      "hands_per_version": 80,
+      "max_move_ms": [
+        13.448,
+        9.175
+      ],
+      "money": [
+        52.75,
+        52.75
+      ],
+      "moons": [
+        6,
+        6
+      ],
+      "ms_per_hand": [
+        18.50555,
+        18.4102875
+      ],
+      "opponent": "actionhybrid",
+      "opponent_moons": [
+        9,
+        9
+      ],
+      "paired_difference": 0.0,
+      "preplay_ms_per_hand": [
+        0.0,
+        0.0
+      ],
+      "queen_and_8_to_12_hearts": [
+        4,
+        4
+      ],
+      "root_evaluations_per_hand": [
+        6646.4,
+        6646.4
+      ],
+      "rules": "chain",
+      "seed": 1900200,
+      "win_share": [
+        0.3791666666666667,
+        0.3791666666666667
+      ]
+    }
+  },
+  {
+    "rules": "blind_chain",
+    "before": {
+      "baseline": "round7",
+      "candidate": "round7",
+      "deals": 20,
+      "difference_ci95": [
+        0.0,
+        0.0
+      ],
+      "hands_per_version": 80,
+      "max_move_ms": [
+        10.21,
+        11.379
+      ],
+      "money": [
+        52.75,
+        52.75
+      ],
+      "moons": [
+        6,
+        6
+      ],
+      "ms_per_hand": [
+        22.9428875,
+        23.27765
+      ],
+      "opponent": "actionhybrid",
+      "opponent_moons": [
+        9,
+        9
+      ],
+      "paired_difference": 0.0,
+      "preplay_ms_per_hand": [
+        1.25e-05,
+        1.25e-05
+      ],
+      "queen_and_8_to_12_hearts": [
+        4,
+        4
+      ],
+      "root_evaluations_per_hand": [
+        6646.4,
+        6646.4
+      ],
+      "rules": "blind_chain",
+      "seed": 1900200,
+      "win_share": [
+        0.3791666666666667,
+        0.3791666666666667
+      ]
+    },
+    "after": {
+      "baseline": "round7",
+      "candidate": "round7",
+      "deals": 20,
+      "difference_ci95": [
+        0.0,
+        0.0
+      ],
+      "hands_per_version": 80,
+      "max_move_ms": [
+        9.061,
+        9.069
+      ],
+      "money": [
+        52.75,
+        52.75
+      ],
+      "moons": [
+        6,
+        6
+      ],
+      "ms_per_hand": [
+        18.402525,
+        18.4746875
+      ],
+      "opponent": "actionhybrid",
+      "opponent_moons": [
+        9,
+        9
+      ],
+      "paired_difference": 0.0,
+      "preplay_ms_per_hand": [
+        0.0,
+        0.0
+      ],
+      "queen_and_8_to_12_hearts": [
+        4,
+        4
+      ],
+      "root_evaluations_per_hand": [
+        6646.4,
+        6646.4
+      ],
+      "rules": "blind_chain",
+      "seed": 1900200,
+      "win_share": [
+        0.3791666666666667,
+        0.3791666666666667
+      ]
+    }
+  }
+]

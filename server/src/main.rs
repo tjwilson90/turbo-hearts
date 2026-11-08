@@ -16,6 +16,8 @@ mod db;
 mod error;
 mod game;
 mod game_endpoints;
+mod judgment;
+mod judgment_endpoints;
 mod lobby;
 mod lobby_endpoints;
 mod subscriber;
@@ -79,6 +81,8 @@ async fn main() -> Result<(), CardsError> {
     let db = Database::new(&CONFIG.db_path)?;
     let db = &*Box::leak(Box::new(db));
 
+    judgment::initialize(db, CONFIG.judgment_cases_path.as_deref())?;
+
     let lobby = Lobby::new(db)?;
     let lobby = &*Box::leak(Box::new(lobby));
 
@@ -105,6 +109,7 @@ async fn main() -> Result<(), CardsError> {
         .map(|| warp::redirect(Uri::from_static("/lobby")))
         .or(asset_endpoints::router())
         .or(game_endpoints::router(lobby, games, user_id.clone()))
+        .or(judgment_endpoints::router(db, user_id.clone(), &CONFIG.external_uri))
         .or(lobby_endpoints::router(lobby, games, user_id))
         .or(auth_endpoints::router(users, http_client, oidc))
         .or(user_endpoints::router(users))

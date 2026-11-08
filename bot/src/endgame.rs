@@ -76,7 +76,7 @@ impl EndgameSolver {
         let mut best_money = i16::MIN;
         for card in plays {
             let mut child = state.clone();
-            child.apply(&GameEvent::Play { seat, card });
+            child.play_card(seat, card);
             let won = self.solve(&child, hands);
             let money = won.scores(state.charges).money(seat);
             if money > best_money {

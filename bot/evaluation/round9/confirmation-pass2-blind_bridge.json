@@ -1,0 +1,122 @@
+{
+  "baseline": "round7",
+  "by_direction": [
+    {
+      "deals": 50,
+      "difference_ci95": [
+        -9.797338932319938,
+        38.82733893231994
+      ],
+      "direction": "left",
+      "money": [
+        36.915,
+        22.4
+      ],
+      "paired_difference": 14.515
+    },
+    {
+      "deals": 50,
+      "difference_ci95": [
+        -35.855386657394526,
+        4.715386657394525
+      ],
+      "direction": "right",
+      "money": [
+        23.66,
+        39.23
+      ],
+      "paired_difference": -15.57
+    },
+    {
+      "deals": 50,
+      "difference_ci95": [
+        -0.4284092490484106,
+        49.99840924904841
+      ],
+      "direction": "across",
+      "money": [
+        51.705,
+        26.92
+      ],
+      "paired_difference": 24.785
+    },
+    {
+      "deals": 50,
+      "difference_ci95": [
+        0.0,
+        0.0
+      ],
+      "direction": "keeper",
+      "money": [
+        28.495,
+        28.495
+      ],
+      "paired_difference": 0.0
+    }
+  ],
+  "candidate": "prelearn:assets/models/preplay-pass2.tpq:none:128:12:none:0:7",
+  "charges_by_suit": [
+    [
+      62,
+      12,
+      56,
+      50
+    ],
+    [
+      64,
+      6,
+      57,
+      57
+    ]
+  ],
+  "deals": 200,
+  "difference_ci95": [
+    -4.330166457977106,
+    16.195166457977106
+  ],
+  "hands_per_version": 800,
+  "keeper_redraws": [
+    112,
+    112
+  ],
+  "max_move_ms": [
+    13.98,
+    29.188
+  ],
+  "money": [
+    35.19375,
+    29.26125
+  ],
+  "moons": [
+    112,
+    48
+  ],
+  "ms_per_hand": [
+    19.7634625,
+    18.15771125
+  ],
+  "opponent": "actionhybrid",
+  "opponent_moons": [
+    35,
+    33
+  ],
+  "paired_difference": 5.9325,
+  "preplay_ms_per_hand": [
+    0.0666525,
+    0.0
+  ],
+  "queen_and_8_to_12_hearts": [
+    69,
+    48
+  ],
+  "root_evaluations_per_hand": [
+    7157.76,
+    6525.28
+  ],
+  "rules": "blind_bridge",
+  "seed": 2001000,
+  "win_share": [
+    0.35916666666666663,
+    0.34541666666666665
+  ]
+}

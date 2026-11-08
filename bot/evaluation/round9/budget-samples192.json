@@ -1,0 +1,122 @@
+{
+  "baseline": "round7",
+  "by_direction": [
+    {
+      "deals": 25,
+      "difference_ci95": [
+        -36.44144212873978,
+        27.36144212873978
+      ],
+      "direction": "left",
+      "money": [
+        6.45,
+        10.99
+      ],
+      "paired_difference": -4.54
+    },
+    {
+      "deals": 25,
+      "difference_ci95": [
+        -26.75378544195355,
+        13.673785441953552
+      ],
+      "direction": "right",
+      "money": [
+        25.27,
+        31.81
+      ],
+      "paired_difference": -6.54
+    },
+    {
+      "deals": 25,
+      "difference_ci95": [
+        -23.83015098802998,
+        15.390150988029983
+      ],
+      "direction": "across",
+      "money": [
+        30.86,
+        35.08
+      ],
+      "paired_difference": -4.22
+    },
+    {
+      "deals": 25,
+      "difference_ci95": [
+        -35.02916059689754,
+        25.329160596897538
+      ],
+      "direction": "keeper",
+      "money": [
+        24.7,
+        29.55
+      ],
+      "paired_difference": -4.85
+    }
+  ],
+  "candidate": "round7:192:12",
+  "charges_by_suit": [
+    [
+      38,
+      5,
+      37,
+      22
+    ],
+    [
+      38,
+      5,
+      37,
+      22
+    ]
+  ],
+  "deals": 100,
+  "difference_ci95": [
+    -17.881912669945578,
+    7.806912669945579
+  ],
+  "hands_per_version": 400,
+  "keeper_redraws": [
+    44,
+    44
+  ],
+  "max_move_ms": [
+    19.116,
+    15.033
+  ],
+  "money": [
+    21.82,
+    26.8575
+  ],
+  "moons": [
+    25,
+    30
+  ],
+  "ms_per_hand": [
+    26.57572,
+    18.1342175
+  ],
+  "opponent": "actionhybrid",
+  "opponent_moons": [
+    39,
+    26
+  ],
+  "paired_difference": -5.0375,
+  "preplay_ms_per_hand": [
+    2.5e-06,
+    0.0
+  ],
+  "queen_and_8_to_12_hearts": [
+    18,
+    21
+  ],
+  "root_evaluations_per_hand": [
+    9613.44,
+    6499.52
+  ],
+  "rules": "classic",
+  "seed": 1902000,
+  "win_share": [
+    0.3554166666666667,
+    0.3833333333333333
+  ]
+}

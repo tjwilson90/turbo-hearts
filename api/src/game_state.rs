@@ -131,22 +131,7 @@ impl GameState {
                     .charge(Seat::South, *south)
                     .charge(Seat::West, *west);
             }
-            GameEvent::Play { seat, card } => {
-                self.played |= *card;
-                self.current_trick = self.current_trick.push(*card);
-                self.next_actor = Some(seat.left());
-                if self.current_trick.is_complete() || self.played == Cards::ALL {
-                    self.led_suits |= self.current_trick.suit();
-                    let winning_seat = self.current_trick.winning_seat(seat.left());
-                    self.won = self.won.win(winning_seat, self.current_trick.cards());
-                    self.current_trick = Trick::new();
-                    self.next_actor = Some(winning_seat);
-                    if self.played == Cards::ALL {
-                        self.phase = self.phase.next(self.charge_count != 0);
-                        self.done = DoneState::new();
-                    }
-                }
-            }
+            GameEvent::Play { seat, card } => self.play_card(*seat, *card),
             GameEvent::Claim { seat, .. } => {
                 self.claims = self.claims.claim(*seat);
             }
@@ -167,6 +152,26 @@ impl GameState {
                 self.claims = self.claims.reject(*claimer);
             }
             _ => {}
+        }
+    }
+
+    /// The same state transition as a Play event, without event dispatch in
+    /// the inner simulation loop. Legality is checked by the caller.
+    #[inline]
+    pub fn play_card(&mut self, seat: Seat, card: Card) {
+        self.played |= card;
+        self.current_trick = self.current_trick.push(card);
+        self.next_actor = Some(seat.left());
+        if self.current_trick.is_complete() || self.played == Cards::ALL {
+            self.led_suits |= self.current_trick.suit();
+            let winning_seat = self.current_trick.winning_seat(seat.left());
+            self.won = self.won.win(winning_seat, self.current_trick.cards());
+            self.current_trick = Trick::new();
+            self.next_actor = Some(winning_seat);
+            if self.played == Cards::ALL {
+                self.phase = self.phase.next(self.charge_count != 0);
+                self.done = DoneState::new();
+            }
         }
     }
 
@@ -199,7 +204,7 @@ impl GameState {
         }
 
         // if this is the first trick
-        if self.current_trick.cards().contains(Card::TwoClubs) {
+        if self.current_trick.contains(Card::TwoClubs) {
             // if you have a non-point card
             if !Cards::POINTS.contains_all(plays) {
                 // you cannot play points

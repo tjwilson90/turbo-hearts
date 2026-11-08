@@ -1,0 +1,122 @@
+{
+  "baseline": "round7",
+  "by_direction": [
+    {
+      "deals": 25,
+      "difference_ci95": [
+        -32.65379790844023,
+        9.99379790844023
+      ],
+      "direction": "left",
+      "money": [
+        -17.59,
+        -6.26
+      ],
+      "paired_difference": -11.33
+    },
+    {
+      "deals": 25,
+      "difference_ci95": [
+        -40.62089187182009,
+        -1.9591081281799099
+      ],
+      "direction": "right",
+      "money": [
+        -10.47,
+        10.82
+      ],
+      "paired_difference": -21.29
+    },
+    {
+      "deals": 25,
+      "difference_ci95": [
+        -18.897529741824833,
+        22.137529741824835
+      ],
+      "direction": "across",
+      "money": [
+        9.65,
+        8.03
+      ],
+      "paired_difference": 1.62
+    },
+    {
+      "deals": 25,
+      "difference_ci95": [
+        -29.970597805320455,
+        6.110597805320456
+      ],
+      "direction": "keeper",
+      "money": [
+        -11.26,
+        0.67
+      ],
+      "paired_difference": -11.93
+    }
+  ],
+  "candidate": "prelearn:none:assets/models/preplay-charge2.tpq:128:12:none:0:7",
+  "charges_by_suit": [
+    [
+      86,
+      33,
+      40,
+      66
+    ],
+    [
+      43,
+      7,
+      39,
+      28
+    ]
+  ],
+  "deals": 100,
+  "difference_ci95": [
+    -20.633131838071264,
+    -0.8318681619287371
+  ],
+  "hands_per_version": 400,
+  "keeper_redraws": [
+    46,
+    64
+  ],
+  "max_move_ms": [
+    16.168,
+    20.726
+  ],
+  "money": [
+    -7.4175,
+    3.315
+  ],
+  "moons": [
+    18,
+    19
+  ],
+  "ms_per_hand": [
+    18.073745,
+    18.60999
+  ],
+  "opponent": "round7:32:12",
+  "opponent_moons": [
+    52,
+    50
+  ],
+  "paired_difference": -10.7325,
+  "preplay_ms_per_hand": [
+    0.001695,
+    0.0
+  ],
+  "queen_and_8_to_12_hearts": [
+    33,
+    34
+  ],
+  "root_evaluations_per_hand": [
+    6647.04,
+    6840.96
+  ],
+  "rules": "classic",
+  "seed": 1901000,
+  "win_share": [
+    0.255,
+    0.29041666666666666
+  ]
+}

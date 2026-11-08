@@ -1,0 +1,123 @@
+{
+  "baseline": "round7",
+  "by_direction": [
+    {
+      "deals": 25,
+      "difference_ci95": [
+        -22.382002931347753,
+        23.82200293134775
+      ],
+      "direction": "left",
+      "money": [
+        53.37,
+        52.65
+      ],
+      "paired_difference": 0.72
+    },
+    {
+      "deals": 25,
+      "difference_ci95": [
+        -26.320728033131076,
+        23.280728033131076
+      ],
+      "direction": "right",
+      "money": [
+        44.58,
+        46.1
+      ],
+      "paired_difference": -1.52
+    },
+    {
+      "deals": 25,
+      "difference_ci95": [
+        -38.155887111104704,
+        8.615887111104708
+      ],
+      "direction": "across",
+      "money": [
+        29.4,
+        44.17
+      ],
+      "paired_difference": -14.77
+    },
+    {
+      "deals": 25,
+      "difference_ci95": [
+        0.2871789514562444,
+        33.012821048543756
+      ],
+      "direction": "keeper",
+      "money": [
+        21.45,
+        4.8
+      ],
+      "paired_difference": 16.65
+    }
+  ],
+  "candidate": "round7:8192:12:5",
+  "charges_by_suit": [
+    [
+      44,
+      4,
+      30,
+      29
+    ],
+    [
+      44,
+      4,
+      30,
+      29
+    ]
+  ],
+  "deals": 100,
+  "difference_ci95": [
+    -10.857687252501975,
+    11.397687252501974
+  ],
+  "hands_per_version": 400,
+  "keeper_redraws": [
+    56,
+    56
+  ],
+  "max_move_ms": [
+    5.111,
+    13.132
+  ],
+  "money": [
+    37.2,
+    36.93
+  ],
+  "moons": [
+    36,
+    36
+  ],
+  "ms_per_hand": [
+    42.882145,
+    17.4953925
+  ],
+  "opponent": "actionhybrid",
+  "opponent_moons": [
+    22,
+    26
+  ],
+  "paired_difference": 0.27,
+  "preplay_ms_per_hand": [
+    7.5e-06,
+    2.5e-06
+  ],
+  "queen_and_8_to_12_hearts": [
+    22,
+    20
+  ],
+  "root_evaluations_per_hand": [
+    26700.8625,
+    6650.88
+  ],
+  "rules": "classic",
+  "seed": 1906000,
+  "win_share": [
+    0.4058333333333334,
+    0.36708333333333326
+  ],
+  "executable_sha256": "8cef5a7f0425ca8bed9d97a8d09909e2e3ad9c5db479091751676bc6867dfb54"
+}

@@ -25,44 +25,46 @@ impl VoidState {
     #[must_use]
     pub fn on_event(self, state: &GameState, event: &GameEvent) -> VoidState {
         match event {
-            GameEvent::Play { seat, card } => {
-                let trick = state.current_trick;
-                if !trick.is_empty() && trick.suit() != card.suit() {
-                    // didn't follow suit
-                    self.mark_void(*seat, trick.suit())
-                } else if trick.is_empty()
-                    && card.suit() == Suit::Hearts
-                    && !state.played.contains_any(Cards::HEARTS)
-                {
-                    // force break hearts
-                    self.mark_void(*seat, Suit::Clubs)
-                        .mark_void(*seat, Suit::Diamonds)
-                        .mark_void(*seat, Suit::Spades)
-                } else if !state.led_suits.contains(card.suit()) && state.charges.is_charged(*card)
-                {
-                    // forced to play charged card
-                    let mut void = self.mark_void(*seat, card.suit());
-                    if trick.is_empty() {
-                        if *card == Card::QueenSpades {
-                            // forced to lead charged queen
-                            void = void.mark_void(*seat, Suit::Clubs);
-                            void = void.mark_void(*seat, Suit::Diamonds);
-                        }
-                        if *card == Card::JackDiamonds {
-                            // forced to lead charged jack
-                            void = void.mark_void(*seat, Suit::Clubs);
-                            if !state.charges.charges(*seat).contains(Card::QueenSpades) {
-                                void = void.mark_void(*seat, Suit::Spades);
-                            }
-                        }
-                    }
-                    void
-                } else {
-                    self
-                }
-            }
+            GameEvent::Play { seat, card } => self.on_play(state, *seat, *card),
             GameEvent::HandComplete { .. } => Self::new(),
             _ => self,
+        }
+    }
+    #[inline]
+    #[must_use]
+    pub fn on_play(self, state: &GameState, seat: Seat, card: Card) -> VoidState {
+        let trick = state.current_trick;
+        if !trick.is_empty() && trick.suit() != card.suit() {
+            // didn't follow suit
+            self.mark_void(seat, trick.suit())
+        } else if trick.is_empty()
+            && card.suit() == Suit::Hearts
+            && !state.played.contains_any(Cards::HEARTS)
+        {
+            // force break hearts
+            self.mark_void(seat, Suit::Clubs)
+                .mark_void(seat, Suit::Diamonds)
+                .mark_void(seat, Suit::Spades)
+        } else if !state.led_suits.contains(card.suit()) && state.charges.is_charged(card) {
+            // forced to play charged card
+            let mut void = self.mark_void(seat, card.suit());
+            if trick.is_empty() {
+                if card == Card::QueenSpades {
+                    // forced to lead charged queen
+                    void = void.mark_void(seat, Suit::Clubs);
+                    void = void.mark_void(seat, Suit::Diamonds);
+                }
+                if card == Card::JackDiamonds {
+                    // forced to lead charged jack
+                    void = void.mark_void(seat, Suit::Clubs);
+                    if !state.charges.charges(seat).contains(Card::QueenSpades) {
+                        void = void.mark_void(seat, Suit::Spades);
+                    }
+                }
+            }
+            void
+        } else {
+            self
         }
     }
 }

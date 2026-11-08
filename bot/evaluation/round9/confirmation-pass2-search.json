@@ -1,0 +1,122 @@
+{
+  "baseline": "round7",
+  "by_direction": [
+    {
+      "deals": 125,
+      "difference_ci95": [
+        -31.683999588497482,
+        1.6999995884974801
+      ],
+      "direction": "left",
+      "money": [
+        -4.284,
+        10.708
+      ],
+      "paired_difference": -14.992
+    },
+    {
+      "deals": 125,
+      "difference_ci95": [
+        -18.528354141067346,
+        15.356354141067348
+      ],
+      "direction": "right",
+      "money": [
+        5.366,
+        6.952
+      ],
+      "paired_difference": -1.586
+    },
+    {
+      "deals": 125,
+      "difference_ci95": [
+        -5.20908313657206,
+        28.589083136572057
+      ],
+      "direction": "across",
+      "money": [
+        24.012,
+        12.322
+      ],
+      "paired_difference": 11.69
+    },
+    {
+      "deals": 125,
+      "difference_ci95": [
+        0.0,
+        0.0
+      ],
+      "direction": "keeper",
+      "money": [
+        3.206,
+        3.206
+      ],
+      "paired_difference": 0.0
+    }
+  ],
+  "candidate": "prelearn:assets/models/preplay-pass2.tpq:none:128:12:none:0:7",
+  "charges_by_suit": [
+    [
+      169,
+      24,
+      143,
+      119
+    ],
+    [
+      159,
+      21,
+      167,
+      138
+    ]
+  ],
+  "deals": 500,
+  "difference_ci95": [
+    -8.541283729778847,
+    6.097283729778848
+  ],
+  "hands_per_version": 2000,
+  "keeper_redraws": [
+    328,
+    328
+  ],
+  "max_move_ms": [
+    30.953,
+    29.737
+  ],
+  "money": [
+    7.075,
+    8.297
+  ],
+  "moons": [
+    210,
+    106
+  ],
+  "ms_per_hand": [
+    20.4232385,
+    18.759026
+  ],
+  "opponent": "round7:32:12",
+  "opponent_moons": [
+    218,
+    217
+  ],
+  "paired_difference": -1.222,
+  "preplay_ms_per_hand": [
+    0.0666245,
+    5e-07
+  ],
+  "queen_and_8_to_12_hearts": [
+    256,
+    170
+  ],
+  "root_evaluations_per_hand": [
+    7489.152,
+    6854.592
+  ],
+  "rules": "classic",
+  "seed": 2000000,
+  "win_share": [
+    0.28625,
+    0.28275
+  ]
+}

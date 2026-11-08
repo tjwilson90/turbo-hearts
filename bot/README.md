@@ -17,6 +17,20 @@ networks remain available for research.
 The [early-signal experiments](evaluation/round6/README.md) add an all-suit human
 charging model, early control-retention evidence, and preventive heart/nine
 discard continuations as separately selectable research profiles.
+The [capacity and history experiments](evaluation/round8/README.md) compare
+larger human policies, card and public-history inputs, persistent simulated
+plans, and a payoff-trained head. These are opt-in research models; card play
+retains the successful-human fallback described above. Better prediction of
+human choices did not produce a consistent payoff gain at equal decision time.
+
+The [engine and preplay update](evaluation/round9/README.md) reduces fixed-search
+computation by about 21.5% and enables a learned passing policy **only in Classic
+games against three human opponents**, on left/right/across rounds. Two rounds
+of population training improved that setting, but changing every bot together
+regressed at mixed tables. Keeper passing, charging, other rules, and passing
+with multiple bots retain their existing policies. The bundled checkpoint
+requires no runtime model path. More search and learned charging remain
+experimental because their match results did not justify promotion.
 
 The defaults are 128 hidden deals per decision, exact search with at most 12
 cards remaining, and a one-second soft time limit. Most decisions finish much
@@ -87,6 +101,17 @@ optional charging rules. `--help` lists the options. Profiles:
 - `defend:N:E`: the frozen first-round opposing-shooter model. `defend:128:12`
   remains the benchmark for the current default.
 - `skilledfallback`: the current production policy, with the time cap disabled.
+- `round7[:N:E:TIME_MS]`: frozen successful-human production policy. `coherent`
+  uses the same arguments and samples a persistent human component per rollout.
+- `neural:MODEL[:N:E:TIME_MS]`, `neuralmix:MODEL[:N:E:TIME_MS]`: use a THH1
+  human policy for all or half of eligible human continuations.
+- `payoff:MODEL[:N:E:TIME_MS:WEIGHT]`: blend a THH1 monetary advantage head
+  into play selection (default weight 0.25). Raw `evaluate` values stay unchanged.
+- `neuralplayer:MODEL`, `neuralhybrid:MODEL[:N:E:TIME_MS]`: learned responders
+  with claims; the hybrid uses frozen round7 search half the time.
+  These new profiles omit the time cap unless `TIME_MS` is supplied (`none`
+  explicitly disables it). A high
+  `N` and explicit cap support comparisons at equal soft decision-time limits.
 - `round4` or `preserve:128:12:none:0:32:8`: the frozen supported-stopper policy.
 - `cautiousdynamic:128:12:none:0:32:0:0.6`: the frozen round-three default.
 - `human`, `humanclaim`: the fitted human action model, without/with provable
@@ -178,7 +203,9 @@ historical perfect-information datasets; the current script consumes the new
 For production application code, use `NeuralNetworkBot::new()` or the seeded
 `NeuralNetworkBot::with_seed(seed)`. To customize budgets, use
 `NeuralNetworkBot::with_config(config, seed)` followed by
-`.with_experiments(SearchExperiments::production())`. `with_config` alone
+`.with_experiments(SearchExperiments::production()).with_production_preplay()`.
+`with_production_preplay()` installs the bundled passing head and its confirmed
+rule/table/direction restrictions. `with_config` alone
 preserves the frozen baseline for reproducible experiments. A calibrated neural
 prior can optionally be supplied through `.with_policy(network, prior_samples)`.
 `evaluate` exposes sampled move values for further experiments. External model
@@ -188,19 +215,62 @@ error for missing or invalid files.
 Use `.with_experiments(SearchExperiments { ... })` before replaying history
 (including `Sit`, which supplies public human/bot player types) to
 enable research variants. `SearchExperiments::default()` turns all extensions
-off; `production()` selects the default subset. `round_four()` and `round_three()`
+off; `production()` selects the default subset. `round_seven()`, `round_four()`, and `round_three()`
 preserve earlier defaults. `.with_samples(n)` preserves
 observations when cloning a bot for a stronger teacher. Diagnostics expose the
 last search's terminal evaluations, belief effective sample size, and tree nodes.
 The standalone self-play checkpoints contain policy scores, so they should not
 be supplied as calibrated monetary priors through `with_policy`.
 
+`with_human_network(HumanNetwork)` selects a THH1 policy for enabled human
+rollouts; pair it with `SearchExperiments::round_seven()` to restrict those
+rollouts to public human seats and retain inferred runner styles.
+`with_payoff_network(HumanNetwork, weight)` accepts only a monetary advantage
+checkpoint and blends it before the stopper preference, outside exact endgames
+and only when another public human seat is present. Both remain experimental.
+
+`with_preplay_models(pass, charge, margin)` selects optional TPQ1 monetary
+models for passing and charging. These score all 286 legal pass triples or all
+available charge subsets, including declining. The margin is the predicted
+money improvement required to replace the existing heuristic. The inputs
+condition on pass direction, charging rules, public charges/declines, and both
+keeper charging stages; they contain only the acting player's information.
+Passing and charging heads can be tested independently with
+`prelearn:PASS_MODEL:CHARGE_MODEL[:SAMPLES:EXACT:TIME_MS:MARGIN:PASS_MASK:HUMAN_RECIPIENTS]`
+in the arena. Use `none` for a disabled head or an omitted time cap. The optional
+passing mask defaults to 15; bits 1/2/4/8 enable left/right/across/keeper.
+`with_preplay_pass_directions([bool; 4])` exposes the same control in Rust.
+`HUMAN_RECIPIENTS=1` or `with_preplay_human_recipients(true)` retains heuristic
+passing when the destination is publicly identified as a bot. `preplay_table`
+tests simultaneous changes to every bot at mixed tables with accurate public
+human/bot roles; the ordinary arena changes one player and marks all seats human.
+
+Generate responsive policy-improvement targets with:
+
+```sh
+cargo run --release -p turbo-hearts-bot --example preplay_data -- \
+  data/preplay.bin 12000 1800000 round7:8:8 2 16
+OPENBLAS_NUM_THREADS=1 python3 train_preplay.py \
+  data/preplay.bin assets/models/preplay-pass.tpq pass
+OPENBLAS_NUM_THREADS=1 python3 train_preplay.py \
+  data/preplay.bin assets/models/preplay-charge.tpq charge
+```
+
+The generator cycles through all four directions and six rules. Its arguments
+are output, deals, seed, learner profile, continuation repeats, number of pass
+candidates, and optional archived opponent profiles. Every candidate is played
+to completion with responsive opponents and normal event redaction. Later
+iterations can use a `prelearn` learner and add archived policies to the
+population; `train_preplay.py --initial MODEL` continues a head on pooled data.
+Split whole deals, retain independent match seeds, and evaluate full games:
+target loss alone is insufficient to establish stronger play.
+
 ## Checks
 
 ```sh
 cargo test --locked --workspace --all-targets
 cargo bench --locked -p turbo-hearts-bot --bench inference
-OPENBLAS_NUM_THREADS=1 python3 -m unittest test_training
+OPENBLAS_NUM_THREADS=1 python3 -m unittest test_training test_human_policy test_historical_data test_human_neural test_preplay
 ```
 
 Regression tests cover uniform constrained deals, private observations,

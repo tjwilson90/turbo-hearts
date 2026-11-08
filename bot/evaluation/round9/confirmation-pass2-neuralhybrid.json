@@ -1,0 +1,122 @@
+{
+  "baseline": "round7",
+  "by_direction": [
+    {
+      "deals": 125,
+      "difference_ci95": [
+        0.24818272275836328,
+        31.579817277241638
+      ],
+      "direction": "left",
+      "money": [
+        34.54,
+        18.626
+      ],
+      "paired_difference": 15.914
+    },
+    {
+      "deals": 125,
+      "difference_ci95": [
+        -11.3180169845404,
+        18.898016984540398
+      ],
+      "direction": "right",
+      "money": [
+        20.04,
+        16.25
+      ],
+      "paired_difference": 3.79
+    },
+    {
+      "deals": 125,
+      "difference_ci95": [
+        -19.42576057215277,
+        17.869760572152774
+      ],
+      "direction": "across",
+      "money": [
+        28.398,
+        29.176
+      ],
+      "paired_difference": -0.778
+    },
+    {
+      "deals": 125,
+      "difference_ci95": [
+        0.0,
+        0.0
+      ],
+      "direction": "keeper",
+      "money": [
+        19.494,
+        19.494
+      ],
+      "paired_difference": 0.0
+    }
+  ],
+  "candidate": "prelearn:assets/models/preplay-pass2.tpq:none:128:12:none:0:7",
+  "charges_by_suit": [
+    [
+      169,
+      24,
+      143,
+      119
+    ],
+    [
+      159,
+      21,
+      167,
+      138
+    ]
+  ],
+  "deals": 500,
+  "difference_ci95": [
+    -2.4360173649722734,
+    11.899017364972273
+  ],
+  "hands_per_version": 2000,
+  "keeper_redraws": [
+    328,
+    328
+  ],
+  "max_move_ms": [
+    23.594,
+    23.317
+  ],
+  "money": [
+    25.618,
+    20.8865
+  ],
+  "moons": [
+    264,
+    139
+  ],
+  "ms_per_hand": [
+    19.892858,
+    18.529156
+  ],
+  "opponent": "neuralhybrid:assets/models/human-history32.thh:32:12",
+  "opponent_moons": [
+    132,
+    137
+  ],
+  "paired_difference": 4.7315,
+  "preplay_ms_per_hand": [
+    0.0663335,
+    1e-06
+  ],
+  "queen_and_8_to_12_hearts": [
+    211,
+    140
+  ],
+  "root_evaluations_per_hand": [
+    7201.152,
+    6639.936
+  ],
+  "rules": "classic",
+  "seed": 2000000,
+  "win_share": [
+    0.34508333333333335,
+    0.3098333333333333
+  ]
+}

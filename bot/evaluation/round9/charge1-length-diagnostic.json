@@ -1,0 +1,121 @@
+{
+  "sample": "Generation 1 validation charge decisions; unavailable/already-charged cards excluded",
+  "by_suit": {
+    "clubs": [
+      {
+        "suit_length": [
+          1,
+          3
+        ],
+        "decisions": 104,
+        "learned_charge_fraction": 0.6634615659713745,
+        "parent_charge_fraction": 0.01923076994717121
+      },
+      {
+        "suit_length": [
+          4,
+          5
+        ],
+        "decisions": 158,
+        "learned_charge_fraction": 0.5253164768218994,
+        "parent_charge_fraction": 0.1139240488409996
+      },
+      {
+        "suit_length": [
+          6,
+          13
+        ],
+        "decisions": 101,
+        "learned_charge_fraction": 0.594059407711029,
+        "parent_charge_fraction": 0.8118811845779419
+      }
+    ],
+    "diamonds": [
+      {
+        "suit_length": [
+          1,
+          3
+        ],
+        "decisions": 141,
+        "learned_charge_fraction": 0.20567375421524048,
+        "parent_charge_fraction": 0.0
+      },
+      {
+        "suit_length": [
+          4,
+          5
+        ],
+        "decisions": 242,
+        "learned_charge_fraction": 0.44214877486228943,
+        "parent_charge_fraction": 0.041322313249111176
+      },
+      {
+        "suit_length": [
+          6,
+          13
+        ],
+        "decisions": 82,
+        "learned_charge_fraction": 0.5853658318519592,
+        "parent_charge_fraction": 0.10975609719753265
+      }
+    ],
+    "hearts": [
+      {
+        "suit_length": [
+          1,
+          3
+        ],
+        "decisions": 101,
+        "learned_charge_fraction": 0.23762376606464386,
+        "parent_charge_fraction": 0.0
+      },
+      {
+        "suit_length": [
+          4,
+          5
+        ],
+        "decisions": 208,
+        "learned_charge_fraction": 0.4134615361690521,
+        "parent_charge_fraction": 0.19230769574642181
+      },
+      {
+        "suit_length": [
+          6,
+          13
+        ],
+        "decisions": 56,
+        "learned_charge_fraction": 0.5357142686843872,
+        "parent_charge_fraction": 0.7857142686843872
+      }
+    ],
+    "spades": [
+      {
+        "suit_length": [
+          1,
+          3
+        ],
+        "decisions": 130,
+        "learned_charge_fraction": 0.2769230902194977,
+        "parent_charge_fraction": 0.0
+      },
+      {
+        "suit_length": [
+          4,
+          5
+        ],
+        "decisions": 186,
+        "learned_charge_fraction": 0.47311827540397644,
+        "parent_charge_fraction": 0.11290322244167328
+      },
+      {
+        "suit_length": [
+          6,
+          13
+        ],
+        "decisions": 92,
+        "learned_charge_fraction": 0.70652174949646,
+        "parent_charge_fraction": 0.72826087474823
+      }
+    ]
+  }
+}
