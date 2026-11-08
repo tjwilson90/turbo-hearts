@@ -32,22 +32,68 @@ function renderPlayers(v) {
   $('players').replaceChildren();
   for(const p of v.players) {
     const rel=(seats.indexOf(p.seat)-seats.indexOf(v.seat)+4)%4;
-    const e=node('div',undefined,'player'+(rel===0?' you':''));
-    e.append(node('strong',cap(p.seat)+(rel===0?' · you':'')),node('small',(p.human?'Human':'Bot')+(rel?` · ${['','left','across','right'][rel]}`:'')));
+    const e=node('div',undefined,'player compass-seat'+(rel===0?' you':''));
+    e.dataset.seat=p.seat;
+    const leader=v.kind==='play'?(v.trick[0]?.seat||v.seat):null;
+    e.append(seatHeading(p.seat,leader,rel===0,!v.trick.length),node('small',(p.human?'Human':'Bot')+(rel?` · ${['','left','across','right'][rel]}`:'')));
     const taken=[p.queen?'Q♠':'',p.jack?'J♦':'',p.ten?'10♣':''].filter(Boolean).join(' ');
     e.append(node('div',`${p.hearts} ♥${taken?' · '+taken:''}`,'holdings'));
     e.append(node('small',`Earlier hands: ${p.previous_money>0?'+':''}${p.previous_money}`));
     if(p.charges.length)e.append(node('div','Charged '+p.charges.map(cardText).join(' '),'charges'));
     if(v.kind==='charge' && p.declined)e.append(node('small','Finished current charging turn'));
     if(p.voids.length)e.append(node('small','Void: '+p.voids.map(s=>symbols[s[0]]).join(' ')));
+    if(v.kind==='play')e.append(trickCards(v.trick,p.seat));
     $('players').append(e);
   }
 }
+function seatHeading(seat,leader,you=false,unplayed=false) {
+  const heading=node('div',undefined,'seat-heading');
+  heading.append(node('strong',cap(seat)+(you?' · you':''),'seat-name'));
+  if(seat===leader)heading.append(node('span',unplayed?'Leads':'Led','lead-badge'));
+  return heading;
+}
+function trickCards(plays,seat) {
+  const cards=node('div',undefined,'seat-cards');
+  plays.forEach((p,i)=>{
+    if(p.seat!==seat)return;
+    const item=node('div',undefined,'trick-card'),card=face(p.card);
+    item.dataset.card=p.card;item.dataset.play=String(i+1);
+    if(i===0)card.classList.add('lead-card');
+    card.setAttribute('aria-label',`${cardText(p.card)}, play ${i+1}${i===0?', lead':''}`);
+    item.append(card,node('span',String(i+1),'play-number'));
+    cards.append(item);
+  });
+  if(!cards.children.length)cards.append(node('span','—','not-played'));
+  return cards;
+}
 function renderTrick(v) {
-  $('trick').replaceChildren();
   $('trick-title').textContent=v.kind==='play'?'Current trick':'Before play';
-  if(!v.trick.length) { $('trick').append(node('p',v.kind==='play'?'You lead the next trick.':'No cards have been played yet.')); return; }
-  for(const item of v.trick) {const e=node('div',undefined,'trick-slot');e.append(node('small',cap(item.seat)),face(item.card));$('trick').append(e);}
+  $('trick-summary').textContent=v.trick.length?`${v.trick.length} cards played · ${cap(v.trick[0].seat)} led`:
+    v.kind==='play'?'You lead the next trick.':'No cards have been played yet.';
+}
+function renderRemaining(v) {
+  $('remaining-panel').hidden=v.kind!=='play';
+  $('remaining-cards').replaceChildren();
+  if(v.kind!=='play')return;
+  // Only the supplied public history and the actor's hand are used. A card on
+  // the table is already played, even while an extended trick is incomplete.
+  const played=new Set(v.played);
+  for(const e of v.history)if(e.type==='play')played.add(e.card);
+  for(const p of v.trick)played.add(p.card);
+  const own=new Set(v.hand);
+  $('remaining-count').textContent=`${52-played.size} unplayed · ${52-played.size-own.size} elsewhere`;
+  for(const suit of 'SHDC') {
+    const row=node('div',undefined,'remaining-suit'),ranks=node('div',undefined,'remaining-ranks');
+    row.append(node('span',symbols[suit],'suit-label'+('HD'.includes(suit)?' red':'')));
+    for(const rank of 'AKQJT98765432') {
+      const card=rank+suit,status=played.has(card)?'played':own.has(card)?'in-hand':'elsewhere';
+      const e=node('span',rank==='T'?'10':rank,'remaining-card '+status+('HD'.includes(suit)?' red':''));
+      e.dataset.card=card;
+      const label=`${cardText(card)} · ${{played:'played','in-hand':'in your hand',elsewhere:'unplayed elsewhere'}[status]}`;
+      e.title=label;e.setAttribute('aria-label',label);ranks.append(e);
+    }
+    row.append(ranks);$('remaining-cards').append(row);
+  }
 }
 function renderHistory(v) {
   $('preplay-history').replaceChildren();$('trick-history').replaceChildren();
@@ -68,8 +114,16 @@ function renderHistory(v) {
       case 'play': plays.push(e);break;
       case 'end_trick':
         if(plays.length) {
-          const row=node('div',undefined,'history-trick');row.append(node('strong',`${++trickCount} · ${cap(e.winner)} won`));
-          for(const p of plays){const item=node('span',undefined,'played-card');item.append(node('span',cap(p.seat)+' '),node('b',cardText(p.card),'HD'.includes(p.card[1])?'red':''));row.append(item);}
+          const row=node('section',undefined,'history-trick compass');
+          const center=node('div',undefined,'table-center');
+          center.append(node('strong',`Trick ${++trickCount}`),node('span',`${cap(e.winner)} won`));
+          row.setAttribute('aria-label',`Trick ${trickCount}, ${cap(plays[0].seat)} led, ${cap(e.winner)} won`);
+          row.append(center);
+          for(const seat of seats) {
+            const player=node('div',undefined,'compass-seat history-seat'+(seat===e.winner?' winner':''));
+            player.dataset.seat=seat;
+            player.append(seatHeading(seat,plays[0].seat),trickCards(plays,seat));row.append(player);
+          }
           $('trick-history').append(row);plays=[];
         } break;
     }
@@ -141,7 +195,7 @@ function showQuestion(c) {
   }
   const blind=v.rules.includes('blind'), chain=v.rules.includes('chain'), free=['classic','blind'].includes(v.rules);
   $('rule-detail').textContent=`${cap(v.rules.replaceAll('_',' '))}: ${free?'players may charge without a fixed seat order':'charging follows the fixed seat order'}. ${blind?'Other players’ charge identities stay hidden until play begins.':'Charge cards are public.'} ${chain?'A player may add further charges when charging continues.':'A player finishes its current charging turn after charging; another charge can reopen it.'} Charging ends when all players finish the cycle.`;
-  renderPlayers(v);renderTrick(v);renderHistory(v);renderHand();
+  renderPlayers(v);renderTrick(v);renderRemaining(v);renderHistory(v);renderHand();
   cleanDraft=draft();
   if(a)message(`Editing a ${a.status} judgment. Saving creates a new revision.`);
 }

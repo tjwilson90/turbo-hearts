@@ -25,8 +25,10 @@
       <div class="layout">
         <div class="position">
           <section class="table-panel"><div class="table-top"><h3>The table</h3><span>Play order: N → E → S → W</span></div>
-            <div id="players" class="players"></div>
-            <h3 id="trick-title">Current trick</h3><div id="trick" class="trick"></div>
+            <div class="compass table-layout">
+              <div id="players" class="players"></div>
+              <div id="trick" class="table-center"><h3 id="trick-title">Current trick</h3><p id="trick-summary"></p></div>
+            </div>
           </section>
           <section class="panel hand-panel"><div class="section-title"><h3>Your hand</h3><span id="selection-count"></span></div>
             <p class="muted small">Click cards to choose. Gray cards are unavailable for this decision.</p>
@@ -34,8 +36,16 @@
             <div class="choice-row"><strong id="choice-label">Preferred choice</strong><span id="chosen">—</span><button id="decline" class="quiet" hidden>No charge</button></div>
             <div class="alternatives"><div id="alternatives"></div><button id="add-alternative" class="quiet">Add another acceptable choice</button><button id="keep-alternative" hidden>Keep alternative</button><button id="cancel-alternative" class="quiet" hidden>Cancel alternative</button></div>
           </section>
+          <section class="panel" id="remaining-panel" hidden>
+            <div class="section-title"><h3>Cards remaining</h3><span id="remaining-count" class="small"></span></div>
+            <p class="muted small">Cards in the current trick have already been played.</p>
+            <div class="remaining-legend"><span class="in-hand">In your hand</span><span class="elsewhere">Elsewhere</span><span class="played">Played</span></div>
+            <div id="remaining-cards" class="remaining-cards"></div>
+          </section>
           <details class="panel" id="history-panel" open><summary>What happened so far <span id="history-count"></span></summary>
-            <div id="preplay-history" class="event-history"></div><div id="trick-history" class="trick-history"></div>
+            <div id="preplay-history" class="event-history"></div>
+            <p class="muted small">Cards are numbered in play order. “Led” marks the first player and the outlined card is the lead.</p>
+            <div id="trick-history" class="trick-history"></div>
           </details>
           <details class="panel"><summary>Round and scoring reference</summary><p id="rule-detail"></p>
             <p>Lower scores are better. Each heart is +1, Q♠ is +13, and J♦ is −10. Charging doubles those values. Taking 10♣ doubles the hand’s score (quadruples it when charged). Shooting all 13 hearts and Q♠ reverses those penalties. A 9 in the led suit extends a trick to eight cards. Money compares your score with the other players’ scores.</p>

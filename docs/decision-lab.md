@@ -5,7 +5,10 @@ page uses the site's normal login. It asks what they would pass, charge, or play
 then lets them save and move on. It accepts other reasonable choices, confidence,
 strategic intentions, a suspected moon runner, and an explanation. Everything
 except the preferred choice is optional; players can skip questions and revise
-recent answers.
+recent answers. Card-play questions include a suit-by-suit remaining-card
+overview distinguishing your hand, unplayed cards elsewhere, and played cards.
+The table and trick history use fixed compass positions with lead markers and
+numbered cards, including both plays per seat in extended tricks.
 
 These recommendations add information game logs cannot provide: what players
 believed, what tradeoffs they considered, and which alternatives they consider
